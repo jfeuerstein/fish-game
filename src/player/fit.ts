@@ -160,7 +160,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
       y = m.backY;
       const slice = sliceAt(m, y);
       width = slice.w * f.width;
-      z = slice.back - deepOf(width) / 2 + 0.01;
+      z = slice.back - deepOf(width) * 0.3;
       y -= (size.y * width) / wide * 0.5;
       backwards = true;
       break;
