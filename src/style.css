@@ -1700,8 +1700,8 @@ button {
 .pk-crab {
   background: linear-gradient(180deg, #d66a4f, #a8402a);
 }
-.pk-mussel {
-  background: linear-gradient(180deg, #2f5560, #1a333b);
+.pk-shell {
+  background: linear-gradient(180deg, #4d8a6a, #2c5a44);
 }
 .pk-gull {
   background: linear-gradient(180deg, #f0cf86, #b2832f);
@@ -2307,4 +2307,12 @@ button {
   width: 15px;
   height: 15px;
   vertical-align: -2px;
+}
+
+.casino-go .tier {
+  margin-left: 8px;
+  vertical-align: 3px;
+  background: rgba(10, 18, 24, 0.7);
+  box-shadow: none;
+  text-shadow: none;
 }

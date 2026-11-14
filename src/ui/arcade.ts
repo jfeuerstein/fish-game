@@ -416,7 +416,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         draw(m, false);
         if (!flight.cashed) {
           const won = flightPrize(m);
-          go.innerHTML = won ? `Cash out <span style="color:${RARITY_COLOR[won]}">${RARITY_LABEL[won]}</span>` : 'Cash out <span>pearl back</span>';
+          go.innerHTML = won ? `Cash out ${tier(won)}` : 'Cash out <span>pearl back</span>';
         }
         if (Math.floor(m * 10) !== Math.floor(flight.at * 10)) s.audio.tick(Math.min(1, m / 10));
         if (flightPrize(m) !== flightPrize(flight.at)) s.audio.tone(880, 0, 0.18, 'triangle', 0.12);
