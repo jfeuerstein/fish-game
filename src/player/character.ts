@@ -4,7 +4,10 @@ import * as THREE from 'three';
 import { fit, model } from '../assets/models';
 import * as P from './poses';
 import { Rig } from './rig';
-import { type Measure, fitFor, placeFor } from './fit';
+import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headOf, measureHat, placeHat, placeFor } from './fit';
+
+/** Draw each skull's ellipsoid (`socket=1` in the address), to tune HEADS by eye. */
+const SOCKETS = typeof location !== 'undefined' && new URLSearchParams(location.search).get('socket') === '1';
 
 export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep';
 
@@ -353,11 +356,10 @@ export class Character {
   }
 
   /**
-   * A hat's crown: how wide the model is a little above the brim, and where its middle is (a peak
-   * or flaps pull the bounding box off centre). The triangles are cut at a few heights, so a model
-   * with few vertices there still gives a true outline.
+   * A hat, measured from slices of its triangles at heights through it (see measureHat): so a
+   * model with few vertices at some height still gives its true outline there.
    */
-  private static crown(obj: THREE.Object3D): { w: number; cx: number; cz: number } | undefined {
+  private static hatShape(obj: THREE.Object3D): HatShape {
     obj.updateMatrixWorld(true);
     const inv = obj.matrixWorld.clone().invert();
     const tris: THREE.Vector3[][] = [];
@@ -371,61 +373,95 @@ export class Character {
       const n = idx ? idx.count : pos.count;
       for (let i = 0; i < n; i += 3) tris.push(idx ? [v(idx.getX(i)), v(idx.getX(i + 1)), v(idx.getX(i + 2))] : [v(i), v(i + 1), v(i + 2)]);
     });
-    if (!tris.length) return undefined;
     let lo = Infinity;
     let hi = -Infinity;
     for (const t of tris) for (const p of t) {
       lo = Math.min(lo, p.y);
       hi = Math.max(hi, p.y);
     }
-    let best: { w: number; cx: number; cz: number } | undefined;
-    for (const k of [0.3, 0.38, 0.46]) {
+    const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, hi - lo, 1);
+    return measureHat({ x: size.x, y: hi - lo, z: size.z }, (k) => {
       const y = lo + (hi - lo) * k;
-      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      const cut: Cut = [];
       for (const t of tris) {
+        const pts: number[] = [];
         for (let e = 0; e < 3; e++) {
           const a = t[e];
           const b = t[(e + 1) % 3];
           if ((a.y - y) * (b.y - y) > 0 || a.y === b.y) continue;
           const u = (y - a.y) / (b.y - a.y);
-          const x = a.x + (b.x - a.x) * u;
-          const z = a.z + (b.z - a.z) * u;
-          x0 = Math.min(x0, x);
-          x1 = Math.max(x1, x);
-          z0 = Math.min(z0, z);
-          z1 = Math.max(z1, z);
+          pts.push(a.x + (b.x - a.x) * u, a.z + (b.z - a.z) * u);
         }
+        if (pts.length >= 4) cut.push([pts[0], pts[1], pts[2], pts[3]]);
       }
-      if (!Number.isFinite(x0)) continue;
-      // The narrower way across: a peak, flaps or horns stick out the other way.
-      const w = Math.min(x1 - x0, z1 - z0);
-      // The slice nearest the head's size wins: the narrowest that is still a real crown.
-      if (!best || w < best.w) best = { w, cx: (x0 + x1) / 2, cz: (z0 + z1) / 2 };
-    }
-    return best;
+      return cut;
+    });
+  }
+
+  /** The skull this character's hats sit on: from HEADS, or guessed from the measured body. */
+  private head(): Head | null {
+    const known = headOf(this.id, this.height);
+    if (known) return known;
+    const m = this.measure();
+    if (!m) return null;
+    const ry = (m.top - m.eyeY) * 1.1;
+    return { y: m.top - ry, z: m.headZ, rx: m.headW / 2, ry, rz: m.headW / 2 };
   }
 
   /** Where a worn thing goes in the character's frame, as a matrix, worked out once. */
   private fitMatrix(obj: THREE.Object3D, id: string): { bone: THREE.Bone; local: THREE.Matrix4 } | null {
-    const fit = fitFor(id, this.id);
     const m = this.measure();
     const rig = this.rig;
-    if (!fit || !m || !rig) return null;
+    if (!m || !rig) return null;
+    const hatFit = hatFor(id, this.id);
+    if (hatFit) {
+      const head = this.head();
+      if (!head || !rig.headBone) return null;
+      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -(hatFit.tilt ?? 0));
+      if (hatFit.turn) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), hatFit.turn));
+      // Measured turned, so its opening is read the way it will face.
+      const probe = new THREE.Group();
+      const inner = obj.clone(true);
+      inner.quaternion.premultiply(q);
+      probe.add(inner);
+      probe.userData.size = obj.userData.size;
+      const shape = Character.hatShape(probe);
+      const p = placeHat(hatFit, head, shape);
+      // The lowest point of the model is at its origin (models stand on y = 0); centre its opening over the skull.
+      const shift = new THREE.Vector3(-shape.cx * p.scale, 0, -shape.cz * p.scale);
+      const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z).add(shift), q, new THREE.Vector3(p.scale, p.scale, p.scale));
+      return { bone: rig.headBone, local };
+    }
+    const fit = fitFor(id, this.id);
+    if (!fit) return null;
     const bone = fit.bone === 'head' ? rig.headBone : rig.chestBone;
     if (!bone) return null;
     const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
-    const crown = fit.place === 'crown' && !fit.whole ? Character.crown(obj) : undefined;
-    const wide = Math.max(size.x, size.z);
-    // Never trust a crown narrower than a third of the hat: something went wrong measuring it.
-    const cw = crown && crown.w > wide * 0.33 ? crown.w : undefined;
-    const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z, crown: cw });
+    const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z });
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -p.tilt);
     if (p.turn) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.turn));
     if (p.backwards) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
-    // Centre the crown itself, not the hat's bounding box, over the head.
-    const shift = crown && cw ? new THREE.Vector3(-crown.cx, 0, -crown.cz).multiplyScalar(p.scale).applyQuaternion(q) : new THREE.Vector3();
-    const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z).add(shift), q, new THREE.Vector3(p.scale, p.scale, p.scale));
+    const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.scale, p.scale, p.scale));
     return { bone, local };
+  }
+
+  /** The skull drawn as a see-through ellipsoid, for tuning HEADS (`socket=1`). */
+  private socket: THREE.Mesh | null = null;
+  private showSocket(): void {
+    const head = this.head();
+    const rig = this.rig;
+    if (!head || !rig?.headBone) return;
+    if (!this.socket) {
+      this.socket = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0xff2266, wireframe: true, depthTest: false, transparent: true, opacity: 0.55 }));
+      this.socket.matrixAutoUpdate = false;
+      this.group.parent?.add(this.socket);
+      this.socket.userData.fit = { bone: rig.headBone, local: new THREE.Matrix4().compose(new THREE.Vector3(0, head.y, head.z), new THREE.Quaternion(), new THREE.Vector3(head.rx, head.ry, head.rz)) };
+    }
+    const { bone, local } = this.socket.userData.fit as { bone: THREE.Bone; local: THREE.Matrix4 };
+    const restInv = this.restInv.get(bone);
+    if (!restInv) return;
+    this.socket.matrix.copy(bone.matrixWorld).multiply(restInv).multiply(local);
+    this.socket.matrixWorldNeedsUpdate = true;
   }
 
   /** Put a worn thing where it goes, following its bone. */
@@ -543,6 +579,7 @@ export class Character {
       this.rodTip.copy(this.handPos).addScaledVector(dir, this.rodLen);
     } else this.rodTip.copy(this.handPos).addScaledVector(up, 1);
     if (this.hat && this.rig?.ok) this.wear(this.hat, this.hatId);
+    if (SOCKETS && this.rig?.ok) this.showSocket();
     else if (this.hat) {
       this.hat.position.copy(base).addScaledVector(up, h * 0.86);
       this.hat.quaternion.copy(this.group.quaternion);

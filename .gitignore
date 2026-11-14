@@ -5,3 +5,4 @@ tools/assets/cache
 .env
 .blender
 __pycache__
+tools/scratch/

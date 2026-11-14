@@ -4,7 +4,20 @@
 // served by fal), and tools/assets/make-models.mjs slims it for the phone. Characters are then
 // rigged and given animations by Tripo. Nothing here names any other game.
 
-/** The model that paints the pictures, and the one that makes a shape of a picture. */
+/**
+ * Tripo, asked directly: its image model paints the picture, its shape model makes a model of
+ * the picture by the picture's own task (nothing is uploaded). A model made this way is about
+ * 40 credits. tools/assets/make-tripo.mjs makes them. Every hat and worn thing is made so.
+ */
+export const TRIPO = { image: 'chat_image_2.5_flare', shape: 'v3.1-20260211' };
+export const TRIPO_LOOK = {
+  prop: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, simple forms, muted warm matte colours with gentle shading, no fine detail, the whole thing in view with space round it, seen from the front and a little to one side and above, standing on nothing, on a plain white background, soft even light, no shadow, no text, no lettering',
+  hat: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, muted warm matte colours with gentle shading, no fine detail, a single hat on its own with nobody wearing it, upright with its opening underneath, seen from the front and a little above, the whole thing in view with space round it, on a plain white background, soft even light, no shadow, no text',
+  extra: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, muted warm matte colours with gentle shading, no fine detail, on its own with nobody wearing it, the whole thing in view with space round it, on a plain white background, soft even light, no shadow, no text',
+  fish: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, thick simple fins, muted matte colours with gentle shading, a goofy friendly face, seen exactly from the side facing left, the whole thing in view with space round it, on a plain white background, soft even light, no shadow, no text, no water',
+};
+
+/** The model that paints the pictures, and the one that makes a shape of a picture (fal). */
 export const IMAGE_MODEL = 'fal-ai/gpt-image-1.5';
 export const SHAPE_MODEL = 'tripo3d/h3.1/image-to-3d';
 
@@ -96,23 +109,43 @@ export const MODELS = {
   'bobber': { kind: 'prop', what: 'a round fishing float bobber, red on top and white below, with a little stick on top', h: 0.2, faces: 800 },
   'ukulele': { kind: 'prop', what: 'a small ukulele with a warm honey wood body, a round sound hole and a dark neck', h: 0.6, faces: 2000 },
 
-  // --- Hats ---
-  'hat-bucket': { kind: 'hat', what: 'a soft green canvas bucket hat', h: 0.36, faces: 2000, item: true },
-  'hat-straw': { kind: 'hat', what: 'a wide brimmed woven straw sun hat with a red ribbon band', h: 0.32, faces: 2500, item: true },
-  'hat-beanie': { kind: 'hat', what: 'a chunky knitted yellow beanie with a fat pom pom on top', h: 0.36, faces: 2000, item: true },
-  'hat-captain': { kind: 'hat', what: 'a white ship captain hat with a black peak and a gold anchor badge', h: 0.34, faces: 2500, item: true },
-  'hat-flowers': { kind: 'hat', what: 'a flower crown: a ring of chunky pink, white and yellow flowers and green leaves', h: 0.2, faces: 2500, item: true },
-  'hat-frog': { kind: 'hat', what: 'a cute green frog hat with two big round eyes on top', h: 0.34, faces: 2500, item: true },
-  'hat-pirate': { kind: 'hat', what: 'a black pirate tricorn hat with gold trim and a white skull badge', h: 0.32, faces: 2500, item: true },
-  'hat-top': { kind: 'hat', what: 'a tall black top hat with a red band', h: 0.42, faces: 2000, item: true },
-  'hat-propeller': { kind: 'hat', what: 'a colourful beanie cap with a little red propeller on top, in red, yellow and blue panels', h: 0.38, faces: 2500, item: true },
-  'hat-cowboy': { kind: 'hat', what: 'a tan cowboy hat with a curled brim and a brown band', h: 0.32, faces: 2500, item: true },
-  'hat-crown': { kind: 'hat', what: 'a small golden crown with round red and blue gems', h: 0.26, faces: 2500, item: true },
-  'hat-mushroom': { kind: 'hat', what: 'a mushroom cap hat: a big red cap with white spots', h: 0.3, faces: 2000, item: true },
-  'hat-fish': { kind: 'hat', what: 'a funny hat shaped like a whole orange fish lying on top of the head', h: 0.3, faces: 2500, item: true },
-  'hat-sailor': { kind: 'hat', what: 'a round white sailor hat with a turned up brim and a blue ribbon', h: 0.26, faces: 2000, item: true },
-  'hat-viking': { kind: 'hat', what: 'a round silver viking helmet with two chunky cream horns', h: 0.38, faces: 2500, item: true },
-  'hat-chef': { kind: 'hat', what: 'a tall puffy white chef hat', h: 0.42, faces: 2000, item: true },
+  // --- Hats (made by Tripo: see TRIPO) ---
+  'hat-bucket': { kind: 'hat', what: 'a soft sage green canvas bucket hat with a short drooping brim and stitched rings', h: 0.36, faces: 3000, item: true },
+  'hat-straw': { kind: 'hat', what: 'a wide brimmed woven straw sun hat with a faded red ribbon band', h: 0.32, faces: 3000, item: true },
+  'hat-beanie': { kind: 'hat', what: 'a chunky ribbed knitted mustard yellow beanie with a turned up cuff and a fat pom pom on top', h: 0.36, faces: 3000, item: true },
+  'hat-captain': { kind: 'hat', what: 'a white ship captain hat with a black glossy peak at the front, a gold braid and a gold anchor badge', h: 0.34, faces: 3000, item: true },
+  'hat-flowers': { kind: 'hat', what: 'a flower crown: a round ring of chunky pink, white and yellow daisies and green leaves, lying flat', h: 0.2, faces: 3000, item: true },
+  'hat-frog': { kind: 'hat', what: 'a soft green frog hood hat with two big round googly eyes on top and a little smile on the front', h: 0.34, faces: 3000, item: true },
+  'hat-pirate': { kind: 'hat', what: 'a black pirate tricorn hat with gold trim and a white skull and crossbones badge on the front', h: 0.32, faces: 3000, item: true },
+  'hat-top': { kind: 'hat', what: 'a tall black silk top hat with a deep red band', h: 0.42, faces: 3000, item: true },
+  'hat-propeller': { kind: 'hat', what: 'a round beanie cap in red, yellow and blue panels with a little red propeller on a stalk on top and a short peak at the front', h: 0.38, faces: 3000, item: true },
+  'hat-cowboy': { kind: 'hat', what: 'a tan cowboy hat with a curled brim and a brown leather band', h: 0.32, faces: 3000, item: true },
+  'hat-crown': { kind: 'hat', what: 'a small golden king crown with five points and round red and blue gems', h: 0.26, faces: 3000, item: true },
+  'hat-mushroom': { kind: 'hat', what: 'a hat that is a big red toadstool mushroom cap with white spots, round and domed', h: 0.3, faces: 3000, item: true },
+  'hat-fish': { kind: 'hat', what: 'a silly hat that is a whole fat orange fish with a big goofy eye and open mouth, lying flat as if sitting on a head, its tail sticking out the back', h: 0.3, faces: 3000, item: true },
+  'hat-sailor': { kind: 'hat', what: 'a round white sailor hat with a turned up brim all round and a navy blue ribbon', h: 0.26, faces: 3000, item: true },
+  'hat-viking': { kind: 'hat', what: 'a round silver viking helmet with a nose guard and two big cream horns curving up from the sides', h: 0.38, faces: 3000, item: true },
+  'hat-chef': { kind: 'hat', what: 'a tall puffy white chef toque with a pleated band', h: 0.42, faces: 3000, item: true },
+  // Silly ones
+  'hat-duck': { kind: 'hat', what: 'a hat that is a big yellow rubber duck with an orange beak sitting on a little round cushion', h: 0.34, faces: 3000, item: true },
+  'hat-cone': { kind: 'hat', what: 'an orange traffic cone with two white reflective stripes, worn as a hat, on a square base', h: 0.46, faces: 3000, item: true },
+  'hat-cake': { kind: 'hat', what: 'a hat that is a round pink frosted birthday cake with sprinkles, white icing drips and one lit candle on top', h: 0.3, faces: 3000, item: true },
+  'hat-wizard': { kind: 'hat', what: 'a tall floppy navy blue wizard hat with a wide brim, gold stars and a bent tip', h: 0.5, faces: 3000, item: true },
+  'hat-party': { kind: 'hat', what: 'a cone shaped paper party hat with teal and pink stripes and a fluffy pom pom on the tip', h: 0.4, faces: 3000, item: true },
+  'hat-crab': { kind: 'hat', what: 'a hat that is a grumpy red crab sitting on a round cushion with its claws raised up', h: 0.3, faces: 3000, item: true },
+  'hat-bread': { kind: 'hat', what: 'a hat that is a whole golden loaf of bread with a split top crust, lying lengthways', h: 0.26, faces: 3000, item: true },
+  'hat-lampshade': { kind: 'hat', what: 'a cream fabric lampshade with a frilly fringe at the bottom, worn as a hat, wide end down', h: 0.36, faces: 3000, item: true },
+  'hat-shark': { kind: 'hat', what: 'a soft grey shark hood hat with a fin on top, little white teeth around the front opening and two small black eyes', h: 0.38, faces: 3000, item: true },
+  'hat-halo': { kind: 'hat', what: 'a glowing golden angel halo ring floating above a small golden headband with two tiny wings', h: 0.24, faces: 3000, item: true },
+  // --- Worn things besides hats ---
+  'x-glasses': { kind: 'extra', what: 'a pair of round tortoiseshell reading glasses, folded open, seen from the front', h: 0.12, faces: 2500, item: true },
+  'x-shades': { kind: 'extra', what: 'a pair of chunky black sunglasses with dark lenses, folded open, seen from the front', h: 0.12, faces: 2500, item: true },
+  'x-scarf': { kind: 'extra', what: 'a chunky knitted red and cream striped scarf wrapped once round in a ring with one end hanging down the front', h: 0.3, faces: 3000, item: true },
+  'x-bowtie': { kind: 'extra', what: 'a big red polka dot bow tie', h: 0.12, faces: 2000, item: true },
+  'x-backpack': { kind: 'extra', what: 'a small tan canvas hiking backpack with a rolled up green blanket on top and two side pockets, seen from behind', h: 0.4, faces: 3000, item: true },
+  'x-flower': { kind: 'extra', what: 'a single big pink hibiscus flower with green leaves', h: 0.14, faces: 2000, item: true },
+  'x-mustache': { kind: 'extra', what: 'a big bushy brown handlebar mustache with curled tips, seen from the front', h: 0.08, faces: 2000, item: true },
+  'x-snorkel': { kind: 'extra', what: 'a swimming mask with a teal frame and a curved orange snorkel tube on the side, seen from the front', h: 0.3, faces: 2500, item: true },
 };
 
 /** Fish (and the odd thing that is not a fish). Each is a model the player holds up, and an icon in the journal. */
@@ -181,7 +214,21 @@ export const PICTURES = {
   icon: { size: '1024x1024', prompt: 'an app icon: a chubby cute otter face peeking over a red and white fishing bobber floating on turquoise water, soft low poly 3D look, flat pastel colours, centred, filling the square, no text, no border' },
 };
 
-/** Tiled ground textures, painted through fal and made seamless by tools/assets/make-textures.mjs. */
+/**
+ * Ground textures painted by Tripo's image model and made to repeat by tools/assets/make-ground.mjs.
+ * They share one look, so the ground reads as one painted surface under the toy-like models.
+ */
+export const GROUND_LOOK = 'a seamless tileable square texture seen from directly above, for a stylised cosy 3D game, hand painted with soft broad brush strokes, simple shapes, flat even lighting, no shadows, no perspective, no horizon, low contrast, muted warm natural colours, the same all over with nothing in particular in the middle, no objects, no text';
+export const GROUND = {
+  grass: 'short soft meadow grass painted as overlapping clumps of rounded leaf shaped brush strokes in a few close greens, sage and fresh green with a hint of yellow',
+  sand: 'smooth pale golden beach sand with soft wind ripples and a few tiny scattered pebbles and speckles',
+  dirt: 'a packed earth footpath, warm light brown with soft blotches and a few small rounded pebbles',
+  rock: 'smooth grey stone with a few soft flat facets and gentle cracks, cool grey with hints of moss green',
+  plaza: 'irregular rounded flagstone paving in warm cream and pale grey stones, soft mortar lines between them, each stone gently rounded',
+  wood: 'weathered wooden deck planks running left to right, soft warm grey brown, simple grain lines and a few round knots',
+};
+
+/** Tiled ground textures, once painted through fal (see GROUND for those painted by Tripo). */
 export const TEXTURE_MODEL = 'fal-ai/flux/schnell';
 export const TEXTURES = {
   grass: 'seamless tileable texture of a soft lawn seen from directly above, stylised low contrast painterly game texture, gentle small tufts, pale fresh spring green, uniform all over, simple, no flowers, no objects, flat lighting',

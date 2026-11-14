@@ -25,31 +25,219 @@ export interface Fit {
   per?: Partial<Record<string, Partial<Omit<Fit, 'per' | 'bone' | 'place'>>>>;
 }
 
-/** On the frog, whose eyes stand up above its skull, hats sit behind the eyes and a little higher. */
-const FROG = { forward: -0.16, sink: 0.82, lift: 0.015 };
+/**
+ * Each character's skull as an ellipsoid, in metres for a character 1.1 m tall, in its own frame
+ * (it faces +z, feet at y = 0). It leaves out the ears and the frog's eyes, which stand clear of
+ * the skull: a hat sits on the skull and the ears poke out beside it, as they would. Tuned by
+ * eye with `socket=1` in the address, which draws them.
+ */
+export interface Head {
+  y: number;
+  z: number;
+  rx: number;
+  ry: number;
+  rz: number;
+}
+export const HEADS: Record<string, Head> = {
+  'char-otter': { y: 0.8, z: 0.0, rx: 0.32, ry: 0.27, rz: 0.29 },
+  'char-frog': { y: 0.78, z: -0.04, rx: 0.36, ry: 0.22, rz: 0.27 },
+  'char-raccoon': { y: 0.78, z: 0.03, rx: 0.31, ry: 0.25, rz: 0.27 },
+};
+
+/** How a hat is worn. */
+export interface HatFit {
+  /**
+   * How it sits: `on` (pulled down onto the skull: the band rests where the skull is as wide as
+   * the hat's opening), `perch` (something sitting on top: a fish, a cake, a crown), or `ring`
+   * (a ring the head goes through: a flower crown, a halo's band).
+   */
+  how: 'on' | 'perch' | 'ring';
+  /** For `on`: how far down the skull the band sits, from its top (0) to its middle (1). */
+  depth: number;
+  /** The hat's opening against the skull's width there; above 1 so the head does not show through. */
+  snug: number;
+  /** Turned about upright, radians: models built facing another way are turned to face +z. */
+  turn?: number;
+  /** Tipped back (positive) or forward, radians. */
+  tilt?: number;
+  /** Nudges, as fractions of the skull's height (up) and depth (forward). */
+  lift?: number;
+  forward?: number;
+  /** Where the head enters it, as a fraction of its height, and its opening as a fraction of its width, when measuring gets them wrong. */
+  band?: number;
+  open?: number;
+  per?: Partial<Record<string, Partial<Omit<HatFit, 'per' | 'how'>>>>;
+}
+
+const on = (depth: number, snug = 1.04, more: Partial<HatFit> = {}): HatFit => ({ how: 'on', depth, snug, ...more });
+const perch = (snug: number, more: Partial<HatFit> = {}): HatFit => ({ how: 'perch', depth: 0, snug, ...more });
+
+export const HATS: Record<string, HatFit> = {
+  'hat-bucket': on(0.42),
+  'hat-straw': on(0.38),
+  'hat-beanie': on(0.5, 1.03),
+  'hat-captain': on(0.36),
+  'hat-flowers': { how: 'ring', depth: 0.3, snug: 1.0 },
+  'hat-frog': on(0.5, 1.02),
+  'hat-pirate': on(0.36),
+  'hat-top': on(0.3),
+  'hat-propeller': on(0.42, 1.03),
+  'hat-cowboy': on(0.36),
+  'hat-crown': { how: 'ring', depth: 0.22, snug: 1.0 },
+  'hat-mushroom': on(0.4, 1.05),
+  'hat-fish': perch(1.15),
+  'hat-sailor': on(0.34),
+  'hat-viking': on(0.46, 1.03),
+  'hat-chef': on(0.36),
+  'hat-duck': perch(0.8),
+  'hat-cone': on(0.36, 1.02),
+  'hat-cake': perch(0.8),
+  'hat-wizard': on(0.36),
+  'hat-party': perch(0.55, { lift: -0.06 }),
+  'hat-crab': perch(0.8),
+  'hat-bread': perch(0.9),
+  'hat-lampshade': on(0.42, 1.03),
+  'hat-shark': on(0.55, 1.02),
+  'hat-halo': perch(0.75, { lift: 0.05 }),
+};
+
+/** A hat's fit on a character, with that character's corrections applied. */
+export function hatFor(item: string, character: string): HatFit | null {
+  const f = HATS[item];
+  if (!f) return null;
+  return { ...f, ...(f.per?.[character] ?? {}) };
+}
+
+/** The skull of a character of the given height. */
+export function headOf(character: string, height: number): Head | null {
+  const h = HEADS[character];
+  if (!h) return null;
+  const k = height / 1.1;
+  return { y: h.y * k, z: h.z * k, rx: h.rx * k, ry: h.ry * k, rz: h.rz * k };
+}
+
+/** What a hat model is, measured: its size, where the head enters it, and its opening there. */
+export interface HatShape {
+  x: number;
+  y: number;
+  z: number;
+  /** Height of the band above the hat's lowest point. */
+  band: number;
+  /** Width of the opening at the band (the narrower way across), and its middle. */
+  open: number;
+  cx: number;
+  cz: number;
+}
+
+/** A cut through a model at one height: its outline as segments, [ax, az, bx, bz]. */
+export type Cut = [number, number, number, number][];
+
+/** How far out from (cx, cz) the nearest edge of a cut is, along a direction; Infinity if none. */
+function reach(cut: Cut, cx: number, cz: number, dx: number, dz: number): number {
+  let best = Infinity;
+  for (const [ax, az, bx, bz] of cut) {
+    // Solve centre + t*d = a + u*(b - a).
+    const ex = bx - ax;
+    const ez = bz - az;
+    const den = dx * ez - dz * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((ax - cx) * ez - (az - cz) * ex) / den;
+    const u = ((ax - cx) * dz - (az - cz) * dx) / den;
+    if (t > 1e-6 && u >= 0 && u <= 1) best = Math.min(best, t);
+  }
+  return best;
+}
+
+/**
+ * Measure a hat from cuts through it: `cut(k)` gives its outline at a fraction k of its height.
+ * Its crown at a height is the nearest outline out from the middle each way (a curled brim
+ * further out does not count). A brim shows as cuts near the bottom reaching much further than
+ * those above: the band is where the brim gives way to the crown.
+ */
+export function measureHat(size: { x: number; y: number; z: number }, cut: (k: number) => Cut): HatShape {
+  const rows: { k: number; w: number; cx: number; cz: number }[] = [];
+  for (let k = 0.03; k < 0.9; k += 0.03) {
+    const c = cut(k);
+    if (!c.length) continue;
+    const px = reach(c, 0, 0, 1, 0);
+    const nx = reach(c, 0, 0, -1, 0);
+    const pz = reach(c, 0, 0, 0, 1);
+    const nz = reach(c, 0, 0, 0, -1);
+    if (![px, nx, pz, nz].every(Number.isFinite)) continue;
+    rows.push({ k, w: Math.min(px + nx, pz + nz), cx: (px - nx) / 2, cz: (pz - nz) / 2 });
+  }
+  if (!rows.length) return { ...size, band: 0, open: Math.min(size.x, size.z), cx: 0, cz: 0 };
+  // The brim is the widest cut low down (a curled or drooping brim is widest a little way up);
+  // a brim is a step, not a taper: within a couple of cuts above it the hat gets much narrower.
+  const low = rows.filter((r) => r.k < 0.45);
+  const widest = low.reduce((best, r) => (r.w > best.w ? r : best), low[0] ?? rows[0]);
+  const from = rows.indexOf(widest);
+  const crownRow = rows.find((r, i) => i > from && r.k < 0.7 && r.w < widest.w * 0.8 && r.w < rows[Math.max(from, i - 2)].w * 0.84);
+  if (crownRow) {
+    const i = rows.indexOf(crownRow);
+    const above = rows[Math.min(rows.length - 1, i + 1)];
+    return { ...size, band: crownRow.k * size.y, open: Math.max(crownRow.w, above.w), cx: above.cx, cz: above.cz };
+  }
+  // No brim: the head goes in at the bottom, as wide as the hat is low down.
+  return { ...size, band: 0, open: widest.w, cx: widest.cx, cz: widest.cz };
+}
+
+/**
+ * Where a hat goes: the point in the character's frame for the hat's lowest point (centred on its
+ * opening), and its scale.
+ */
+export function placeHat(f: HatFit, head: Head, shape: HatShape): { x: number; y: number; z: number; scale: number } {
+  const band = f.band !== undefined ? f.band * shape.y : shape.band;
+  const open = f.open !== undefined ? f.open * Math.min(shape.x, shape.z) : shape.open;
+  const top = head.y + head.ry;
+  let scale: number;
+  let bandY: number;
+  if (f.how === 'on' || f.how === 'ring') {
+    // The band rests where the skull is as wide as the opening: depth down from the top.
+    const dy = head.ry * (1 - f.depth);
+    const across = 2 * head.rx * Math.sqrt(Math.max(0.05, 1 - (dy / head.ry) ** 2));
+    scale = (across * f.snug) / Math.max(open, 1e-3);
+    bandY = head.y + dy;
+  } else {
+    // Something sitting on the head: as wide as the skull times snug, resting a little into the top of it.
+    scale = (2 * head.rx * f.snug) / Math.max(Math.min(shape.x, shape.z), 1e-3);
+    bandY = top - head.ry * 0.08;
+  }
+  const y = bandY - (f.how === 'perch' ? 0 : band * scale) + (f.lift ?? 0) * head.ry * 2;
+  const z = head.z + (f.forward ?? 0) * head.rz * 2;
+  return { x: 0, y, z, scale };
+}
 
 const hat = (width: number, sink: number, more: Partial<Fit> = {}): Fit => ({ bone: 'head', place: 'crown', width, sink, lift: 0, forward: 0, tilt: 0, ...more });
 
 export const FITS: Record<string, Fit> = {
-  // For hats, the crown (measured from the model just above the brim) is fitted to the head's
-  // width where the hat sits; `sink` says where that is, from the eyes (0) to the top of the head
-  // (1). The frog's eyes are on top of its head, so hats sit further back on it.
-  'hat-bucket': hat(0.84, 0.52, { per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-straw': hat(0.86, 0.56, { per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-beanie': hat(0.84, 0.5, { per: { 'char-frog': FROG } }),
-  'hat-captain': hat(0.86, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } }, forward: 0.012 }),
-  'hat-flowers': hat(1.06, 0.58, { per: { 'char-frog': FROG } }),
-  'hat-frog': hat(0.88, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': FROG } }),
-  'hat-pirate': hat(0.95, 0.55, { turn: -Math.PI / 2, per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-top': hat(0.64, 0.74, { per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-propeller': hat(0.7, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': FROG }, forward: 0.012 }),
-  'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { ...FROG, sink: 1.05 } } }),
-  'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': FROG } }),
-  'hat-fish': hat(1.05, 0.74, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': FROG } }),
-  'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-viking': hat(0.85, 0.5, { turn: Math.PI / 2, per: { 'char-frog': { ...FROG, sink: 1.0, lift: 0.03 } } }),
-  'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': FROG } }),
+  // Hats are placed by HATS (above); these entries say only which bone they follow.
+  'hat-bucket': hat(1, 0.5),
+  'hat-straw': hat(1, 0.5),
+  'hat-beanie': hat(1, 0.5),
+  'hat-captain': hat(1, 0.5),
+  'hat-flowers': hat(1, 0.5),
+  'hat-frog': hat(1, 0.5),
+  'hat-pirate': hat(1, 0.5),
+  'hat-top': hat(1, 0.5),
+  'hat-propeller': hat(1, 0.5),
+  'hat-cowboy': hat(1, 0.5),
+  'hat-crown': hat(1, 0.5),
+  'hat-mushroom': hat(1, 0.5),
+  'hat-fish': hat(1, 0.5),
+  'hat-sailor': hat(1, 0.5),
+  'hat-viking': hat(1, 0.5),
+  'hat-chef': hat(1, 0.5),
+  'hat-duck': hat(1, 0.5),
+  'hat-cone': hat(1, 0.5),
+  'hat-cake': hat(1, 0.5),
+  'hat-wizard': hat(1, 0.5),
+  'hat-party': hat(1, 0.5),
+  'hat-crab': hat(1, 0.5),
+  'hat-bread': hat(1, 0.5),
+  'hat-lampshade': hat(1, 0.5),
+  'hat-shark': hat(1, 0.5),
+  'hat-halo': hat(1, 0.5),
   'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
   'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.18, forward: -0.05 } } },
   'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, per: { 'char-frog': { width: 1.06, lift: -0.035 }, 'char-raccoon': { width: 1.2, lift: -0.01 } } },

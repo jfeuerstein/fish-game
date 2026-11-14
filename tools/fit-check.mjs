@@ -13,7 +13,8 @@ import { launchBrowser } from './browser.mjs';
 
 const args = process.argv.slice(2);
 const charsArg = args.find((a, i) => args[i - 1] === '--chars');
-const [out = 'fit-check', ...rest] = args.filter((a, i) => a !== '--chars' && args[i - 1] !== '--chars');
+const socket = args.includes('--socket') ? '&socket=1' : '';
+const [out = 'fit-check', ...rest] = args.filter((a, i) => a !== '--chars' && args[i - 1] !== '--chars' && a !== '--socket');
 const only = rest;
 mkdirSync(out, { recursive: true });
 const ALL = ['char-otter', 'char-frog', 'char-raccoon'];
@@ -22,7 +23,7 @@ const server = await preview({ preview: { port: 0, host: '127.0.0.1' }, logLevel
 const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 260, height: 300 } });
 page.on('pageerror', (e) => console.error(`[page error] ${e.message}`));
-await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?title=0&fresh=1&mute=1&quality=low&hud=0&at=plaza&time=day&weather=clear`);
+await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?title=0&fresh=1&mute=1&quality=low&hud=0&at=plaza&time=day&weather=clear${socket}`);
 await page.waitForFunction(() => window.__cove?.ready, null, { timeout: 180000 });
 const items = only.length ? only : await page.evaluate(async () => Object.keys(await (await fetch('models/index.json')).json()).filter((k) => k.startsWith('hat-') || k.startsWith('x-')));
 const shots = {};
