@@ -16,8 +16,8 @@ describe('chests', () => {
     const n = 20000;
     let legend = 0;
     for (let i = 0; i < n; i++) if (openChest(CHESTS[0], r).rarity === 'legendary') legend++;
-    expect(legend / n).toBeGreaterThan(0.006);
-    expect(legend / n).toBeLessThan(0.016);
+    expect(legend / n).toBeGreaterThan(CHESTS[0].odds.legendary * 0.6);
+    expect(legend / n).toBeLessThan(CHESTS[0].odds.legendary * 1.4);
   });
   it('puts the winner where the strip stops', () => {
     const win = PRIZES[3];
