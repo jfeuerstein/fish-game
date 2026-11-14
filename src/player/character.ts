@@ -342,36 +342,57 @@ export class Character {
     return this.measured;
   }
 
-  /** A hat's crown: how wide the model is a little above the brim (a quarter to two fifths of the way up). */
-  private static crownWidth(obj: THREE.Object3D): number | undefined {
+  /**
+   * A hat's crown: how wide the model is a little above the brim, and where its middle is (a peak
+   * or flaps pull the bounding box off centre). The triangles are cut at a few heights, so a model
+   * with few vertices there still gives a true outline.
+   */
+  private static crown(obj: THREE.Object3D): { w: number; cx: number; cz: number } | undefined {
     obj.updateMatrixWorld(true);
     const inv = obj.matrixWorld.clone().invert();
-    const pts: THREE.Vector3[] = [];
+    const tris: THREE.Vector3[][] = [];
     obj.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;
       const pos = mesh.geometry.getAttribute('position');
+      const idx = mesh.geometry.getIndex();
       const toObj = inv.clone().multiply(mesh.matrixWorld);
-      for (let i = 0; i < pos.count; i++) pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(toObj));
+      const v = (i: number): THREE.Vector3 => new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(toObj);
+      const n = idx ? idx.count : pos.count;
+      for (let i = 0; i < n; i += 3) tris.push(idx ? [v(idx.getX(i)), v(idx.getX(i + 1)), v(idx.getX(i + 2))] : [v(i), v(i + 1), v(i + 2)]);
     });
-    if (!pts.length) return undefined;
+    if (!tris.length) return undefined;
     let lo = Infinity;
     let hi = -Infinity;
-    for (const p of pts) {
+    for (const t of tris) for (const p of t) {
       lo = Math.min(lo, p.y);
       hi = Math.max(hi, p.y);
     }
-    const band = pts.filter((p) => p.y > lo + (hi - lo) * 0.25 && p.y < lo + (hi - lo) * 0.42);
-    if (band.length < 4) return undefined;
-    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-    for (const p of band) {
-      x0 = Math.min(x0, p.x);
-      x1 = Math.max(x1, p.x);
-      z0 = Math.min(z0, p.z);
-      z1 = Math.max(z1, p.z);
+    let best: { w: number; cx: number; cz: number } | undefined;
+    for (const k of [0.3, 0.38, 0.46]) {
+      const y = lo + (hi - lo) * k;
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const t of tris) {
+        for (let e = 0; e < 3; e++) {
+          const a = t[e];
+          const b = t[(e + 1) % 3];
+          if ((a.y - y) * (b.y - y) > 0 || a.y === b.y) continue;
+          const u = (y - a.y) / (b.y - a.y);
+          const x = a.x + (b.x - a.x) * u;
+          const z = a.z + (b.z - a.z) * u;
+          x0 = Math.min(x0, x);
+          x1 = Math.max(x1, x);
+          z0 = Math.min(z0, z);
+          z1 = Math.max(z1, z);
+        }
+      }
+      if (!Number.isFinite(x0)) continue;
+      // The narrower way across: a peak, flaps or horns stick out the other way.
+      const w = Math.min(x1 - x0, z1 - z0);
+      // The slice nearest the head's size wins: the narrowest that is still a real crown.
+      if (!best || w < best.w) best = { w, cx: (x0 + x1) / 2, cz: (z0 + z1) / 2 };
     }
-    // The narrower way across: a peak or horns stick out the other way.
-    return Math.min(x1 - x0, z1 - z0);
+    return best;
   }
 
   /** Where a worn thing goes in the character's frame, as a matrix, worked out once. */
@@ -383,11 +404,17 @@ export class Character {
     const bone = fit.bone === 'head' ? rig.headBone : rig.chestBone;
     if (!bone) return null;
     const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
-    const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z, crown: fit.place === 'crown' ? Character.crownWidth(obj) : undefined });
+    const crown = fit.place === 'crown' ? Character.crown(obj) : undefined;
+    const wide = Math.max(size.x, size.z);
+    // Never trust a crown narrower than a third of the hat: something went wrong measuring it.
+    const cw = crown && crown.w > wide * 0.33 ? crown.w : undefined;
+    const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z, crown: cw });
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -p.tilt);
     if (p.turn) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.turn));
     if (p.backwards) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
-    const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.scale, p.scale, p.scale));
+    // Centre the crown itself, not the hat's bounding box, over the head.
+    const shift = crown && cw ? new THREE.Vector3(-crown.cx, 0, -crown.cz).multiplyScalar(p.scale).applyQuaternion(q) : new THREE.Vector3();
+    const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z).add(shift), q, new THREE.Vector3(p.scale, p.scale, p.scale));
     return { bone, local };
   }
 
