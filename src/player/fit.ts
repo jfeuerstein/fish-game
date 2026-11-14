@@ -43,16 +43,16 @@ export const FITS: Record<string, Fit> = {
   'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { forward: -0.08, sink: 0.95 } } }),
   'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-fish': hat(1.05, 0.86, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-fish': hat(1.05, 0.74, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-viking': hat(0.85, 0.5, { turn: Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'x-glasses': { bone: 'head', place: 'face', width: 0.7, sink: 0, lift: 0.04, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.12 } } },
-  'x-shades': { bone: 'head', place: 'face', width: 0.72, sink: 0, lift: 0.04, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.12 } } },
-  'x-scarf': { bone: 'chest', place: 'neck', width: 1.15, sink: 0.45, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.03, width: 1.1 } } },
+  'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.0, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.1, forward: -0.05 } } },
+  'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.0, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.1, forward: -0.05 } } },
+  'x-scarf': { bone: 'chest', place: 'neck', width: 1.5, sink: 0.45, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.02 } } },
   'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.02 } } },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
-  'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0 },
+  'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0, turn: -Math.PI / 2 },
 };
 
 /** The fit for an item on a character, with that character's corrections applied. */
@@ -139,8 +139,8 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
       break;
     }
     case 'neck': {
-      // A scarf round the neck, a little below the narrowest point, wrapping it.
-      y = m.neckY;
+      // A scarf round the neck at the collar, its ring's opening (about two thirds of its width) round the body there.
+      y = m.neckY - h * 0.035;
       const slice = sliceAt(m, y);
       width = slice.w * f.width;
       z = (slice.front + slice.back) / 2;
