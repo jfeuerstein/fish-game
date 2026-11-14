@@ -56,7 +56,7 @@ export const PATHS: readonly (readonly V2[])[] = [
   // Square to camp
   [[-9, 17], [-22, 19], [-33, 18]],
   // Camp north over the creek to the north-west shore
-  [[-40, 13], [-45, 0], [-49, -18], [-52, -32], [-55, -46]],
+  [[-40, 13], [-45, 0], [-49, -18], [-51.2, -28.6], [-50.2, -31], [-49.2, -33.4], [-55, -46]],
   // Square up to the lighthouse
   [[6, 3], [13, -9], [21, -22], [27, -31]],
   // Square down to the beach
@@ -66,6 +66,28 @@ export const PATH_WIDTH = 1.7;
 
 /** Where the beach is widest: the south shore. */
 export const BEACH_ANGLE = Math.PI / 2;
+
+/**
+ * The footbridge over the creek: it stands on the creek's surface (not its bed) and spans it the
+ * short way, with an arched deck that can be walked on (see floorAt).
+ */
+const BRIDGE_AT = { x: -50.2, z: -31.0 };
+const CREEK_DIR = Math.atan2(-3, -6);
+export const BRIDGE = {
+  ...BRIDGE_AT,
+  /** Turned so its walkway runs across the creek. */
+  yaw: -CREEK_DIR,
+  base: creekLevelAt(BRIDGE_AT.x, BRIDGE_AT.z) - 0.05,
+  /** The model is about 4.7 m long at scale 1: this reaches from bank to bank. */
+  scale: 1.7,
+  halfLen: 4.0,
+  halfWidth: 1.4,
+  rise: 0.85,
+} as const;
+
+function creekLevelAt(x: number, z: number): number {
+  return creekLevel(nearestOnLine(CREEK, x, z).t);
+}
 
 export type PropId = string;
 
@@ -112,7 +134,7 @@ export const PLACED: readonly Placed[] = [
   { id: 'log', x: -41.6, z: 19.5, yaw: Math.PI / 2 + 0.3 },
   { id: 'log', x: -34.6, z: 20, yaw: -Math.PI / 2 + 0.2 },
   { id: 'tent', x: -45, z: 23, yaw: 0.9 },
-  { id: 'bridge', x: -52.5, z: -32.2, yaw: -0.25 },
+  { id: 'bridge', x: BRIDGE.x, z: BRIDGE.z, yaw: BRIDGE.yaw, y: BRIDGE.base, scale: BRIDGE.scale },
   { id: 'buoy', x: 114, z: 2 },
   { id: 'buoy', x: 104, z: 36 },
   { id: 'buoy', x: -86, z: -10 },
@@ -156,8 +178,22 @@ export const FLOORS: readonly Floor[] = [
   { x0: PIER.head.x0, x1: PIER.head.x1, z0: PIER.head.z0, z1: PIER.head.z1, y: PIER.deck },
 ];
 
+/** The bridge's deck at a point, or null off it: low at each end, highest in the middle. */
+export function bridgeAt(x: number, z: number): number | null {
+  // Across the creek is perpendicular to its line.
+  const ax = -Math.sin(CREEK_DIR);
+  const az = Math.cos(CREEK_DIR);
+  const dx = x - BRIDGE.x;
+  const dz = z - BRIDGE.z;
+  const along = dx * ax + dz * az;
+  const across = dx * az - dz * ax;
+  if (Math.abs(along) > BRIDGE.halfLen || Math.abs(across) > BRIDGE.halfWidth) return null;
+  const k = along / BRIDGE.halfLen;
+  return BRIDGE.base + 0.25 + BRIDGE.rise * (1 - k * k);
+}
+
 export function floorAt(x: number, z: number): number | null {
-  let best: number | null = null;
+  let best: number | null = bridgeAt(x, z);
   for (const f of FLOORS) if (x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1) best = best === null ? f.y : Math.max(best, f.y);
   return best;
 }

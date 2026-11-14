@@ -60,3 +60,23 @@ describe('pier', () => {
         for (let z = f.z0 + 0.3; z < f.z1; z += 0.5) expect(tiles.some((t) => Math.abs(t.x - x) <= 1.51 && Math.abs(t.z - z) <= 1.51), `${x},${z}`).toBe(true);
   });
 });
+
+describe('bridge', () => {
+  it('can be walked across the creek, on a deck above the water', async () => {
+    const { BRIDGE, bridgeAt, creekLevel } = await import('./layout');
+    void creekLevel;
+    const dir = Math.atan2(-3, -6);
+    const ax = -Math.sin(dir);
+    const az = Math.cos(dir);
+    let prev = standHeight(field, BRIDGE.x - ax * 5, BRIDGE.z - az * 5);
+    for (let s = -5; s <= 5; s += 0.25) {
+      const x = BRIDGE.x + ax * s;
+      const z = BRIDGE.z + az * s;
+      expect(walkable(field, x, z), `at ${s}`).toBe(true);
+      const h = standHeight(field, x, z);
+      expect(h - prev, `step up at ${s}`).toBeLessThan(0.6);
+      prev = h;
+    }
+    expect(bridgeAt(BRIDGE.x, BRIDGE.z)!).toBeGreaterThan(BRIDGE.base + 0.4);
+  });
+});
