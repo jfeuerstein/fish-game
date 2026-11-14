@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { Colliders } from './colliders';
 import { Heightfield, waterAt } from './island';
-import { FLOWER_RULES, RULES, lilypads, scatter } from './scatter';
+import { FLOWER_RULES, RULES, lilypads, onBridge, scatter } from './scatter';
 
 const field = new Heightfield();
 
 describe('scatter', () => {
+  it('grows nothing through the bridge', () => {
+    for (const p of [...scatter(field), ...scatter(field, FLOWER_RULES, 2)]) expect(onBridge(p.x, p.z), `${p.id} at ${p.x},${p.z}`).toBe(false);
+  });
   it('grows plenty of trees, all on dry land, the same every time', () => {
     const a = scatter(field);
     const b = scatter(field);

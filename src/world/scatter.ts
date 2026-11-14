@@ -2,7 +2,7 @@
 // water, buildings and anywhere people gather. Pure.
 import { fbm, rng } from '../core/rng';
 import { Heightfield, pathDistance, waterAt } from './island';
-import { CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, type Placed, nearestOnLine } from './layout';
+import { BRIDGE, CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, type Placed, bridgeLocal, nearestOnLine } from './layout';
 
 /** Places kept clear of anything growing, as circles. */
 function clearings(): { x: number; z: number; r: number }[] {
@@ -17,6 +17,12 @@ function clearings(): { x: number; z: number; r: number }[] {
     if (!p.id.startsWith('tree')) out.push({ x: p.x, z: p.z, r: big });
   }
   return out;
+}
+
+/** The bridge's deck and the banks at its ends, with a margin: nothing grows through the planks. */
+export function onBridge(x: number, z: number): boolean {
+  const { along, across } = bridgeLocal(x, z);
+  return Math.abs(along) < BRIDGE.halfLen + 2.5 && Math.abs(across) < BRIDGE.halfWidth + 1;
 }
 
 export interface GrowRule {
@@ -85,6 +91,7 @@ export function scatter(field: Heightfield, rules: GrowRule[] = RULES, seed = 1)
       const x = (r() - 0.5) * field.half * 1.9;
       const z = (r() - 0.5) * field.half * 1.9;
       if (!pierClear(x, z)) continue;
+      if (onBridge(x, z)) continue;
       if (clear.some((c) => Math.hypot(x - c.x, z - c.z) < c.r)) continue;
       const s = spotAt(field, x, z);
       if (!rule.fits(s) || waterAt(field, x, z)) continue;
