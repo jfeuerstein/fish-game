@@ -1,0 +1,45 @@
+<!doctype html>
+<html><body style="margin:0;background:transparent">
+<canvas id="c" width="256" height="256"></canvas>
+<script type="module">
+// Renders one model at a time as a menu icon; tools/icons.mjs drives it.
+import * as THREE from 'three';
+import { loadIndex, model, fit } from '/src/assets/models.ts';
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xeef6ff, 0x8a7a6a, 1.6));
+const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+sun.position.set(2, 4, 3);
+scene.add(sun);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 100);
+await loadIndex();
+window.renderIcon = async (id) => {
+  for (const c of [...scene.children]) if (c.userData.icon) scene.remove(c);
+  let m = await model(id, 1);
+  if (!m) return null;
+  const long = id.startsWith('fish-') || id.startsWith('rod-');
+  if (long) m = fit(m, 1, true);
+  const holder = new THREE.Group();
+  holder.add(m);
+  holder.userData.icon = true;
+  // Fish and rods side on, everything else three-quarters.
+  holder.rotation.y = long ? 0 : -0.6;
+  if (id.startsWith('rod-')) holder.rotation.z = -0.9;
+  scene.add(holder);
+  holder.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(holder, true);
+  const size = box.getSize(new THREE.Vector3());
+  const centre = box.getCenter(new THREE.Vector3());
+  const r = size.length() / 2;
+  const dist = r / Math.sin((camera.fov * Math.PI) / 360) * 0.92;
+  const dir = new THREE.Vector3(0, long ? 0.35 : 0.55, 1).normalize();
+  camera.position.copy(centre).addScaledVector(dir, dist);
+  camera.lookAt(centre);
+  renderer.render(scene, camera);
+  return renderer.domElement.toDataURL('image/png');
+};
+window.ready = true;
+</script>
+</body></html>

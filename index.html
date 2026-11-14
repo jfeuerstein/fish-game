@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cove" />
+    <meta name="theme-color" content="#1d3b4f" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="art/icon-180.png" />
+    <link rel="icon" type="image/png" href="art/icon-192.png" />
+    <title>Driftwood Cove</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud" hidden></div>
+      <div id="title">
+        <div class="title-art"></div>
+        <div class="title-card">
+          <h1>Driftwood Cove</h1>
+          <p class="title-sub">a little island for fishing</p>
+          <div class="title-bar"><i id="load-bar"></i></div>
+          <button id="start" type="button" disabled>Loading…</button>
+        </div>
+      </div>
+      <div id="rotate">Turn your phone upright</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
