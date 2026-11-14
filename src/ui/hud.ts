@@ -234,6 +234,10 @@ export class Hud {
     }
     if (this.bubble.textContent !== text) this.bubble.textContent = text;
     this.bubble.hidden = false;
+    // Kept on the screen, whoever is speaking.
+    const w = this.root.clientWidth || 400;
+    x = Math.min(w - 120, Math.max(120, x));
+    y = Math.max(150, y);
     this.bubble.style.left = `${x}px`;
     this.bubble.style.top = `${y}px`;
   }

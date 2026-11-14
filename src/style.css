@@ -105,14 +105,31 @@ button {
 #title .title-art {
   position: absolute;
   inset: 0;
-  background: url('/art/title.webp') center 30% / cover no-repeat;
+  background: url('/art/title.webp') 38% 100% / cover no-repeat;
+}
+#title .title-name {
+  position: absolute;
+  top: calc(var(--top-clear) + 56px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(29, 95, 134, 0.55), 0 6px 18px rgba(20, 50, 80, 0.35);
+}
+#title .title-name h1 {
+  color: #fff;
+  font-size: 48px;
+}
+#title .title-name .title-sub {
+  color: #fff;
+  font-size: 19px;
 }
 #title .title-card {
   position: relative;
-  margin: 0 18px calc(var(--bottom-clear) + 18px);
-  padding: 18px 20px 20px;
-  border-radius: 26px;
-  background: rgba(255, 248, 236, 0.94);
+  margin: 0 28px calc(var(--bottom-clear) + 20px);
+  padding: 12px 14px 14px;
+  border-radius: 24px;
+  background: rgba(255, 248, 236, 0.82);
   box-shadow: 0 10px 30px rgba(10, 30, 50, 0.35);
   text-align: center;
 }
@@ -130,11 +147,11 @@ button {
   font-size: 16px;
 }
 #title .title-bar {
-  height: 8px;
+  height: 6px;
   border-radius: 8px;
   background: var(--paper-2);
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 #title .title-bar i {
   display: block;
@@ -257,7 +274,7 @@ button {
 
 .toasts {
   position: absolute;
-  top: calc(var(--top-clear) + 70px);
+  top: calc(var(--top-clear) + 84px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -661,9 +678,9 @@ button {
 }
 .tab {
   flex: none;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 18px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
   border: 0;
   background: var(--paper-2);
   font-size: 15px;

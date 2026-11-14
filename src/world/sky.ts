@@ -19,15 +19,15 @@ interface Moment {
 
 /** Hand-tuned moments of the day; the hours between are blended. */
 const MOMENTS: Moment[] = [
-  { hour: 0, top: '#0b1530', horizon: '#1f2f57', sun: '#8fa6ff', sunI: 0.35, hemiSky: '#46578f', hemiGround: '#1c2236', hemiI: 0.75, deep: '#0d2c4a', shallow: '#1f5f72' },
-  { hour: 4.8, top: '#14204a', horizon: '#3a3f73', sun: '#9aa9ff', sunI: 0.3, hemiSky: '#4d5a92', hemiGround: '#222638', hemiI: 0.75, deep: '#12324f', shallow: '#2a6476' },
+  { hour: 0, top: '#101d42', horizon: '#2b3d70', sun: '#a9bcff', sunI: 0.75, hemiSky: '#6f82c4', hemiGround: '#2c3352', hemiI: 1.25, deep: '#143a5e', shallow: '#2f7488' },
+  { hour: 4.8, top: '#18264f', horizon: '#46497f', sun: '#aab6ff', sunI: 0.7, hemiSky: '#7180bd', hemiGround: '#30344c', hemiI: 1.2, deep: '#183c5c', shallow: '#36717f' },
   { hour: 6.2, top: '#4f6fb3', horizon: '#f6b48a', sun: '#ffc08a', sunI: 1.1, hemiSky: '#9fb0dd', hemiGround: '#6d5a52', hemiI: 0.95, deep: '#2d6790', shallow: '#6ac2bf' },
   { hour: 8, top: '#5aa6e8', horizon: '#cfe8f5', sun: '#fff1d6', sunI: 1.9, hemiSky: '#c4e2ff', hemiGround: '#7f8f62', hemiI: 1.05, deep: '#1e73a3', shallow: '#56d1c6' },
   { hour: 12.5, top: '#3f97e6', horizon: '#c6e7fa', sun: '#fff8ea', sunI: 2.2, hemiSky: '#cfe8ff', hemiGround: '#869466', hemiI: 1.1, deep: '#1a6fa6', shallow: '#4fd6cb' },
   { hour: 16.5, top: '#4c96dd', horizon: '#e9e2c8', sun: '#ffe2b0', sunI: 2.0, hemiSky: '#cfe0f5', hemiGround: '#8a8a60', hemiI: 1.05, deep: '#1e6c9d', shallow: '#5acfc0' },
   { hour: 18.8, top: '#5d63a8', horizon: '#ff9e6e', sun: '#ff9c5c', sunI: 1.4, hemiSky: '#c3a6c9', hemiGround: '#6e5248', hemiI: 0.95, deep: '#30598a', shallow: '#78b3b0' },
-  { hour: 20.2, top: '#202a5c', horizon: '#7b5a8c', sun: '#a49bff', sunI: 0.45, hemiSky: '#5d5c99', hemiGround: '#2b2738', hemiI: 0.8, deep: '#16355a', shallow: '#335f74' },
-  { hour: 24, top: '#0b1530', horizon: '#1f2f57', sun: '#8fa6ff', sunI: 0.35, hemiSky: '#46578f', hemiGround: '#1c2236', hemiI: 0.75, deep: '#0d2c4a', shallow: '#1f5f72' },
+  { hour: 20.2, top: '#24306a', horizon: '#86649a', sun: '#b0a8ff', sunI: 0.75, hemiSky: '#7a7ab8', hemiGround: '#3a3448', hemiI: 1.2, deep: '#1b3d64', shallow: '#3d6f82' },
+  { hour: 24, top: '#101d42', horizon: '#2b3d70', sun: '#a9bcff', sunI: 0.75, hemiSky: '#6f82c4', hemiGround: '#2c3352', hemiI: 1.25, deep: '#143a5e', shallow: '#2f7488' },
 ];
 
 export interface Palette {

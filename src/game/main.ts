@@ -140,6 +140,7 @@ export class Game implements Session {
     this.player.place(at.x, at.z, at.yaw);
     this.player.onStep = (surface) => this.audio.play(surface === 'wood' ? 'stepwood' : surface === 'water' ? 'splashstep' : 'step', { volume: 0.18, rate: 0.9 + Math.random() * 0.2 });
     this.rig = new CameraRig(this.camera, this.world.field);
+    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(tree|shop|lighthouse|fishing-hut|cliff|tent|well|lamp-post)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
     if (this.cfg.zoom) this.rig.zoom = this.cfg.zoom;
     this.controls = new Controls(this.app);
@@ -200,6 +201,7 @@ export class Game implements Session {
     start.onclick = go;
     if (!this.cfg.title) go();
 
+    if (this.cfg.zoo) await this.zoo(this.cfg.zoo);
     this.ready = true;
     (window as unknown as Record<string, unknown>).__cove = this.api();
     this.renderer.setAnimationLoop(() => this.frame());
@@ -631,6 +633,25 @@ export class Game implements Session {
     this.audio.setMusic(this.rain > 0.5 ? 'rain' : night > 0.5 ? 'night' : 'day');
     const radio = this.placed.radioNear(p);
     this.audio.setVolumes({ sfx: this.save.settings.sfx, ambience: this.save.settings.ambience, music: Math.min(1, this.save.settings.music * (1 + radio * 1.2)) });
+  }
+
+  /** Models in rows on the square, to look them over (`zoo=fish`, `zoo=hat`, `zoo=all`). */
+  private async zoo(prefix: string): Promise<void> {
+    const { fit, model } = await import('../assets/models');
+    const index = (await (await fetch(`${import.meta.env.BASE_URL}models/index.json`)).json()) as Record<string, { h: number | null }>;
+    const ids = Object.keys(index).filter((id) => prefix === 'all' || id.startsWith(prefix)).sort();
+    const cols = 5;
+    await Promise.all(
+      ids.map(async (id, i) => {
+        const long = id.startsWith('fish-');
+        const m = await model(id, long ? undefined : Math.min(2, index[id].h ?? 1));
+        if (!m) return;
+        const holder = long ? fit(m, 1.1, true) : m;
+        holder.position.set(-5 + (i % cols) * 2.5, 2.25, 6 + Math.floor(i / cols) * 2.5);
+        this.scene.add(holder);
+      }),
+    );
+    this.rig.override = { pos: new THREE.Vector3(0, 2.4, 6 + Math.ceil(ids.length / cols) * 1.25), dist: 5 + ids.length * 0.3, pitch: 0.7 };
   }
 
   api(): Record<string, unknown> {

@@ -12,10 +12,17 @@ export class CameraRig {
   private target = new THREE.Vector3();
   private smoothed = new THREE.Vector3();
   private first = true;
+  /** The distance actually used, eased toward what is wanted. */
+  private held = 9;
   /** A place to look at instead of the player (the chalk board, the catch). */
   override: { pos: THREE.Vector3; dist: number; pitch: number } | null = null;
   /** A brief nudge, as when a fish strikes. */
   private shake = 0;
+  /** Things the camera should not end up behind (trees, buildings): it comes in closer instead. */
+  obstacles: THREE.Object3D[] = [];
+  private ray = new THREE.Raycaster();
+  private pulledIn = Infinity;
+  private checkClock = 0;
 
   constructor(readonly camera: THREE.PerspectiveCamera, private field: Heightfield) {}
 
@@ -48,7 +55,21 @@ export class CameraRig {
       this.first = false;
     }
     this.smoothed.lerp(this.target, 1 - Math.exp(-dt * (o ? 4 : 10)));
-    const dist = o ? o.dist : this.distance * this.zoom;
+    let dist = o ? o.dist : this.distance * this.zoom;
+    if (!o && this.obstacles.length) {
+      // Every few frames, look along the line from the player to the camera for anything in the way.
+      this.checkClock -= dt;
+      if (this.checkClock <= 0) {
+        this.checkClock = 0.12;
+        const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
+        this.ray.set(this.smoothed, dir);
+        this.ray.far = dist;
+        const hit = this.ray.intersectObjects(this.obstacles, false)[0];
+        this.pulledIn = hit ? Math.max(2.2, hit.distance - 0.6) : Infinity;
+      }
+    }
+    this.held += (Math.min(dist, this.pulledIn) - this.held) * (1 - Math.exp(-dt * (this.pulledIn < this.held ? 10 : 2)));
+    if (!o) dist = this.held;
     const pitch = o ? o.pitch : this.pitch;
     const cam = this.camera;
     const back = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(this.yaw) * Math.cos(pitch));
