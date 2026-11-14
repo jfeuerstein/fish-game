@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { fit, model } from '../assets/models';
 import * as P from './poses';
 import { Rig } from './rig';
+import { type Measure, fitFor, placeFor } from './fit';
 
 export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep';
 
@@ -61,7 +62,6 @@ export function alongY(root: THREE.Object3D, length: number): THREE.Object3D {
   return holder;
 }
 
-const tmp = new THREE.Vector3();
 
 export class Character {
   readonly group = new THREE.Group();
@@ -127,17 +127,66 @@ export class Character {
     const rig = this.rig!;
     const body = this.body!;
     this.group.updateMatrixWorld(true);
-    const reach = (dir: THREE.Vector3): number => {
-      let best = 0;
-      for (const k of [0.72, 0.78, 0.84]) {
-        const centre = this.group.position.clone().add(new THREE.Vector3(0, this.height * k, 0));
-        const hit = new THREE.Raycaster(centre.clone().addScaledVector(dir, 4), dir.clone().negate(), 0, 4).intersectObject(body, true)[0];
-        if (hit) best = Math.max(best, 4 - hit.distance);
+    const ray = new THREE.Raycaster();
+    const pixels = new Map<THREE.Texture, ImageData | null>();
+    /** The colour of the model where a ray hit it: from its texture, or its painted vertices. */
+    const colourAt = (hit: THREE.Intersection): [number, number, number] | null => {
+      const mesh = hit.object as THREE.Mesh;
+      const mat = mesh.material as THREE.MeshLambertMaterial;
+      if (mat.map && hit.uv) {
+        if (!pixels.has(mat.map)) {
+          const img = mat.map.image as CanvasImageSource & { width: number; height: number };
+          let data: ImageData | null = null;
+          try {
+            const c = document.createElement('canvas');
+            c.width = Math.min(512, img.width);
+            c.height = Math.min(512, img.height);
+            const g = c.getContext('2d')!;
+            g.drawImage(img, 0, 0, c.width, c.height);
+            data = g.getImageData(0, 0, c.width, c.height);
+          } catch {
+            data = null;
+          }
+          pixels.set(mat.map, data);
+        }
+        const d = pixels.get(mat.map);
+        if (!d) return null;
+        const u = ((hit.uv.x % 1) + 1) % 1;
+        const v = mat.map.flipY ? 1 - (((hit.uv.y % 1) + 1) % 1) : ((hit.uv.y % 1) + 1) % 1;
+        const i = (Math.floor(v * (d.height - 1)) * d.width + Math.floor(u * (d.width - 1))) * 4;
+        return [d.data[i] / 255, d.data[i + 1] / 255, d.data[i + 2] / 255];
       }
-      return best;
+      const col = mesh.geometry.getAttribute('color');
+      if (col && hit.face) return [col.getX(hit.face.a), col.getY(hit.face.a), col.getZ(hit.face.a)];
+      return null;
+    };
+    /**
+     * How face-like one side of the head looks: eyes are the darkest and brightest things on a
+     * character, and the back of a head has neither. A snout or beak also reaches further.
+     */
+    const score = (dir: THREE.Vector3): number => {
+      let s = 0;
+      let reach = 0;
+      const side = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
+      for (let ky = 0.6; ky <= 0.98; ky += 0.04) {
+        for (let kx = -0.18; kx <= 0.181; kx += 0.06) {
+          const centre = this.group.position.clone().add(new THREE.Vector3(0, this.height * ky, 0)).addScaledVector(side, this.height * kx);
+          ray.set(centre.clone().addScaledVector(dir, 4), dir.clone().negate());
+          ray.far = 4;
+          const hit = ray.intersectObject(body, true)[0];
+          if (!hit) continue;
+          reach = Math.max(reach, 4 - hit.distance);
+          const c = colourAt(hit);
+          if (!c) continue;
+          const l = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+          const sat = Math.max(...c) - Math.min(...c);
+          if (l < 0.16 || (l > 0.88 && sat < 0.1)) s++;
+        }
+      }
+      return s + reach * 2;
     };
     const f = rig.forwardWorld(1).setY(0).normalize();
-    const sign: 1 | -1 = reach(f) >= reach(f.clone().negate()) ? 1 : -1;
+    const sign: 1 | -1 = score(f) >= score(f.clone().negate()) ? 1 : -1;
     if (sign < 0) rig.flip();
     const front = rig.forwardWorld(1).setY(0).normalize();
     // Into the group's own frame, then turned to +z.
@@ -191,59 +240,135 @@ export class Character {
     this.group.parent?.add(m);
   }
 
-  /** Where each extra goes: which bone carries it, how high up the body, and on which side. */
-  private static readonly EXTRAS: Record<string, { bone: 'head' | 'chest'; at: number; side: 'front' | 'back' | 'around' | 'ear' }> = {
-    'x-glasses': { bone: 'head', at: 0.74, side: 'front' },
-    'x-shades': { bone: 'head', at: 0.74, side: 'front' },
-    'x-scarf': { bone: 'chest', at: 0.44, side: 'around' },
-    'x-bowtie': { bone: 'chest', at: 0.43, side: 'front' },
-    'x-backpack': { bone: 'chest', at: 0.42, side: 'back' },
-    'x-flower': { bone: 'head', at: 0.9, side: 'ear' },
-  };
+  /**
+   * The body, measured in its own frame in a neutral pose, by casting rays at it: where the
+   * top of the head is, how wide the head and neck are, where the face and back are.
+   */
+  private measured: Measure | null = null;
+  /** For each bone that carries things: from its neutral place back to the character's frame. */
+  private restInv = new Map<THREE.Bone, THREE.Matrix4>();
 
-  /** How far the body's surface is from its middle, at a height, looking from a direction (by casting a ray at it). */
-  private surface(height: number, dir: THREE.Vector3): number {
-    if (!this.body) return 0.25;
-    const centre = this.group.position.clone().add(new THREE.Vector3(0, height, 0));
-    const ray = new THREE.Raycaster(centre.clone().addScaledVector(dir, 3), dir.clone().negate(), 0, 3);
-    const hit = ray.intersectObject(this.body, true)[0];
-    return hit ? 3 - hit.distance : 0.25;
+  private measure(): Measure | null {
+    const rig = this.rig;
+    const body = this.body;
+    if (!rig?.ok || !body) return null;
+    if (this.measured) return this.measured;
+    rig.apply(P.neutral());
+    body.position.y = 0;
+    this.group.updateMatrixWorld(true);
+    const toWorld = this.group.matrixWorld;
+    const toLocal = toWorld.clone().invert();
+    const ray = new THREE.Raycaster();
+    const h = this.height;
+    /** How far along an axis the body reaches from a line through the middle, at a height. */
+    const reach = (y: number, dir: THREE.Vector3, along = new THREE.Vector3()): number | null => {
+      const from = new THREE.Vector3(along.x, y, along.z).addScaledVector(dir, 3).applyMatrix4(toWorld);
+      const d = dir.clone().negate().transformDirection(toWorld);
+      ray.set(from, d);
+      ray.far = 4;
+      const hit = ray.intersectObject(body, true)[0];
+      return hit ? hit.point.clone().applyMatrix4(toLocal).dot(dir) : null;
+    };
+    const X = new THREE.Vector3(1, 0, 0);
+    const Z = new THREE.Vector3(0, 0, 1);
+    // The top of the head: the highest point near the middle.
+    let top = 0;
+    let topZ = 0;
+    for (const z of [-0.08, -0.04, 0, 0.04, 0.08].map((k) => k * h)) {
+      const from = new THREE.Vector3(0, h * 2, z).applyMatrix4(toWorld);
+      ray.set(from, new THREE.Vector3(0, -1, 0).transformDirection(toWorld));
+      ray.far = h * 2;
+      const hit = ray.intersectObject(body, true)[0];
+      if (hit) {
+        const p = hit.point.clone().applyMatrix4(toLocal);
+        if (p.y > top) {
+          top = p.y;
+          topZ = z;
+        }
+      }
+    }
+    if (!top) top = h * 0.98;
+    const width = (y: number): number => (reach(y, X) ?? h * 0.2) + (reach(y, X.clone().negate()) ?? h * 0.2);
+    const front = (y: number): number => reach(y, Z) ?? h * 0.2;
+    const back = (y: number): number => -(reach(y, Z.clone().negate()) ?? h * 0.2);
+    // The head: from the top, its widest point in the top third of the body is the brow.
+    let headW = 0;
+    let browY = top - h * 0.18;
+    for (let y = top - h * 0.06; y > top - h * 0.38; y -= h * 0.02) {
+      const w = width(y);
+      if (w > headW) {
+        headW = w;
+        browY = y;
+      }
+    }
+    const eyeY = Math.min(browY, top - h * 0.2);
+    // The neck: the narrowest place below the head and above the shoulders, or where the head ends.
+    let neckY = top - h * 0.48;
+    let neckW = Infinity;
+    for (let y = browY - h * 0.1; y > h * 0.3; y -= h * 0.02) {
+      const w = width(y);
+      if (w < neckW - 0.002) {
+        neckW = w;
+        neckY = y;
+      }
+    }
+    if (!Number.isFinite(neckW)) neckW = headW * 0.8;
+    const backY = Math.max(h * 0.3, neckY - h * 0.16);
+    this.measured = {
+      height: h,
+      top,
+      headZ: (front(browY) + back(browY)) / 2 || topZ,
+      headW,
+      eyeY,
+      faceZ: front(eyeY),
+      neckY,
+      neckW: Math.max(neckW, headW * 0.6),
+      neckFront: front(neckY),
+      chestY: neckY - h * 0.05,
+      chestFront: front(neckY - h * 0.05),
+      backY,
+      backZ: back(backY),
+      backW: width(backY),
+      earY: top - h * 0.08,
+      earX: -(reach(top - h * 0.08, X.clone().negate()) ?? headW / 2) * 0.85,
+    };
+    // Where the bones are in this pose, so things worn follow them from here.
+    for (const bone of [rig.headBone, rig.chestBone]) {
+      if (bone) this.restInv.set(bone, toLocal.clone().multiply(bone.matrixWorld).invert());
+    }
+    return this.measured;
   }
 
-  private placeExtra(fwd: THREE.Vector3, up: THREE.Vector3, right: THREE.Vector3): void {
-    if (!this.extra || !this.extraId) return;
-    const spec = Character.EXTRAS[this.extraId];
-    const bone = spec && (spec.bone === 'head' ? this.rig?.headBone : this.rig?.chestBone);
-    const h = this.height;
-    if (!spec || !bone) {
-      this.extra.position.copy(this.group.position).addScaledVector(up, h * 0.5);
-      return;
+  /** Where a worn thing goes in the character's frame, as a matrix, worked out once. */
+  private fitMatrix(obj: THREE.Object3D, id: string): { bone: THREE.Bone; local: THREE.Matrix4 } | null {
+    const fit = fitFor(id, this.id);
+    const m = this.measure();
+    const rig = this.rig;
+    if (!fit || !m || !rig) return null;
+    const bone = fit.bone === 'head' ? rig.headBone : rig.chestBone;
+    if (!bone) return null;
+    const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
+    const p = placeFor(fit, m, size);
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -p.tilt);
+    if (p.backwards) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
+    const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.scale, p.scale, p.scale));
+    return { bone, local };
+  }
+
+  /** Put a worn thing where it goes, following its bone. */
+  private wear(obj: THREE.Object3D | null, id: string | null): void {
+    if (!obj || !id) return;
+    if (!obj.userData.fit) {
+      const f = this.fitMatrix(obj, id);
+      if (!f) return;
+      obj.userData.fit = f;
+      obj.matrixAutoUpdate = false;
     }
-    const q = bone.getWorldQuaternion(new THREE.Quaternion());
-    const bp = bone.getWorldPosition(new THREE.Vector3());
-    if (!this.extra.userData.offset) {
-      // Measured once, standing: the point on the body's surface where it goes.
-      const height = h * spec.at;
-      const at = this.group.position.clone().addScaledVector(up, height);
-      let turn = new THREE.Quaternion();
-      if (spec.side === 'front') at.addScaledVector(fwd, this.surface(height, fwd) + 0.01);
-      else if (spec.side === 'back') {
-        at.addScaledVector(fwd, -this.surface(height, fwd.clone().negate()) - 0.05);
-        turn = new THREE.Quaternion().setFromAxisAngle(up, Math.PI);
-      } else if (spec.side === 'ear') at.addScaledVector(right, -this.surface(height, right.clone().negate()) * 0.8).addScaledVector(fwd, 0.02);
-      else at.addScaledVector(up, -0.06);
-      // Sized to the body: glasses as wide as the face, a scarf round the neck.
-      const across = this.surface(height, right) + this.surface(height, right.clone().negate());
-      const size = (this.extra.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
-      const want = Math.min(h * 0.6, spec.side === 'around' ? across * 1.1 : spec.side === 'front' && spec.bone === 'head' ? across * 0.85 : spec.side === 'back' ? across * 0.7 : across * 0.3);
-      this.extra.userData.scale = want / Math.max(size.x, size.z, 0.01);
-      const inv = q.clone().invert();
-      this.extra.userData.offset = at.sub(bp).applyQuaternion(inv);
-      this.extra.userData.turn = inv.multiply(this.group.quaternion.clone().multiply(turn));
-    }
-    this.extra.position.copy(bp).add((this.extra.userData.offset as THREE.Vector3).clone().applyQuaternion(q));
-    this.extra.quaternion.copy(q).multiply(this.extra.userData.turn as THREE.Quaternion);
-    this.extra.scale.setScalar(this.extra.userData.scale as number);
+    const { bone, local } = obj.userData.fit as { bone: THREE.Bone; local: THREE.Matrix4 };
+    const restInv = this.restInv.get(bone);
+    if (!restInv) return;
+    obj.matrix.copy(bone.matrixWorld).multiply(restInv).multiply(local);
+    obj.matrixWorldNeedsUpdate = true;
   }
 
   /** Something held in the hands: a ukulele, or the fish just caught. */
@@ -344,26 +469,12 @@ export class Character {
       this.rod.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       this.rodTip.copy(this.handPos).addScaledVector(dir, this.rodLen);
     } else this.rodTip.copy(this.handPos).addScaledVector(up, 1);
-    if (this.hat && this.rig?.headBone) {
-      // On top of the head, following its nods.
-      const head = this.rig.headBone;
-      head.getWorldPosition(tmp);
-      const q = head.getWorldQuaternion(new THREE.Quaternion());
-      if (!this.hat.userData.offset) {
-        // Measured once, in the pose the character is standing in: from the head bone to the top of the head.
-        const top = base.clone().addScaledVector(up, h * 0.86);
-        const inv = q.clone().invert();
-        this.hat.userData.offset = top.sub(tmp).applyQuaternion(inv);
-        this.hat.userData.turn = inv.multiply(this.group.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(up, 0)));
-      }
-      this.hat.position.copy(tmp).add((this.hat.userData.offset as THREE.Vector3).clone().applyQuaternion(q));
-      this.hat.quaternion.copy(q).multiply(this.hat.userData.turn as THREE.Quaternion);
-      this.hat.scale.setScalar(h / 1.1);
-    } else if (this.hat) {
+    if (this.hat && this.rig?.ok) this.wear(this.hat, this.hatId);
+    else if (this.hat) {
       this.hat.position.copy(base).addScaledVector(up, h * 0.86);
       this.hat.quaternion.copy(this.group.quaternion);
     }
-    this.placeExtra(fwd, up, right);
+    if (this.extra && this.rig?.ok) this.wear(this.extra, this.extraId);
     if (this.held) {
       const l = this.rig?.handL?.getWorldPosition(new THREE.Vector3()) ?? this.handPos;
       const mid = this.handPos.clone().add(l).multiplyScalar(0.5);
