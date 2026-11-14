@@ -135,10 +135,11 @@ def hat_sailor(m):
 
 def hat_viking(m):
     m.sphere(lambda c: hexrgb('#b9c2cc') if c.z > 0.08 else hexrgb('#8a6a3a'), deform=lambda p: (p[0] * 0.44, p[1] * 0.44, max(p[2], 0) * 0.46), seg=12, rings=8)
+    m.cylinder('#8a6a3a', matrix=T(0, 0, 0.04), seg=12, r=0.45, depth=0.08)
+    # Horns: two solid curved cones, out to the sides and up, joined to the helmet.
     for s in (-1, 1):
-        for k in range(4):
-            r = 0.09 - k * 0.02
-            m.sphere('#f3ead2', matrix=T(0, s * (0.42 + k * 0.08), 0.2 + k * 0.1 + k * k * 0.02), r=r, seg=6, rings=4)
+        m.cone('#f3ead2', matrix=T(0, s * 0.52, 0.3) @ R('X', -62 * s), seg=8, r1=0.1, r2=0.05, depth=0.26)
+        m.cone('#f3ead2', matrix=T(0, s * 0.68, 0.5) @ R('X', -25 * s), seg=8, r1=0.055, r2=0.0, depth=0.24)
 
 
 def hat_chef(m):

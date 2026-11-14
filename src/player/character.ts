@@ -404,7 +404,7 @@ export class Character {
     const bone = fit.bone === 'head' ? rig.headBone : rig.chestBone;
     if (!bone) return null;
     const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
-    const crown = fit.place === 'crown' ? Character.crown(obj) : undefined;
+    const crown = fit.place === 'crown' && !fit.whole ? Character.crown(obj) : undefined;
     const wide = Math.max(size.x, size.z);
     // Never trust a crown narrower than a third of the hat: something went wrong measuring it.
     const cw = crown && crown.w > wide * 0.33 ? crown.w : undefined;
