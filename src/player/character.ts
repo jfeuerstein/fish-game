@@ -313,6 +313,15 @@ export class Character {
       }
     }
     if (!Number.isFinite(neckW)) neckW = headW * 0.8;
+    // The head bone starts where the neck is: a better guide than the narrowest slice, which on a
+    // round-faced character can be the chin.
+    if (rig.headBone) {
+      const at = rig.headBone.getWorldPosition(new THREE.Vector3()).applyMatrix4(toLocal);
+      if (at.y > h * 0.3 && at.y < browY) {
+        neckY = at.y;
+        neckW = width(neckY);
+      }
+    }
     const backY = Math.max(h * 0.3, neckY - h * 0.16);
     const profile: Measure['profile'] = [];
     for (let y = Math.max(h * 0.25, neckY - h * 0.1); y <= top; y += h * 0.02) profile.push({ y, w: width(y), front: front(y), back: back(y) });

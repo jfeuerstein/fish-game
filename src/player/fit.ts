@@ -47,8 +47,8 @@ export const FITS: Record<string, Fit> = {
   'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-viking': hat(0.85, 0.5, { turn: Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'x-glasses': { bone: 'head', place: 'face', width: 0.7, sink: 0, lift: 0, forward: 0, tilt: 0 },
-  'x-shades': { bone: 'head', place: 'face', width: 0.72, sink: 0, lift: 0, forward: 0, tilt: 0 },
+  'x-glasses': { bone: 'head', place: 'face', width: 0.7, sink: 0, lift: 0.04, forward: 0, tilt: 0 },
+  'x-shades': { bone: 'head', place: 'face', width: 0.72, sink: 0, lift: 0.04, forward: 0, tilt: 0 },
   'x-scarf': { bone: 'chest', place: 'neck', width: 1.25, sink: 0.45, lift: 0, forward: 0, tilt: 0 },
   'x-bowtie': { bone: 'chest', place: 'chest', width: 0.38, sink: 0, lift: 0, forward: 0, tilt: 0 },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
@@ -140,7 +140,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
     }
     case 'neck': {
       // A scarf round the neck, a little below the narrowest point, wrapping it.
-      y = m.neckY - h * 0.03;
+      y = m.neckY;
       const slice = sliceAt(m, y);
       width = slice.w * f.width;
       z = (slice.front + slice.back) / 2;
@@ -149,7 +149,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
     }
     case 'chest': {
       // A bow tie at the collar.
-      y = m.neckY - h * 0.07;
+      y = m.neckY - h * 0.05;
       const slice = sliceAt(m, y);
       width = slice.w * f.width;
       z = slice.front + deepOf(width) / 2 - 0.005;
