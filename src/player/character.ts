@@ -314,6 +314,8 @@ export class Character {
     }
     if (!Number.isFinite(neckW)) neckW = headW * 0.8;
     const backY = Math.max(h * 0.3, neckY - h * 0.16);
+    const profile: Measure['profile'] = [];
+    for (let y = Math.max(h * 0.25, neckY - h * 0.1); y <= top; y += h * 0.02) profile.push({ y, w: width(y), front: front(y), back: back(y) });
     this.measured = {
       height: h,
       top,
@@ -331,12 +333,45 @@ export class Character {
       backW: width(backY),
       earY: top - h * 0.08,
       earX: -(reach(top - h * 0.08, X.clone().negate()) ?? headW / 2) * 0.85,
+      profile,
     };
     // Where the bones are in this pose, so things worn follow them from here.
     for (const bone of [rig.headBone, rig.chestBone]) {
       if (bone) this.restInv.set(bone, toLocal.clone().multiply(bone.matrixWorld).invert());
     }
     return this.measured;
+  }
+
+  /** A hat's crown: how wide the model is a little above the brim (a quarter to two fifths of the way up). */
+  private static crownWidth(obj: THREE.Object3D): number | undefined {
+    obj.updateMatrixWorld(true);
+    const inv = obj.matrixWorld.clone().invert();
+    const pts: THREE.Vector3[] = [];
+    obj.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const pos = mesh.geometry.getAttribute('position');
+      const toObj = inv.clone().multiply(mesh.matrixWorld);
+      for (let i = 0; i < pos.count; i++) pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(toObj));
+    });
+    if (!pts.length) return undefined;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const p of pts) {
+      lo = Math.min(lo, p.y);
+      hi = Math.max(hi, p.y);
+    }
+    const band = pts.filter((p) => p.y > lo + (hi - lo) * 0.25 && p.y < lo + (hi - lo) * 0.42);
+    if (band.length < 4) return undefined;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const p of band) {
+      x0 = Math.min(x0, p.x);
+      x1 = Math.max(x1, p.x);
+      z0 = Math.min(z0, p.z);
+      z1 = Math.max(z1, p.z);
+    }
+    // The narrower way across: a peak or horns stick out the other way.
+    return Math.min(x1 - x0, z1 - z0);
   }
 
   /** Where a worn thing goes in the character's frame, as a matrix, worked out once. */
@@ -348,7 +383,7 @@ export class Character {
     const bone = fit.bone === 'head' ? rig.headBone : rig.chestBone;
     if (!bone) return null;
     const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
-    const p = placeFor(fit, m, size);
+    const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z, crown: fit.place === 'crown' ? Character.crownWidth(obj) : undefined });
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -p.tilt);
     if (p.backwards) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
     const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.scale, p.scale, p.scale));

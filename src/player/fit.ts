@@ -24,25 +24,25 @@ export interface Fit {
 const hat = (width: number, sink: number, more: Partial<Fit> = {}): Fit => ({ bone: 'head', place: 'crown', width, sink, lift: 0, forward: 0, tilt: 0, ...more });
 
 export const FITS: Record<string, Fit> = {
-  // Widths are of the whole hat, brim and all, against the head's width: a wide brim needs a big
-  // number for the crown to fit the head. The frog's eyes are on top of its head, so hats sit
-  // further back on it.
-  'hat-bucket': hat(1.45, 0.6, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-straw': hat(1.9, 0.45, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-beanie': hat(1.08, 0.58, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-captain': hat(1.25, 0.5, { forward: 0.02, per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-flowers': hat(1.2, 0.55, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-frog': hat(1.08, 0.5, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-pirate': hat(1.45, 0.5, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-top': hat(1.3, 0.18, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-propeller': hat(1.15, 0.5, { forward: 0.02, per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-cowboy': hat(1.8, 0.4, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-crown': hat(0.78, 0.28, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-mushroom': hat(1.35, 0.45, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-fish': hat(1.1, 0.25, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-sailor': hat(1.25, 0.38, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-viking': hat(1.7, 0.5, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
-  'hat-chef': hat(1.0, 0.22, { per: { 'char-frog': { forward: -0.05, lift: 0.02 } } }),
+  // For hats, the crown (measured from the model just above the brim) is fitted to the head's
+  // width where the hat sits; `sink` says where that is, from the eyes (0) to the top of the head
+  // (1). The frog's eyes are on top of its head, so hats sit further back on it.
+  'hat-bucket': hat(0.94, 0.52, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-straw': hat(0.94, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-beanie': hat(0.96, 0.44, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-captain': hat(0.94, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
+  'hat-flowers': hat(1.0, 0.66, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-frog': hat(0.96, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-pirate': hat(0.95, 0.55, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-top': hat(0.84, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-propeller': hat(0.96, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
+  'hat-cowboy': hat(0.94, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-crown': hat(0.8, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-fish': hat(0.92, 0.86, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-sailor': hat(0.94, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-viking': hat(0.96, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-chef': hat(0.92, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'x-glasses': { bone: 'head', place: 'face', width: 0.82, sink: 0, lift: 0, forward: 0.005, tilt: 0 },
   'x-shades': { bone: 'head', place: 'face', width: 0.84, sink: 0, lift: 0, forward: 0.005, tilt: 0 },
   'x-scarf': { bone: 'chest', place: 'neck', width: 1.08, sink: 0.4, lift: 0, forward: 0, tilt: 0 },
@@ -82,6 +82,24 @@ export interface Measure {
   /** The side of the head, for a flower behind the ear. */
   earY: number;
   earX: number;
+  /** The head and body, slice by slice from the neck up: width, and front and back. */
+  profile: { y: number; w: number; front: number; back: number }[];
+}
+
+/** The body's slice at a height, read between the measured ones. */
+export function sliceAt(m: Measure, y: number): { w: number; front: number; back: number } {
+  const p = m.profile;
+  if (!p.length) return { w: m.headW, front: m.faceZ, back: m.faceZ - m.headW };
+  if (y <= p[0].y) return p[0];
+  for (let i = 1; i < p.length; i++) {
+    if (p[i].y >= y) {
+      const a = p[i - 1];
+      const b = p[i];
+      const t = (y - a.y) / (b.y - a.y || 1);
+      return { w: a.w + (b.w - a.w) * t, front: a.front + (b.front - a.front) * t, back: a.back + (b.back - a.back) * t };
+    }
+  }
+  return p[p.length - 1];
 }
 
 /**
@@ -89,7 +107,7 @@ export interface Measure {
  * (its lowest point, centred, which is how models are made to stand), the scale for a model of
  * the given size, and whether it faces backwards.
  */
-export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: number }): { x: number; y: number; z: number; scale: number; tilt: number; backwards: boolean } {
+export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: number; crown?: number }): { x: number; y: number; z: number; scale: number; tilt: number; backwards: boolean } {
   const wide = Math.max(size.x, size.z, 0.001);
   const h = m.height;
   let width: number;
@@ -98,11 +116,14 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
   let z: number;
   let backwards = false;
   switch (f.place) {
-    case 'crown':
-      width = m.headW * f.width;
-      y = m.top;
-      z = m.headZ;
+    case 'crown': {
+      // Where the hat's bottom sits, between the eyes and the top of the head, and how wide the head is there.
+      y = m.eyeY + (m.top - m.eyeY) * f.sink;
+      const slice = sliceAt(m, y);
+      width = slice.w * f.width * (size.crown ? wide / size.crown : 1);
+      z = (slice.front + slice.back) / 2;
       break;
+    }
     case 'face':
       width = m.headW * f.width;
       y = m.eyeY;
@@ -139,6 +160,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
   if (f.place === 'back') z -= deep / 2;
   if (f.place === 'face' || f.place === 'chest' || f.place === 'ear') y -= tall / 2;
   else if (f.place === 'back') y -= tall * 0.55;
-  else y -= tall * f.sink;
+  else if (f.place === 'neck') y -= tall * f.sink;
+  else if (f.place === 'crown') y -= tall * 0.04;
   return { x, y: y + f.lift * h, z: z + f.forward * h * (backwards ? -1 : 1), scale, tilt: f.tilt, backwards };
 }
