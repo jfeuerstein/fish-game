@@ -1,9 +1,9 @@
-// Fanfare for a win: confetti, a shower of coins, a flash and a shake, light rays behind a big
+// Fanfare for a win: confetti, a shower of pearls, a flash and a shake, light rays behind a big
 // stamped headline, and a little brass band played by the synth. Scaled to how grand the win is;
 // with reduced motion it keeps to the headline and the sound.
 import type { Audio } from '../audio/audio';
 import type { Grandness } from '../game/arcade';
-import { el, icon } from './hud';
+import { el } from './hud';
 
 const CONFETTI = ['#d65a3c', '#ecc77d', '#c8963e', '#2c6b78', '#7cc2c6', '#f4eee3', '#7a5aa6', '#8cc882'];
 const quiet = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,11 +25,9 @@ interface Bit {
 export class Fanfare {
   private canvas: HTMLCanvasElement | null = null;
   private bits: Bit[] = [];
-  private coinImg = new Image();
   private running = false;
 
   constructor(private app: HTMLElement, private audio: Audio) {
-    this.coinImg.src = icon('coin');
   }
 
   /** Celebrate a win of a given grandness, with a headline and a line under it. */
@@ -79,7 +77,7 @@ export class Fanfare {
     this.go();
   }
 
-  /** Coins falling from the top of the screen. */
+  /** Pearls falling from the top of the screen. */
   rain(n: number): void {
     const W = this.app.clientWidth;
     for (let i = 0; i < n; i++) {
@@ -152,9 +150,16 @@ export class Fanfare {
         ctx.translate(b.x, b.y);
         ctx.rotate(b.r);
         if (b.coin) {
-          // A coin turning as it falls: squash it along one axis.
-          ctx.scale(Math.abs(Math.cos(b.r * 1.7)) * 0.8 + 0.2, 1);
-          ctx.drawImage(this.coinImg, -b.w / 2, -b.h / 2, b.w, b.h);
+          // A pearl falling: a soft round with a sheen (prizes are things, not coins).
+          const r = b.w / 2.6;
+          const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r);
+          g.addColorStop(0, '#ffffff');
+          g.addColorStop(0.45, '#f1e8ff');
+          g.addColorStop(1, '#a690d8');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fill();
         } else {
           ctx.scale(1, Math.cos(b.r * 2.3));
           ctx.fillStyle = b.c;

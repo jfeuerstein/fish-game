@@ -70,10 +70,13 @@ deploys to GitHub Pages.
   and every game there pays out a cosmetic, never coins: a game decides only how rare the prize is,
   and `pickPrize` chooses it (what is not owned yet is three times as likely; a duplicate gives
   pearls back). The Gull Wheel (a CS-style strip: bet on shell, crab or the one gull for an
-  uncommon, rare or legendary prize), the Bait Bandit slots (three alike win that rarity, two alike
-  one step down), Flying Fish (a crash game: the prize tier climbs with the multiplier; cash out
-  before the gull snatches it), the chests and the scratch tickets (`tickets.ts`). Prizes are won
-  the moment a game is paid for, so closing the game mid-spin loses nothing. `showPrize` in
+  uncommon, rare or legendary prize), the Bait Bandit slots (two alike win that symbol's rarity,
+  three alike one rarer), Flying Fish (a crash game: the prize tier climbs with the multiplier; cash
+  out before the gull snatches it), the chests and the scratch tickets (`tickets.ts`). The prize
+  pool (`PRIZES`) holds only things never sold for coins (`prize` in `economy.ts`), and a test
+  holds every way of playing to a similar worth per pearl and no cheap road to a legendary. Prizes
+  are won the moment a game is paid for (Flying Fish: the moment it is cashed out), so closing the
+  game mid-spin loses nothing. `showPrize` in
   `src/ui/chests.ts` is the card every game shows; `src/ui/fanfare.ts` celebrates by rarity.
   Coins are only for Gus's shop.
 - **Sounds from patch.gg**: `tools/assets/get-patch-sounds.mjs` fetches Kenney's CC0 casino

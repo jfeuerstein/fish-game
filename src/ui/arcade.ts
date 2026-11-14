@@ -168,7 +168,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
   // ---------- The Bait Bandit ----------
   const CELL = 84;
   function slots(body: HTMLElement): void {
-    body.append(el('p', 'casino-blurb', `Three alike win a prize that rare; two alike, one a step down. Three pearls give three back. ${SLOTS_COST} pearl a pull.`));
+    body.append(el('p', 'casino-blurb', `Two alike win a prize that rare; three alike, one rarer still. Three pearls give three back. ${SLOTS_COST} pearl a pull.`));
     const machine = el('div', 'slots');
     const reels: HTMLElement[] = [];
     for (let i = 0; i < 3; i++) {
@@ -189,15 +189,19 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     body.append(out);
     const table = el('div', 'paytable');
     table.innerHTML =
-      (['crown', 'gold', 'fish', 'bobber', 'worm'] as Reel[]).map((k) => `<div><span>${`<img src="${icon(REEL_PIC[k])}" alt="">`.repeat(3)}</span>${tier(REEL_PRIZE[k]!)}</div>`).join('') +
+      (['crown', 'gold', 'fish', 'bobber', 'worm'] as Reel[]).map((k) => `<div><span>${`<img src="${icon(REEL_PIC[k])}" alt="">`.repeat(2)}</span>${tier(k === 'crown' ? 'epic' : REEL_PRIZE[k]!)}</div>`).join('') +
       `<div><span>${`<img src="${icon('token')}" alt="">`.repeat(3)}</span><b>3 pearls</b></div>`;
-    body.append(el('div', 'section', 'Three alike win'), table);
+    body.append(el('div', 'section', 'Two alike win'), table);
 
     pull.onclick = () => {
       if (busy || !pay(SLOTS_COST)) return;
       busy = true;
       pull.disabled = true;
       const res = spinSlots(rng((Date.now() ^ (save.arcade.played * 40503)) >>> 0));
+      // Won now, so closing the game mid-spin loses nothing; the reels only show it.
+      const got = res.prize ? winPrize(s, res.prize) : null;
+      save.tokens += res.pearls;
+      s.changed();
       s.audio.play('cast', { volume: 0.4, rate: 0.8 });
       out.className = 'casino-out';
       out.textContent = '';
@@ -247,7 +251,11 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         }
         out.className = `casino-out ${res.prize || res.pearls ? 'good' : 'bad'}`;
         out.innerHTML = res.kind === 'boots' ? 'Three boots! A matching pair… and a spare.' : res.kind === 'pearls' ? 'Three pearls!' : res.prize ? `${res.kind === 'pair' ? 'Two alike' : 'Three alike'}: ${tier(res.prize)}` : 'Nothing lines up.';
-        end(res.prize, res.pearls, res.kind === 'boots' ? 'The gull is embarrassed for you.' : '');
+        s.hud.hold = false;
+        if (res.pearls) s.hud.toast(`${res.kind === 'boots' ? 'The gull is embarrassed for you. ' : ''}+${res.pearls} pearl${res.pearls > 1 ? 's' : ''}.`, 'gold');
+        if (got) celebrate(got);
+        else if (!res.pearls) end(null);
+        refreshPurse();
       }
     };
   }
@@ -260,7 +268,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     ladder.innerHTML = FLIGHT_TIERS.map((t) => `<span style="--rar:${RARITY_COLOR[t.rarity]}"><b>${t.at}×</b>${RARITY_LABEL[t.rarity]}</span>`).join('');
     const hist = el('div', 'flight-hist');
     const drawHist = (): void => {
-      hist.innerHTML = save.arcade.flights.map((m) => `<i class="${m >= 4.5 ? 'hi' : m < 1.5 ? 'lo' : ''}">${m.toFixed(2)}×</i>`).join('');
+      hist.innerHTML = save.arcade.flights.map((m) => `<i class="${m >= 3.5 ? 'hi' : m < 1.4 ? 'lo' : ''}">${m.toFixed(2)}×</i>`).join('');
     };
     drawHist();
     const sky = el('canvas', 'flight-sky');
@@ -403,6 +411,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
             end(null);
           }
           go.disabled = true;
+          go.textContent = flight.cashed ? 'Watching…' : 'Snatched!';
           // Let the gull fly off before the next go.
           const t = performance.now();
           const after = (): void => {
@@ -463,6 +472,12 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
   // A fish in the air when the sheet is closed is cashed out where it is: nothing is lost by walking off.
   const prevClose = sheet.close.bind(sheet);
   sheet.close = () => {
+    if (flight && flight.cashed) {
+      // Already cashed out: the flight only finishes in the history.
+      cancelAnimationFrame(flight.raf);
+      save.arcade.flights = [...save.arcade.flights, flight.snatch].slice(-10);
+      flight = null;
+    }
     if (flight && !flight.cashed) {
       const m = Math.min(flight.snatch, flightAt((performance.now() - flight.t0) / 1000));
       cancelAnimationFrame(flight.raf);

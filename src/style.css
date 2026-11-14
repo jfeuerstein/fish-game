@@ -2316,3 +2316,10 @@ button {
   box-shadow: none;
   text-shadow: none;
 }
+
+/* A row of tabs that runs off the edge fades there, so it reads as more to scroll to. */
+.sheet-tabs {
+  -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, #000 82%, transparent);
+  padding-right: 28px;
+}

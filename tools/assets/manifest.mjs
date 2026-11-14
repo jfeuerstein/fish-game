@@ -143,7 +143,6 @@ export const MODELS = {
   'hat-bread': { kind: 'hat', what: 'a hat that is a whole golden loaf of bread with a split top crust, lying lengthways', h: 0.26, faces: 3000, item: true },
   'hat-lampshade': { kind: 'hat', what: 'a cream fabric lampshade with a frilly fringe at the bottom, worn as a hat, wide end down', h: 0.36, faces: 3000, item: true },
   'hat-shark': { kind: 'hat', what: 'a soft grey shark hood hat with a fin on top, little white teeth around the front opening and two small black eyes', h: 0.38, faces: 3000, item: true },
-  'hat-halo': { kind: 'hat', what: 'a glowing golden angel halo ring floating above a small golden headband with two tiny wings', h: 0.24, faces: 3000, item: true },
   // --- Worn things besides hats ---
   'x-glasses': { kind: 'extra', what: 'a pair of round tortoiseshell reading glasses, folded open, seen from the front', h: 0.12, faces: 2500, item: true },
   'x-shades': { kind: 'extra', what: 'a pair of chunky black sunglasses with dark lenses, folded open, seen from the front', h: 0.12, faces: 2500, item: true },

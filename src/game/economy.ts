@@ -100,6 +100,8 @@ export interface Hat {
   price: number;
   /** Not sold: given by the notice board. */
   gift?: boolean;
+  /** Not sold, and not found either: won only at the Lucky Gull. */
+  prize?: boolean;
 }
 export const HATS: readonly Hat[] = [
   { id: 'hat-party', name: 'Party Hat', price: 90 },
@@ -112,21 +114,21 @@ export const HATS: readonly Hat[] = [
   { id: 'hat-cone', name: 'Traffic Cone', price: 380 },
   { id: 'hat-lampshade', name: 'Lampshade', price: 460 },
   { id: 'hat-bread', name: 'Loaf of Bread', price: 550 },
-  { id: 'hat-captain', name: "Captain's Hat", price: 700 },
-  { id: 'hat-propeller', name: 'Propeller Cap', price: 650 },
+  { id: 'hat-captain', name: "Captain's Hat", price: 0, prize: true },
+  { id: 'hat-propeller', name: 'Propeller Cap', price: 0, prize: true },
   { id: 'hat-chef', name: 'Chef Hat', price: 500 },
-  { id: 'hat-top', name: 'Top Hat', price: 900 },
-  { id: 'hat-pirate', name: 'Pirate Hat', price: 1200 },
-  { id: 'hat-viking', name: 'Viking Helmet', price: 1500 },
-  { id: 'hat-wizard', name: 'Wizard Hat', price: 2200 },
+  { id: 'hat-top', name: 'Top Hat', price: 0, prize: true },
+  { id: 'hat-pirate', name: 'Pirate Hat', price: 0, prize: true },
+  { id: 'hat-viking', name: 'Viking Helmet', price: 0, prize: true },
+  { id: 'hat-wizard', name: 'Wizard Hat', price: 0, prize: true },
   { id: 'hat-cake', name: 'Birthday Cake', price: 0, gift: true },
   { id: 'hat-duck', name: 'Rubber Duck', price: 0, gift: true },
-  { id: 'hat-crab', name: 'Grumpy Crab', price: 0, gift: true },
-  { id: 'hat-shark', name: 'Shark Hood', price: 0, gift: true },
+  { id: 'hat-crab', name: 'Grumpy Crab', price: 0, prize: true },
+  { id: 'hat-shark', name: 'Shark Hood', price: 0, prize: true },
   { id: 'hat-frog', name: 'Frog Hat', price: 0, gift: true },
   { id: 'hat-mushroom', name: 'Mushroom Cap', price: 0, gift: true },
   { id: 'hat-fish', name: 'Fish Hat', price: 0, gift: true },
-  { id: 'hat-crown', name: 'Little Crown', price: 0, gift: true },
+  { id: 'hat-crown', name: 'Little Crown', price: 0, prize: true },
 ];
 
 /** Things to set down around the island. */
@@ -138,6 +140,8 @@ export interface Furniture {
   seat?: boolean;
   /** Glows after dark. */
   glow?: boolean;
+  /** Not sold: won only at the Lucky Gull. */
+  prize?: boolean;
   /** Plays music nearby. */
   music?: boolean;
 }
@@ -147,26 +151,26 @@ export const FURNITURE: readonly Furniture[] = [
   { id: 'f-lantern', name: 'Lantern', price: 260, glow: true },
   { id: 'f-plant', name: 'Potted Plant', price: 200 },
   { id: 'f-umbrella', name: 'Beach Umbrella', price: 340 },
-  { id: 'f-radio', name: 'Radio', price: 480, music: true },
-  { id: 'f-flamingo', name: 'Lawn Flamingo', price: 300 },
-  { id: 'f-gnome', name: 'Fishing Gnome', price: 420 },
-  { id: 'f-tiki', name: 'Tiki Torch', price: 380, glow: true },
+  { id: 'f-radio', name: 'Radio', price: 0, prize: true, music: true },
+  { id: 'f-flamingo', name: 'Lawn Flamingo', price: 0, prize: true },
+  { id: 'f-gnome', name: 'Fishing Gnome', price: 0, prize: true },
+  { id: 'f-tiki', name: 'Tiki Torch', price: 0, prize: true, glow: true },
   { id: 'f-hammock', name: 'Hammock', price: 900, seat: true },
-  { id: 'f-telescope', name: 'Telescope', price: 1100 },
-  { id: 'f-snowman', name: 'Snowman', price: 1500 },
+  { id: 'f-telescope', name: 'Telescope', price: 0, prize: true },
+  { id: 'f-snowman', name: 'Snowman', price: 0, prize: true },
 ];
 
 /** Things to wear besides a hat. */
-/** Things to wear besides hats. `gift` ones are won at the Lucky Gull, not sold. */
-export const EXTRAS: readonly { id: string; name: string; price: number; gift?: boolean }[] = [
+/** Things to wear besides hats. `prize` ones are won at the Lucky Gull, not sold. */
+export const EXTRAS: readonly { id: string; name: string; price: number; prize?: boolean }[] = [
   { id: 'x-flower', name: 'Flower Pin', price: 200 },
   { id: 'x-bowtie', name: 'Bow Tie', price: 250 },
   { id: 'x-glasses', name: 'Round Glasses', price: 300 },
   { id: 'x-scarf', name: 'Cosy Scarf', price: 350 },
   { id: 'x-shades', name: 'Sunglasses', price: 450 },
   { id: 'x-backpack', name: 'Backpack', price: 700 },
-  { id: 'x-mustache', name: 'Fine Mustache', price: 0, gift: true },
-  { id: 'x-snorkel', name: 'Snorkel Mask', price: 0, gift: true },
+  { id: 'x-mustache', name: 'Fine Mustache', price: 0, prize: true },
+  { id: 'x-snorkel', name: 'Snorkel Mask', price: 0, prize: true },
 ];
 
 /** Characters the player can be. */

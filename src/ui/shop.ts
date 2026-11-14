@@ -144,7 +144,7 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       }
     } else if (tab === 'Wear') {
       const grid = el('div', 'grid');
-      for (const x of EXTRAS.filter((e) => !e.gift || save.extras.includes(e.id))) {
+      for (const x of EXTRAS.filter((e) => !e.prize || save.extras.includes(e.id))) {
         const owned = save.extras.includes(x.id);
         const t = el('button', `tile${save.extra === x.id ? ' on' : ''}`);
         t.innerHTML = `<img src="${icon(x.id)}" alt="">${x.name}${owned ? '<small>Owned</small>' : coin(x.price)}`;
@@ -161,7 +161,7 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       body.append(el('p', '', 'Something to wear with your hat.'), grid);
     } else if (tab === 'Hats') {
       const grid = el('div', 'grid');
-      for (const h of HATS.filter((x) => !x.gift)) {
+      for (const h of HATS.filter((x) => !x.gift && !x.prize)) {
         const owned = save.hats.includes(h.id);
         const t = el('button', `tile${save.hat === h.id ? ' on' : ''}`);
         t.innerHTML = `<img src="${icon(h.id)}" alt="">${h.name}${owned ? '<small>Owned</small>' : coin(h.price)}`;
@@ -175,11 +175,11 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         };
         grid.append(t);
       }
-      body.append(el('p', '', 'Some hats only turn up in chests, or as thanks for errands.'), grid);
+      body.append(el('p', '', 'The rarest hats are only won at the Lucky Gull, for pearls.'), grid);
     } else if (tab === 'Things') {
       body.append(el('p', '', 'Things to set down anywhere on the island. Find them in your bag.'));
       const grid = el('div', 'grid');
-      for (const f of FURNITURE) {
+      for (const f of FURNITURE.filter((x) => !x.prize)) {
         const t = el('button', 'tile');
         const n = save.furniture[f.id] ?? 0;
         const out = save.placed.filter((p) => p.id === f.id).length;

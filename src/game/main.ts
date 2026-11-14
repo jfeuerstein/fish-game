@@ -264,7 +264,10 @@ export class Game implements Session {
       more: moreSheet(this.app, this, openChests),
       fun: funSheet(this.app, this, () => Chalk.near(this.player.pos)),
     };
-    for (const s of Object.values(this.sheets)) s.onClose = () => (this.controls.enabled = true);
+    // The stick comes back when the last sheet goes, not when one sheet gives way to another.
+    for (const s of Object.values(this.sheets)) s.onClose = () => queueMicrotask(() => {
+      if (!Sheet.current) this.controls.enabled = true;
+    });
     const open = (s: Sheet): void => {
       this.fishing.cancel();
       this.controls.release();

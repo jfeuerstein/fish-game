@@ -13,39 +13,30 @@ export interface Prize {
   kind: 'hat' | 'character' | 'furniture' | 'extra';
 }
 
-/** Everything a chest can hold. Some things (the frog and raccoon, the crown) come only from chests. */
+/**
+ * Everything the Lucky Gull's games and chests can give. None of it is sold for coins: these are
+ * the things only pearls win (a few gift hats also wash up in treasure and in the sand).
+ */
 export const PRIZES: readonly Prize[] = [
-  { id: 'hat-bucket', name: 'Bucket Hat', rarity: 'common', kind: 'hat' },
-  { id: 'hat-beanie', name: 'Pom Beanie', rarity: 'common', kind: 'hat' },
-  { id: 'hat-straw', name: 'Straw Hat', rarity: 'common', kind: 'hat' },
-  { id: 'hat-sailor', name: 'Sailor Hat', rarity: 'common', kind: 'hat' },
-  { id: 'hat-party', name: 'Party Hat', rarity: 'common', kind: 'hat' },
-  { id: 'f-cooler', name: 'Picnic Cooler', rarity: 'common', kind: 'furniture' },
-  { id: 'f-plant', name: 'Potted Plant', rarity: 'common', kind: 'furniture' },
-  { id: 'hat-flowers', name: 'Flower Crown', rarity: 'uncommon', kind: 'hat' },
-  { id: 'hat-cowboy', name: 'Cowboy Hat', rarity: 'uncommon', kind: 'hat' },
-  { id: 'hat-chef', name: 'Chef Hat', rarity: 'uncommon', kind: 'hat' },
-  { id: 'hat-propeller', name: 'Propeller Cap', rarity: 'uncommon', kind: 'hat' },
-  { id: 'hat-cake', name: 'Birthday Cake', rarity: 'uncommon', kind: 'hat' },
-  { id: 'hat-cone', name: 'Traffic Cone', rarity: 'uncommon', kind: 'hat' },
-  { id: 'f-flamingo', name: 'Lawn Flamingo', rarity: 'uncommon', kind: 'furniture' },
+  { id: 'hat-propeller', name: 'Propeller Cap', rarity: 'common', kind: 'hat' },
+  { id: 'hat-cake', name: 'Birthday Cake', rarity: 'common', kind: 'hat' },
+  { id: 'f-flamingo', name: 'Lawn Flamingo', rarity: 'common', kind: 'furniture' },
+  { id: 'f-radio', name: 'Radio', rarity: 'common', kind: 'furniture' },
+  { id: 'hat-captain', name: "Captain's Hat", rarity: 'uncommon', kind: 'hat' },
+  { id: 'hat-duck', name: 'Rubber Duck', rarity: 'uncommon', kind: 'hat' },
+  { id: 'x-mustache', name: 'Fine Mustache', rarity: 'uncommon', kind: 'extra' },
   { id: 'f-gnome', name: 'Fishing Gnome', rarity: 'uncommon', kind: 'furniture' },
-  { id: 'hat-captain', name: "Captain's Hat", rarity: 'rare', kind: 'hat' },
+  { id: 'f-tiki', name: 'Tiki Torch', rarity: 'uncommon', kind: 'furniture' },
   { id: 'hat-top', name: 'Top Hat', rarity: 'rare', kind: 'hat' },
-  { id: 'hat-frog', name: 'Frog Hat', rarity: 'rare', kind: 'hat' },
   { id: 'hat-mushroom', name: 'Mushroom Cap', rarity: 'rare', kind: 'hat' },
-  { id: 'hat-duck', name: 'Rubber Duck', rarity: 'rare', kind: 'hat' },
-  { id: 'hat-bread', name: 'Loaf of Bread', rarity: 'rare', kind: 'hat' },
-  { id: 'x-mustache', name: 'Fine Mustache', rarity: 'rare', kind: 'extra' },
-  { id: 'f-tiki', name: 'Tiki Torch', rarity: 'rare', kind: 'furniture' },
-  { id: 'f-radio', name: 'Radio', rarity: 'rare', kind: 'furniture' },
+  { id: 'hat-frog', name: 'Frog Hat', rarity: 'rare', kind: 'hat' },
+  { id: 'hat-crab', name: 'Grumpy Crab', rarity: 'rare', kind: 'hat' },
+  { id: 'f-telescope', name: 'Telescope', rarity: 'rare', kind: 'furniture' },
   { id: 'hat-pirate', name: 'Pirate Hat', rarity: 'epic', kind: 'hat' },
   { id: 'hat-viking', name: 'Viking Helmet', rarity: 'epic', kind: 'hat' },
   { id: 'hat-fish', name: 'Fish Hat', rarity: 'epic', kind: 'hat' },
-  { id: 'hat-crab', name: 'Grumpy Crab', rarity: 'epic', kind: 'hat' },
   { id: 'hat-shark', name: 'Shark Hood', rarity: 'epic', kind: 'hat' },
   { id: 'x-snorkel', name: 'Snorkel Mask', rarity: 'epic', kind: 'extra' },
-  { id: 'f-telescope', name: 'Telescope', rarity: 'epic', kind: 'furniture' },
   { id: 'char-raccoon', name: 'Raccoon', rarity: 'epic', kind: 'character' },
   { id: 'hat-crown', name: 'Little Crown', rarity: 'legendary', kind: 'hat' },
   { id: 'hat-wizard', name: 'Wizard Hat', rarity: 'legendary', kind: 'hat' },
@@ -66,8 +57,8 @@ export interface Chest {
 }
 
 export const CHESTS: readonly Chest[] = [
-  { id: 'tide', name: 'Tide Chest', cost: 2, odds: { common: 0.55, uncommon: 0.26, rare: 0.13, epic: 0.05, legendary: 0.01 }, blurb: 'Washed up on the beach. Mostly hats.' },
-  { id: 'gilded', name: 'Gilded Chest', cost: 5, odds: { common: 0.2, uncommon: 0.32, rare: 0.28, epic: 0.15, legendary: 0.05 }, blurb: 'Heavier. Something rattles inside.' },
+  { id: 'tide', name: 'Tide Chest', cost: 2, odds: { common: 0.45, uncommon: 0.3, rare: 0.16, epic: 0.07, legendary: 0.02 }, blurb: 'Washed up on the beach. Mostly hats.' },
+  { id: 'gilded', name: 'Gilded Chest', cost: 4, odds: { common: 0, uncommon: 0.28, rare: 0.38, epic: 0.22, legendary: 0.12 }, blurb: 'Heavier. Something rattles inside.' },
 ];
 
 /**
@@ -81,7 +72,7 @@ export function tokensFor(variant: Variant, tier = 'common', first = false): num
 }
 
 /** What a prize already owned is worth instead, in tokens. */
-export const REFUND: Record<Rarity, number> = { common: 0, uncommon: 1, rare: 1, epic: 2, legendary: 4 };
+export const REFUND: Record<Rarity, number> = { common: 1, uncommon: 1, rare: 2, epic: 3, legendary: 5 };
 
 function pickRarity(odds: Record<Rarity, number>, r: number): Rarity {
   let acc = 0;

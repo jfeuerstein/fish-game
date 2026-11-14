@@ -6,15 +6,14 @@ import { rng } from '../core/rng';
 import type { Rarity } from './crates';
 
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-const down = (r: Rarity): Rarity | null => (r === 'common' ? null : RARITIES[RARITIES.indexOf(r) - 1]);
 
 // ---------- The Gull Wheel ----------
 
 /** One pocket on the wheel's strip, and the prize a bet on it wins. */
 export type Pocket = 'shell' | 'crab' | 'gull';
 export const POCKET_PRIZE: Record<Pocket, Rarity> = { shell: 'uncommon', crab: 'rare', gull: 'legendary' };
-/** The strip's pattern, repeated: one gull, five crabs and nine shells, spread out. */
-export const WHEEL: readonly Pocket[] = ['gull', 'shell', 'crab', 'shell', 'shell', 'crab', 'shell', 'shell', 'crab', 'shell', 'shell', 'crab', 'shell', 'shell', 'crab'];
+/** The strip's pattern, repeated: one gull, eight crabs and sixteen shells, the crabs spread out. */
+export const WHEEL: readonly Pocket[] = ['gull', ...Array.from({ length: 24 }, (_, i): Pocket => (i % 3 === 1 ? 'crab' : 'shell'))];
 export const WHEEL_COST = 1;
 
 /** Spin the wheel: which pocket of the pattern it stops on. */
@@ -41,8 +40,8 @@ export function wheelStrip(result: number, length: number, stopAt: number): numb
 
 export type Reel = 'worm' | 'bobber' | 'fish' | 'gold' | 'crown' | 'boot' | 'pearl';
 /** How often each symbol comes up on a reel (relative weights). */
-export const REEL_WEIGHTS: Record<Reel, number> = { worm: 30, bobber: 22, fish: 14, gold: 7, crown: 3, boot: 16, pearl: 8 };
-/** The rarity each symbol stands for: three alike win a prize of it, two alike a prize one rarity down (two worms a common one). */
+export const REEL_WEIGHTS: Record<Reel, number> = { worm: 30, bobber: 22, fish: 14, gold: 7, crown: 5, boot: 10, pearl: 6 };
+/** The rarity each symbol stands for (see scoreSlots). */
 export const REEL_PRIZE: Partial<Record<Reel, Rarity>> = { worm: 'common', bobber: 'uncommon', fish: 'rare', gold: 'epic', crown: 'legendary' };
 export const SLOTS_COST = 1;
 
@@ -65,20 +64,19 @@ function pickReel(r: number): Reel {
   return 'worm';
 }
 
-/** What a line of three wins. */
+/** What a line of three wins: two alike that symbol's rarity (two crowns, an epic), three alike one rarity up. */
 export function scoreSlots(reels: [Reel, Reel, Reel]): SlotResult {
   const [a, b, c] = reels;
   if (a === b && b === c) {
     if (a === 'pearl') return { reels, prize: null, pearls: 3, kind: 'pearls' };
     if (a === 'boot') return { reels, prize: null, pearls: 1, kind: 'boots' };
-    return { reels, prize: REEL_PRIZE[a]!, pearls: 0, kind: a === 'crown' || a === 'gold' ? 'jackpot' : 'three' };
+    const r = REEL_PRIZE[a]!;
+    const won = RARITIES[Math.min(RARITIES.length - 1, RARITIES.indexOf(r) + 1)];
+    return { reels, prize: won, pearls: a === 'crown' ? 3 : 0, kind: won === 'legendary' || won === 'epic' ? 'jackpot' : 'three' };
   }
   const pair = a === b || a === c ? a : b === c ? b : null;
   const pr = pair ? REEL_PRIZE[pair] : undefined;
-  if (pr) {
-    // Two alike: a prize one rarity down; two worms, a common one all the same.
-    return { reels, prize: down(pr) ?? 'common', pearls: 0, kind: 'pair' };
-  }
+  if (pr) return { reels, prize: pair === 'crown' ? 'epic' : pr, pearls: 0, kind: 'pair' };
   return { reels, prize: null, pearls: 0, kind: 'none' };
 }
 
@@ -107,11 +105,11 @@ export const MAX_FLIGHT = 100;
 export const FLIGHT_COST = 1;
 /** How high the fish must fly for each rarity of prize; cashed out lower, the pearl comes back. */
 export const FLIGHT_TIERS: readonly { at: number; rarity: Rarity }[] = [
-  { at: 1.5, rarity: 'common' },
-  { at: 2.5, rarity: 'uncommon' },
-  { at: 4.5, rarity: 'rare' },
-  { at: 9, rarity: 'epic' },
-  { at: 20, rarity: 'legendary' },
+  { at: 1.4, rarity: 'common' },
+  { at: 2, rarity: 'uncommon' },
+  { at: 3.5, rarity: 'rare' },
+  { at: 7, rarity: 'epic' },
+  { at: 25, rarity: 'legendary' },
 ];
 
 /** Where the gull will snatch the fish: a multiplier, 1 or more; reaching m has chance (1 - SNATCH_AT_ONCE) / m. */

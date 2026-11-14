@@ -84,7 +84,7 @@ export const HATS: Record<string, HatFit> = {
   'hat-straw': on(0.38, 0.22, 0.55),
   'hat-beanie': on(0.52, 0.1, 0.95, { per: { 'char-frog': { depth: 0.3 } } }),
   'hat-captain': on(0.38, 0.32, 0.84),
-  'hat-flowers': ring(0.28, 0.3, 0.8),
+  'hat-flowers': ring(0.28, 0.3, 0.8, { per: { 'char-frog': { snug: 1.4, depth: 0.5 } } }),
   'hat-frog': on(0.88, 0.05, 0.92),
   'hat-pirate': on(0.45, 0.1, 0.7),
   'hat-top': on(0.32, 0.18, 0.72),
