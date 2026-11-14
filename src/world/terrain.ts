@@ -112,9 +112,11 @@ vec3 grass = untiled(tGrass, wuv / 4.2, big);
 // Patches of sunnier and deeper green, as a painter would lay them in.
 grass *= mix(vec3(0.86, 0.94, 0.80), vec3(1.08, 1.06, 0.88), smoothstep(0.3, 0.75, fbm(wuv / 14.0 + 3.0)));
 vec3 sand = untiled(tSand, wuv / 6.5, big) * mix(0.94, 1.04, mid);
-vec3 dirt = desat(untiled(tDirt, wuv / 4.0, big), 0.28) * vec3(1.0, 0.94, 0.86);
+vec3 dirt = desat(untiled(tDirt, wuv / 4.0, big), 0.42) * vec3(1.04, 0.97, 0.88);
 vec3 rock = untiled(tRock, wuv / 6.0, big);
 vec3 cob = texture2D(tPlaza, wuv / 3.4).rgb * 0.9;
+// Warmer stone, with broad patches of lighter and darker paving so the square is not one grey disc.
+cob *= mix(vec3(0.9, 0.86, 0.8), vec3(1.06, 1.0, 0.92), smoothstep(0.25, 0.75, big));
 vec4 w = vSplat;
 vec4 e = vec4(edge(w.x, mid), edge(w.y, mid), edge(w.z, big), edge(w.w, mid * 0.5 + 0.25));
 vec3 ground = grass;
@@ -122,6 +124,9 @@ ground = mix(ground, sand, e.x);
 ground = mix(ground, dirt, e.y);
 ground = mix(ground, rock, e.z);
 ground = mix(ground, cob, e.w);
+// A kerb of darker stones round the square's edge.
+float kerb = smoothstep(0.32, 0.5, w.w + (mid - 0.5) * 0.3) - smoothstep(0.5, 0.62, w.w + (mid - 0.5) * 0.3);
+ground *= 1.0 - kerb * 0.28;
 // Darker and greener under the water, where it is seen through it.
 ground *= mix(vec3(1.0), vec3(0.62, 0.78, 0.74), smoothstep(0.1, -2.5, vGround.y));
 diffuseColor.rgb *= ground;`,

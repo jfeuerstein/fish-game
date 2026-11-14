@@ -130,7 +130,7 @@ export class Props {
         const up = new THREE.Vector3(0, 1, 0);
         for (const mesh of meshes) {
           const geo = toFloat(mesh.geometry.clone()).applyMatrix4(mesh.matrixWorld);
-          const inst = new THREE.InstancedMesh(geo, mesh.material, list.length);
+          const inst = new THREE.InstancedMesh(geo, id === 'pier' ? paintedPlanks() : mesh.material, list.length);
           inst.castShadow = !NO_SHADOW.has(id);
           inst.receiveShadow = true;
           list.forEach((p, i) => {
@@ -182,4 +182,46 @@ export function toFloat(geo: THREE.BufferGeometry): THREE.BufferGeometry {
     geo.setAttribute(name, new THREE.BufferAttribute(out, a.itemSize));
   }
   return geo;
+}
+
+/**
+ * The pier's boards in the same painted wood as everything else (the ground's plank texture),
+ * laid on by where each face is in the world: planks across the deck, grain up the posts. The
+ * pier is a simple model of boxes, so it needs no texture of its own.
+ */
+let planks: THREE.Material | null = null;
+function paintedPlanks(): THREE.Material {
+  if (planks) return planks;
+  const tex = new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}textures/wood.webp`);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.tWood = { value: tex };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldP;\nvarying vec3 vWorldN;')
+      .replace(
+        '#include <worldpos_vertex>',
+        `#include <worldpos_vertex>
+mat4 placed = modelMatrix;
+#ifdef USE_INSTANCING
+placed = modelMatrix * instanceMatrix;
+#endif
+vWorldP = (placed * vec4(transformed, 1.0)).xyz;
+vWorldN = normalize(mat3(placed) * objectNormal);`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D tWood;\nvarying vec3 vWorldP;\nvarying vec3 vWorldN;')
+      .replace(
+        '#include <map_fragment>',
+        `vec3 wn = abs(normalize(vWorldN));
+// The deck: planks run across the pier (along z); the posts and edges: grain running up.
+vec3 deck = texture2D(tWood, vec2(vWorldP.z, vWorldP.x) / 3.0).rgb;
+vec3 side = texture2D(tWood, vec2(vWorldP.y, vWorldP.x + vWorldP.z) / 1.6).rgb * 0.82;
+diffuseColor.rgb *= mix(side, deck, smoothstep(0.5, 0.8, wn.y)) * vec3(1.05, 1.0, 0.95);`,
+      );
+  };
+  planks = mat;
+  return mat;
 }

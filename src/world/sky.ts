@@ -25,7 +25,7 @@ const MOMENTS: Moment[] = [
   { hour: 8, top: '#5aa6e8', horizon: '#cfe8f5', sun: '#fff1d6', sunI: 1.9, hemiSky: '#c4e2ff', hemiGround: '#7f8f62', hemiI: 1.05, deep: '#1e73a3', shallow: '#56d1c6' },
   { hour: 12.5, top: '#3f97e6', horizon: '#c6e7fa', sun: '#fff8ea', sunI: 2.2, hemiSky: '#cfe8ff', hemiGround: '#869466', hemiI: 1.1, deep: '#1a6fa6', shallow: '#4fd6cb' },
   { hour: 16.5, top: '#4c96dd', horizon: '#e9e2c8', sun: '#ffe2b0', sunI: 2.0, hemiSky: '#cfe0f5', hemiGround: '#8a8a60', hemiI: 1.05, deep: '#1e6c9d', shallow: '#5acfc0' },
-  { hour: 18.8, top: '#5d63a8', horizon: '#ff9e6e', sun: '#ff9c5c', sunI: 1.4, hemiSky: '#c3a6c9', hemiGround: '#6e5248', hemiI: 0.95, deep: '#30598a', shallow: '#78b3b0' },
+  { hour: 18.8, top: '#5d63a8', horizon: '#ffa878', sun: '#ffb886', sunI: 1.25, hemiSky: '#b6b4d8', hemiGround: '#5e5650', hemiI: 1.08, deep: '#30598a', shallow: '#78b3b0' },
   { hour: 20.2, top: '#24306a', horizon: '#86649a', sun: '#b0a8ff', sunI: 0.75, hemiSky: '#7a7ab8', hemiGround: '#3a3448', hemiI: 1.2, deep: '#1b3d64', shallow: '#3d6f82' },
   { hour: 24, top: '#101d42', horizon: '#2b3d70', sun: '#a9bcff', sunI: 0.75, hemiSky: '#6f82c4', hemiGround: '#2c3352', hemiI: 1.25, deep: '#143a5e', shallow: '#2f7488' },
 ];

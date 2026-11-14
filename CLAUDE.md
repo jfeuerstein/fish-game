@@ -2,8 +2,8 @@
 
 A cozy fishing game for one person, played upright on an iPhone as a Home Screen web app. Walk
 round a small island, cast into the sea, the deep water off the pier, the pond and the creek,
-fill the journal, sell fish to Gus, do errands from the board, and spend tokens from shiny and
-golden fish on chests that spin a strip of prizes. It is in the genre of social fishing hangouts
+fill the journal, sell fish to Gus, do errands from the board, and spend pearls from the rarest
+catches at the Lucky Gull, where every go spins up a cosmetic. It is in the genre of social fishing hangouts
 but has its own island, characters, art and sound; keep it that way (no names, characters, art
 or music from any existing game).
 
@@ -53,8 +53,8 @@ deploys to GitHub Pages.
 - **Hats** sit on each character's skull, an ellipsoid in `HEADS` (`src/player/fit.ts`) that
   leaves out ears and the frog's eyes; `socket=1` draws it. Each hat in `HATS` says how it is worn
   (`on`, `ring` or `perch`), how deep, and where its band and opening are, read off a cut through
-  the model (`node tools/hat-cut.mjs hat-id ...` prints one). Tripo's models face +x, so hats are turned a
-  quarter. Check every change with `tools/fit-check.mjs`.
+  the model (`node tools/hat-cut.mjs hat-id ...` prints one). Check every change with
+  `tools/fit-check.mjs`.
 - **Emotes** include flop, twirl, honk and fish slap (islanders react); Settings › Silly has big heads.
 - **Characters** are Tripo-rigged models posed in code: `poses.ts` (pure joint angles: walk, cast,
   reel, sit, wave, dance, cheer, clap, uke, row) and `rig.ts` (turns them into bone rotations about
@@ -83,10 +83,10 @@ deploys to GitHub Pages.
   makes them MP3s in `public/audio/` and writes their credits to `public/audio/credits.json`.
   Patch's models are flat low-poly and do not match the Tripo look; its sounds do fit.
 - **Progress** (`src/game/`): `economy.ts` (rods, bait, coolers, hats, furniture, levels),
-  `quests.ts` (the board), `crates.ts` (chests, odds, the strip), `progress.ts` (what a catch, a
+  `quests.ts` (the board), `crates.ts` (pearls, the prize pool, the odds, the strip), `progress.ts` (what a catch, a
   sale or an errand does), `save.ts` (read defensively; add a field with a default, never change
   the meaning of one). Saved in `localStorage` (`cove.save`; chalk in `cove.chalk`).
-- **Menus** are bottom sheets (`src/ui/`): shop, journal, bag, board, chests, more, fun; plus the
+- **Menus** are bottom sheets (`src/ui/`): shop, journal, bag, board, arcade, more, fun; plus the
   ukulele pads and the chalk board. The HUD (`hud.ts`) has money and level at the top, the action
   buttons by the right thumb, and Bag/Journal/Fun/More along the bottom. The bottom third is the
   movement stick; anywhere higher turns the camera.
@@ -104,8 +104,8 @@ the other players, and how each point shows up here. Keep to it when adding thin
   `rollCatch` in `roll.ts`), treasure chests from casts, coin bags, twin catches, rain clouds
   that follow you after a lucky catch, tiny to giant species, a quip on every catch, and a
   journal tab of what is biting now.
-- **Luck:** scratch tickets (`tickets.ts`, `ui/scratch.ts`: the prize is decided at purchase and
-  pays back a little under the price on average), chests with a spinning strip (`crates.ts`).
+- **Luck:** the Lucky Gull (see Pearls above): one roll of a cosmetic per pearl, watched as a
+  strip, reels, a leaping fish or a scratch card.
 - **Secrets:** sea glass, bounce mushrooms and jumping, a metal detector with things buried
   each day (`world/secrets.ts`, `world/finds.ts`).
 - **Customization and toys:** characters, hats, accessories (`x-*`, placed by measuring the body),
@@ -124,7 +124,10 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
   how models are made now: its image model paints a picture in one soft chunky toy style, its
   shape model makes a model of that picture. About 40 credits a model, 10 a picture. The account
   runs only a couple of tasks at once; the client waits and retries when told it is busy. Its
-  models face +x. Hats, accessories, the arcade, the gull, props and fish are made this way.
+  models face +x; `model()` turns any marked `source: "tripo"` in the index to face +z like the
+  rest. Hats, accessories, the arcade, the gull, props, fish, trees and the main buildings are
+  made this way. The pier is the Blender model, dressed in the painted plank texture by where
+  each face is (`paintedPlanks` in `props.ts`): its deck heights are what the walking uses.
 - **The ground** is painted by Tripo's `chat_image_2.5_sunburst` model (`GROUND`, `make-ground.mjs`),
   made to repeat, and blended in `terrain.ts` with two turned reads (no visible grid), patches of
   colour and painted, noise-pushed edges between grass, sand, earth, rock and paving.

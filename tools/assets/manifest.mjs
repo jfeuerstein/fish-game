@@ -46,10 +46,10 @@ export const MODELS = {
   'npc-pelican': { kind: 'char', what: 'a chubby white pelican shopkeeper with a big yellow beak pouch, wearing a navy apron and a little sailor cap', h: 1.3, faces: 9000, rig: true },
 
   // --- Buildings and landmarks ---
-  'shop': { kind: 'prop', what: 'a small cosy seaside bait and tackle shop: a little wooden hut with pale blue painted planks, a striped red and white awning over an open counter window, a few crates and a barrel by the door, a round fish shaped sign with no writing', h: 6.5, faces: 14000 },
-  'lighthouse': { kind: 'prop', what: 'a short chubby lighthouse with red and white stripes, a black lantern room with a little balcony rail, on a round stone base', h: 13, faces: 10000 },
+  'shop': { kind: 'prop', what: 'a cosy seaside bait and tackle shop: a little wooden cabin painted soft sea blue with cream trim and a shingled roof, a striped red and cream awning over a wide open counter window at the front, a round fish shaped sign with no writing, a crate and a barrel by the door', h: 6.5, faces: 14000 },
+  'lighthouse': { kind: 'prop', what: 'a short chubby lighthouse with broad red and cream stripes, a dark lantern room with a warm glowing window and a little balcony rail, on a round base of big rounded stones', h: 13, faces: 10000 },
   'notice-board': { kind: 'prop', what: 'a wooden village notice board on two posts with a little shingle roof, with a few blank paper notes pinned to it', h: 2.4, faces: 5000 },
-  'fishing-hut': { kind: 'prop', what: 'a tiny weathered wooden fishing shack with a tin roof, nets and a life ring hanging on the wall, a small round window', h: 4.5, faces: 10000 },
+  'fishing-hut': { kind: 'prop', what: 'a tiny weathered wooden fishing shack with a rusty tin roof, a net and a red life ring hanging on the front wall, a small round window and a little door', h: 4.5, faces: 10000 },
   'tent': { kind: 'prop', what: 'a small triangular orange camping tent with the front flap tied open, pegged down with ropes', h: 2.0, faces: 5000 },
   'pier': { kind: 'prop', what: 'a square section of a wooden pier: a flat deck of weathered planks on four thick round posts, seen from above at an angle', h: 2.4, faces: 4000 },
   'bridge': { kind: 'prop', what: 'a small arched wooden footbridge with low chunky rails', h: 1.8, faces: 6000 },
@@ -60,10 +60,10 @@ export const MODELS = {
   'gull': { kind: 'prop', what: 'a cheeky fat seagull standing upright on orange feet, wearing a green dealer visor and a little red bow tie, smug grin', h: 1.0, faces: 5000 },
 
   // --- Nature ---
-  'tree-pine': { kind: 'prop', what: 'a tall chunky pine tree made of three stacked cone shaped tiers of dark green foliage on a short brown trunk', h: 9, faces: 3000 , simplify: 0.45 },
-  'tree-round': { kind: 'prop', what: 'a round leafy deciduous tree with a big puffy ball of fresh green foliage on a short sturdy brown trunk', h: 7, faces: 3500 , simplify: 0.45 },
-  'tree-birch': { kind: 'prop', what: 'a slim birch tree with a white trunk with black marks and a puffy yellow-green crown of leaves', h: 8, faces: 3500 , simplify: 0.45 },
-  'tree-palm': { kind: 'prop', what: 'a short leaning palm tree with a curved ringed trunk and a few thick chunky green fronds and three coconuts', h: 6, faces: 4000 , simplify: 0.6 },
+  'tree-pine': { kind: 'prop', what: 'a tall chunky pine tree of three soft rounded tiers of deep green foliage on a short brown trunk', h: 9, faces: 2500 , simplify: 0.45 },
+  'tree-round': { kind: 'prop', what: 'a round leafy tree with a big soft puffy crown of fresh green foliage in a few lumps, on a short sturdy brown trunk', h: 7, faces: 3500 , simplify: 0.45 },
+  'tree-birch': { kind: 'prop', what: 'a slim birch tree with a white trunk with a few dark marks and a soft puffy yellow-green crown', h: 8, faces: 3500 , simplify: 0.45 },
+  'tree-palm': { kind: 'prop', what: 'a short leaning palm tree with a curved ringed trunk, a few thick soft green fronds and three coconuts', h: 6, faces: 4000 , simplify: 0.6 },
   'bush': { kind: 'prop', what: 'a round puffy green bush with a few small pink flowers', h: 1.3, faces: 2500 , simplify: 0.3 },
   'flowers': { kind: 'prop', what: 'a small clump of chunky wildflowers, yellow, white and purple daisies with fat green leaves, growing from a little mound of grass', h: 0.7, faces: 2500 , simplify: 0.2 },
   'grass-tuft': { kind: 'prop', what: 'a small chunky tuft of tall green grass blades growing from a little mound', h: 0.6, faces: 1500 , simplify: 0.15 },

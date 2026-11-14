@@ -73,16 +73,20 @@ void main() {
   // Colour by depth: clear turquoise over sand, deepening to blue.
   float d = clamp(depth / mix(3.0, 7.0, step(vWorld.y, 0.3)), 0.0, 1.0);
   vec3 col = mix(uShallow, uDeep, smoothstep(0.0, 1.0, sqrt(d)));
-  // Bands of lighter water, as in a picture book.
-  // The sky in it, and the sun glinting off it.
+  // Thin lighter lines where the swell crests, as a painter draws water in a picture book.
+  float crest = (smoothstep(0.47, 0.5, n1) - smoothstep(0.5, 0.53, n1)) * smoothstep(0.35, 0.65, n2);
+  col = mix(col, mix(uShallow, uSky, 0.5), crest * 0.22 * (1.0 - d * 0.5));
+  // The sky in it, from a calmer surface than the ripples (a lumpy one gives white blotches),
+  // and the sun glinting off it, small and sharp.
   vec3 view = normalize(cameraPosition - vWorld);
-  float fres = pow(1.0 - max(dot(view, normal), 0.0), 3.0);
-  col = mix(col, uSky, fres * 0.45);
+  vec3 calm = normalize(vec3((n1 - 0.5) * 0.18, 1.0, (n2 - 0.5) * 0.18));
+  float fres = pow(1.0 - max(dot(view, calm), 0.0), 4.0);
+  col = mix(col, uSky, clamp(fres, 0.0, 1.0) * 0.32);
   vec3 h = normalize(view + normalize(uSunDir));
-  float spec = pow(max(dot(normal, h), 0.0), 140.0);
-  col += uSun * spec * 1.4;
+  float spec = pow(max(dot(normal, h), 0.0), 260.0) * step(0.0, uSunDir.y);
+  col += uSun * smoothstep(0.25, 0.6, spec) * 0.8;
   float sparkle = smoothstep(0.9, 0.97, vnoise(q * 6.0 + vec2(t * 1.1, -t * 0.7))) * smoothstep(0.75, 0.95, vnoise(q * 1.3 - t * 0.3)) * step(0.0, uSunDir.y) * (1.0 - uRain);
-  col += uSun * sparkle * 0.4;
+  col += uSun * sparkle * 0.3;
   // Foam where the water meets the shore, pulsing gently in and out.
   float edge = depth - 0.12 - 0.08 * sin(t * 1.4 + vWorld.x * 0.3 + vWorld.z * 0.2);
   float foam = 1.0 - smoothstep(0.0, 0.32, edge);
