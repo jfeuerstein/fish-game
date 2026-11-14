@@ -1,21 +1,29 @@
-// Chests: spend tokens, watch a strip of prizes spin past a marker and slow to a stop.
+// Chests: spend pearls, watch a strip of prizes spin past a marker and slow to a stop. Also the
+// prize card every game at the Lucky Gull shows: what was won, how rare, and to wear it.
 import { rng } from '../core/rng';
-import { CHESTS, type Chest, PRIZES, type Prize, RARITY_COLOR, RARITY_LABEL, REFUND, WIN_AT, makeStrip, openChest } from '../game/crates';
+import { CHESTS, type Chest, PRIZES, type Prize, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, openChest, pickPrize } from '../game/crates';
 import type { Session } from '../game/session';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
 import { Sheet } from './sheet';
 
-const GRAND = { common: 'small', uncommon: 'small', rare: 'big', epic: 'huge', legendary: 'jackpot' } as const;
+import { GRAND } from '../game/arcade';
 
-/** Give a prize: whether it was already owned, and the tokens given back if so. */
+/** Whether the player already has a prize (furniture is never 'had': another is always welcome). */
+export function owns(s: Session, p: Prize): boolean {
+  const save = s.save;
+  if (p.kind === 'furniture') return false;
+  return (p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : save.characters).includes(p.id);
+}
+
+/** Give a prize: whether it was already owned, and the pearls given back if so. */
 export function award(s: Session, p: Prize): { owned: boolean; refund: number } {
   const save = s.save;
   if (p.kind === 'furniture') {
     save.furniture[p.id] = (save.furniture[p.id] ?? 0) + 1;
     return { owned: false, refund: 0 };
   }
-  const list = p.kind === 'hat' ? save.hats : save.characters;
+  const list = p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : save.characters;
   if (list.includes(p.id)) {
     save.tokens += REFUND[p.rarity];
     return { owned: true, refund: REFUND[p.rarity] };
@@ -24,16 +32,73 @@ export function award(s: Session, p: Prize): { owned: boolean; refund: number } 
   return { owned: false, refund: 0 };
 }
 
+/** Choose a prize of a rarity (favouring what is not had yet) and give it. */
+export function winPrize(s: Session, rarity: Rarity, rand: () => number = Math.random): { prize: Prize; owned: boolean; refund: number } {
+  const prize = pickPrize(rarity, (p) => owns(s, p), rand);
+  return { prize, ...award(s, prize) };
+}
+
+/** What a prize is called once had, and what to do with it. */
+function said(prize: Prize, owned: boolean, refund: number): string {
+  if (owned) return refund ? `Already yours, so ${refund} pearl${refund > 1 ? 's' : ''} back.` : 'Already yours. The gull snickers.';
+  if (prize.kind === 'character') return 'A new friend to play as! Change in More › Wardrobe.';
+  if (prize.kind === 'hat') return 'A new hat!';
+  if (prize.kind === 'extra') return 'Something new to wear!';
+  return 'In your bag, ready to set down.';
+}
+
+/** The inside of a prize card, with buttons to wear it or play as it; `close` puts it away. */
+export function prizeCard(card: HTMLElement, s: Session, prize: Prize, owned: boolean, refund: number, close: () => void, more: HTMLElement[] = []): void {
+  card.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
+  card.innerHTML = `<div class="rr-glow"></div><img src="${icon(prize.id)}" alt=""><div class="rr-rar">${RARITY_LABEL[prize.rarity]}</div><div class="rr-name">${prize.name}</div><div class="rr-sub">${said(prize, owned, refund)}</div>`;
+  const actions = el('div', 'rr-actions');
+  if (!owned && (prize.kind === 'hat' || prize.kind === 'extra' || prize.kind === 'character')) {
+    const use = el('button', 'btn green', prize.kind === 'character' ? 'Play as' : 'Wear it');
+    use.onclick = () => {
+      if (prize.kind === 'hat') s.wear(prize.id);
+      else if (prize.kind === 'extra') s.wearExtra(prize.id);
+      else s.become(prize.id);
+      close();
+    };
+    actions.append(use);
+  }
+  actions.append(...more);
+  const ok = el('button', 'btn plain', 'Done');
+  ok.onclick = close;
+  actions.append(ok);
+  card.append(actions);
+}
+
+/** A prize won at one of the games: the card comes up over everything, with the fanfare. */
+export function showPrize(app: HTMLElement, s: Session, fanfare: Fanfare, won: { prize: Prize; owned: boolean; refund: number }, done: () => void = () => undefined): void {
+  const { prize, owned, refund } = won;
+  const overlay = el('div', 'prize-overlay');
+  overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
+  const card = el('div', 'roulette-result');
+  overlay.append(card);
+  app.append(overlay);
+  const close = (): void => {
+    overlay.remove();
+    done();
+  };
+  prizeCard(card, s, prize, owned, refund, close);
+  // Shown at once (a reflow first, so it still springs in).
+  void card.offsetWidth;
+  card.classList.add('show');
+  s.audio.play(prize.rarity === 'legendary' || prize.rarity === 'epic' ? 'rare' : 'catch', { volume: 0.7 });
+  fanfare.win(owned ? 'small' : GRAND[prize.rarity], `${RARITY_LABEL[prize.rarity].toUpperCase()}!`, prize.name, RARITY_COLOR[prize.rarity]);
+}
+
 const TILE = 104;
 
 /** The chests on offer, each with its button, and what can turn up: into `body`. */
 export function chestList(body: HTMLElement, s: Session, busy: () => boolean, open: (c: Chest) => void): void {
-  body.append(el('p', '', `Shiny fish bring 1 token, golden ones 3, and the gull's wheel and slots give a few. You have <b>${s.save.tokens}</b>.`));
+  body.append(el('p', '', `Pearls come from the rarest catches: golden and prismatic fish, and legends. You have <b>${s.save.tokens}</b>.`));
   for (const c of CHESTS) {
     const row = el('div', 'row');
     const odds = (Object.entries(c.odds) as [keyof typeof RARITY_COLOR, number][]).map(([r, p]) => `<span style="color:${RARITY_COLOR[r]}">${Math.round(p * 1000) / 10}%</span>`).join(' · ');
     row.innerHTML = `<img src="${icon(`chest-${c.id}`)}" alt=""><div class="grow"><div class="title">${c.name}</div><div class="sub">${c.blurb}</div><div class="sub" style="font-size:11px">${odds}</div></div>`;
-    const b = el('button', 'btn coral', `Open · ${c.cost}`);
+    const b = el('button', 'btn coral', `<span class="price"><b class="pearl"></b>${c.cost}</span>`);
     b.disabled = s.save.tokens < c.cost || busy();
     b.onclick = () => open(c);
     row.append(b);
@@ -59,8 +124,9 @@ export function spinChest(app: HTMLElement, s: Session, fanfare: Fanfare, chest:
   if (spinning || s.save.tokens < chest.cost) return;
   spinning = true;
   s.save.tokens -= chest.cost;
+  s.audio.play('chip', { volume: 0.8 });
   const seed = Date.now() % 1e9;
-  const prize = openChest(chest, rng(seed));
+  const prize = openChest(chest, rng(seed), (p) => owns(s, p));
   const strip = makeStrip(chest, prize, seed + 1);
   // Given now, so closing the game mid-spin loses nothing; the strip only shows it.
   s.hud.hold = true;
@@ -115,35 +181,13 @@ export function spinChest(app: HTMLElement, s: Session, fanfare: Fanfare, chest:
     overlay.classList.add(`won-${prize.rarity}`);
     overlay.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
     fanfare.win(owned ? 'small' : GRAND[prize.rarity], RARITY_LABEL[prize.rarity].toUpperCase() + '!', prize.name, RARITY_COLOR[prize.rarity]);
-    result.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
-    result.innerHTML = `<div class="rr-glow"></div><img src="${icon(prize.id)}" alt=""><div class="rr-rar">${RARITY_LABEL[prize.rarity]}</div><div class="rr-name">${prize.name}</div><div class="rr-sub">${owned ? (refund ? `Already yours, so +${refund} token${refund > 1 ? 's' : ''} back.` : 'Already yours. The gull snickers.') : prize.kind === 'character' ? 'A new friend to play as! Change in More › Wardrobe.' : prize.kind === 'hat' ? 'A new hat!' : 'In your bag, ready to set down.'}</div>`;
-    const actions = el('div', 'rr-actions');
-    if (prize.kind === 'hat' && !owned) {
-      const wear = el('button', 'btn green', 'Wear it');
-      wear.onclick = () => {
-        s.wear(prize.id);
-        close();
-      };
-      actions.append(wear);
-    }
-    if (prize.kind === 'character' && !owned) {
-      const be = el('button', 'btn green', 'Play as');
-      be.onclick = () => {
-        s.become(prize.id);
-        close();
-      };
-      actions.append(be);
-    }
     const again = el('button', 'btn coral', `Again · ${chest.cost}`);
     again.disabled = s.save.tokens < chest.cost;
     again.onclick = () => {
       close();
       spinChest(app, s, fanfare, chest, after);
     };
-    const ok = el('button', 'btn plain', 'Done');
-    ok.onclick = close;
-    actions.append(again, ok);
-    result.append(actions);
+    prizeCard(result, s, prize, owned, refund, close, [again]);
     result.classList.add('show');
   }
 

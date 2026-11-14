@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { rng } from '../core/rng';
 import { BAITS, LURES, RODS } from './economy';
-import { PRIZES, TICKETS, makeTicket } from './tickets';
+import { PRIZES, TICKETS, makeTicket, payout } from './tickets';
 import { TITLES, newTitles } from './titles';
 import { newSave } from './save';
 import { rollCatch, rollQuality, type Conditions } from '../fishing/roll';
@@ -24,20 +24,16 @@ describe('scratch tickets', () => {
       }
     }
   });
-  it('pays back a little less than it costs, on average', () => {
-    const kind = TICKETS[0];
-    let coins = 0;
-    let tokens = 0;
-    const n = 40000;
-    for (let i = 0; i < n; i++) {
-      const t = makeTicket(kind, i + 1);
-      coins += t.coins;
-      tokens += t.tokens;
-    }
-    const back = (coins + tokens * 80) / (n * kind.price);
-    expect(back).toBeGreaterThan(0.6);
-    expect(back).toBeLessThan(1);
-    expect(PRIZES.crown.chance).toBeLessThan(0.001);
+  it('wins a cosmetic or pearls back on about half the tickets, a dearer ticket a rarer prize', () => {
+    let wins = 0;
+    const n = 20000;
+    for (let i = 0; i < n; i++) if (makeTicket(TICKETS[0], i + 1).win) wins++;
+    expect(wins / n).toBeGreaterThan(0.45);
+    expect(wins / n).toBeLessThan(0.65);
+    expect(payout(TICKETS[0], 'crab').prize).toBe('rare');
+    expect(payout(TICKETS[2], 'crab').prize).toBe('legendary');
+    expect(payout(TICKETS[1], 'pearl').pearls).toBe(3);
+    expect(PRIZES.crown.chance).toBeLessThan(0.01);
   });
 });
 

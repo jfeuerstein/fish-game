@@ -1,28 +1,34 @@
-// Scratch tickets from the shop: nine squares under a silver coat; three of a kind wins. Pure.
+// Scratch tickets at the Lucky Gull: nine squares under a silver coat; three of a kind wins a
+// cosmetic (or pearls back). Bought with pearls; a dearer ticket's prizes are rarer. Pure.
 import { rng } from '../core/rng';
+import { RARITIES } from './arcade';
+import type { Rarity } from './crates';
 
 export type Symbol = 'shell' | 'fish' | 'crab' | 'star' | 'pearl' | 'crown';
 
 export interface TicketKind {
   id: string;
   name: string;
+  /** In pearls. */
   price: number;
+  /** How many rarities up from the symbol's own its prize is. */
+  boost: number;
   blurb: string;
 }
 export const TICKETS: readonly TicketKind[] = [
-  { id: 'penny', name: 'Tide Pool', price: 25, blurb: 'A little scratch for loose change.' },
-  { id: 'lucky', name: 'Lucky Catch', price: 100, blurb: 'Bigger prizes, same old luck.' },
-  { id: 'splash', name: 'Big Splash', price: 400, blurb: 'For the bold. The crown pays a fortune.' },
+  { id: 'penny', name: 'Tide Pool', price: 1, boost: 0, blurb: 'A little scratch. Mostly everyday things.' },
+  { id: 'lucky', name: 'Lucky Catch', price: 2, boost: 1, blurb: 'Every prize one rarity up.' },
+  { id: 'splash', name: 'Big Splash', price: 4, boost: 2, blurb: 'For the bold. The crown is a legend.' },
 ];
 
-/** Chance of each three-of-a-kind, and what it pays on the cheapest ticket (coins, or tokens for pearls). */
-export const PRIZES: Record<Symbol, { chance: number; coins: number; tokens: number; glyph: string }> = {
-  shell: { chance: 0.24, coins: 15, tokens: 0, glyph: '🐚' },
-  fish: { chance: 0.13, coins: 35, tokens: 0, glyph: '🐟' },
-  crab: { chance: 0.06, coins: 70, tokens: 0, glyph: '🦀' },
-  star: { chance: 0.018, coins: 175, tokens: 0, glyph: '⭐' },
-  pearl: { chance: 0.03, coins: 0, tokens: 1, glyph: '🫧' },
-  crown: { chance: 0.0006, coins: 2500, tokens: 3, glyph: '👑' },
+/** Chance of each three-of-a-kind, and the rarity it stands for on the cheapest ticket (pearls give pearls back). */
+export const PRIZES: Record<Symbol, { chance: number; rarity: Rarity | null }> = {
+  shell: { chance: 0.24, rarity: 'common' },
+  fish: { chance: 0.15, rarity: 'uncommon' },
+  crab: { chance: 0.08, rarity: 'rare' },
+  star: { chance: 0.03, rarity: 'epic' },
+  pearl: { chance: 0.07, rarity: null },
+  crown: { chance: 0.008, rarity: 'legendary' },
 };
 const ORDER: Symbol[] = ['crown', 'pearl', 'star', 'crab', 'fish', 'shell'];
 
@@ -30,15 +36,17 @@ export interface Ticket {
   kind: TicketKind;
   cells: Symbol[];
   win: Symbol | null;
-  coins: number;
-  tokens: number;
+  /** The rarity of the cosmetic won, if any. */
+  prize: Rarity | null;
+  /** Pearls back (three pearls: the price and one more). */
+  pearls: number;
 }
 
-/** What a ticket pays for its symbol: coins scale with the price, tokens a little less. */
-export function payout(kind: TicketKind, s: Symbol): { coins: number; tokens: number } {
-  const m = kind.price / 25;
-  const p = PRIZES[s];
-  return { coins: p.coins * m, tokens: p.tokens ? Math.max(1, Math.round(p.tokens * Math.sqrt(m))) : 0 };
+/** What a ticket wins for its symbol. */
+export function payout(kind: TicketKind, s: Symbol): { prize: Rarity | null; pearls: number } {
+  const r = PRIZES[s].rarity;
+  if (!r) return { prize: null, pearls: kind.price + 1 };
+  return { prize: RARITIES[Math.min(RARITIES.length - 1, RARITIES.indexOf(r) + kind.boost)], pearls: 0 };
 }
 
 /** Make a ticket: decide the prize, then fill the squares so exactly that symbol shows three times. */
@@ -65,11 +73,10 @@ export function makeTicket(kind: TicketKind, seed: number): Ticket {
     count.set(s, n + 1);
     cells.push(s);
   }
-  // Shuffle.
   for (let i = cells.length - 1; i > 0; i--) {
     const j = Math.floor(r() * (i + 1));
     [cells[i], cells[j]] = [cells[j], cells[i]];
   }
-  const pay = win ? payout(kind, win) : { coins: 0, tokens: 0 };
+  const pay = win ? payout(kind, win) : { prize: null, pearls: 0 };
   return { kind, cells, win, ...pay };
 }

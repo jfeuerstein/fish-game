@@ -1,10 +1,6 @@
 // The bait shop: sell fish, buy rods, bait, hats, things for around the island, upgrades.
 import { valueOf, BY_ID, sayLength, stars } from '../fishing/fish';
 import { BAITS, BOAT_LICENCE, COOLERS, DETECTOR, EXTRAS, FURNITURE, HATS, LURES, RODS, levelFor } from '../game/economy';
-import { TICKETS } from '../game/tickets';
-import { newTitles } from '../game/titles';
-import { buyTicket } from './scratch';
-import type { Fanfare } from './fanfare';
 import { sell, spend } from '../game/progress';
 import type { Session } from '../game/session';
 import { el, icon } from './hud';
@@ -12,7 +8,7 @@ import { Sheet } from './sheet';
 
 const coin = (n: number): string => `<span class="price"><img src="${icon('coin')}" alt="">${n.toLocaleString()}</span>`;
 
-export function shopSheet(app: HTMLElement, s: Session, openChests: () => void, fanfare: Fanfare): Sheet {
+export function shopSheet(app: HTMLElement, s: Session, openChests: () => void): Sheet {
   const sheet: Sheet = new Sheet(app, "Gus's Bait & Tackle", (body, tab) => {
     const save = s.save;
     const level = levelFor(save.xp).level;
@@ -146,23 +142,9 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void, 
         row.append(b);
         body.append(row);
       }
-    } else if (tab === 'Tickets') {
-      body.append(el('p', '', `"Feeling lucky? Scratch off three of a kind and you win." Played ${save.tickets.played}, best win ${save.tickets.best.toLocaleString()}.`));
-      for (const k of TICKETS) {
-        const row = el('div', 'row');
-        row.innerHTML = `<img src="${icon(`ticket-${k.id}`)}" alt=""><div class="grow"><div class="title">${k.name}</div><div class="sub">${k.blurb}</div><div class="sub">Crown pays ${(2500 * k.price / 25).toLocaleString()}</div></div>`;
-        const b = el('button', 'btn coral');
-        b.innerHTML = coin(k.price);
-        b.onclick = () => buyTicket(app, s, fanfare, k, () => {
-          for (const n of newTitles(save)) s.hud.toast(`New title: ${n}!`, 'gold');
-          sheet.refresh();
-        });
-        row.append(b);
-        body.append(row);
-      }
     } else if (tab === 'Wear') {
       const grid = el('div', 'grid');
-      for (const x of EXTRAS) {
+      for (const x of EXTRAS.filter((e) => !e.gift || save.extras.includes(e.id))) {
         const owned = save.extras.includes(x.id);
         const t = el('button', `tile${save.extra === x.id ? ' on' : ''}`);
         t.innerHTML = `<img src="${icon(x.id)}" alt="">${x.name}${owned ? '<small>Owned</small>' : coin(x.price)}`;
@@ -209,8 +191,8 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void, 
         grid.append(t);
       }
       body.append(grid);
-    } else if (tab === 'Chests') {
-      body.append(el('p', '', 'Shiny and golden fish come with tokens. Spend them on a chest and see what spins up!'));
+    } else if (tab === 'Pearls') {
+      body.append(el('p', '', '"Pearls? The rarest fish carry them: golden ones, prismatic ones, and the legends. The gull at the Lucky Gull takes them for chests and games. Prizes only, mind: no coins."'));
       const b = el('button', 'big-btn', 'Open chests');
       b.onclick = () => openChests();
       body.append(b);
@@ -265,6 +247,6 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void, 
       det.append(d);
       body.append(det);
     }
-  }, ['Sell', 'Rods', 'Lures', 'Bait', 'Tickets', 'Chests', 'Hats', 'Wear', 'Things', 'Upgrades']);
+  }, ['Sell', 'Rods', 'Lures', 'Bait', 'Hats', 'Wear', 'Things', 'Upgrades', 'Pearls']);
   return sheet;
 }

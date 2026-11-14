@@ -1,21 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { rng } from '../core/rng';
-import { REEL_WEIGHTS, type Reel, SNATCH_AT_ONCE, WHEEL, WHEEL_PAYS, flightAt, grandness, reelStrip, scoreSlots, snatchPoint, spinWheel, timeTo, wheelPayout, wheelStrip } from './arcade';
+import { FLIGHT_TIERS, POCKET_PRIZE, REEL_WEIGHTS, type Reel, SNATCH_AT_ONCE, WHEEL, flightAt, flightPrize, nextTier, reelStrip, scoreSlots, snatchPoint, spinWheel, timeTo, wheelPrize, wheelStrip } from './arcade';
+import { PRIZES, pickPrize } from './crates';
 
 describe('the Gull Wheel', () => {
-  it('has one gull and seven each of crabs and mussels, and pays back a little under the stake', () => {
+  it('has one gull, five crabs and nine shells, each winning a prize of its own rarity', () => {
     expect(WHEEL.filter((p) => p === 'gull').length).toBe(1);
-    expect(WHEEL.filter((p) => p === 'crab').length).toBe(7);
-    for (const on of ['crab', 'mussel', 'gull'] as const) {
-      const ev = (WHEEL.filter((p) => p === on).length / WHEEL.length) * WHEEL_PAYS[on];
-      expect(ev, on).toBeLessThan(1);
-      expect(ev, on).toBeGreaterThan(0.9);
-    }
+    expect(WHEEL.filter((p) => p === 'crab').length).toBe(5);
+    expect(WHEEL.filter((p) => p === 'shell').length).toBe(9);
+    expect(POCKET_PRIZE.gull).toBe('legendary');
   });
-  it('pays only the pocket bet on, with tokens for a gull', () => {
-    expect(wheelPayout('crab', 50, 'crab').coins).toBe(100);
-    expect(wheelPayout('crab', 50, 'mussel').coins).toBe(0);
-    expect(wheelPayout('gull', 200, 'gull')).toEqual({ coins: 2800, tokens: 2 });
+  it('wins only on the pocket bet on, and never coins', () => {
+    expect(wheelPrize('crab', 'crab')).toBe('rare');
+    expect(wheelPrize('crab', 'shell')).toBeNull();
   });
   it('builds a strip that stops on the result', () => {
     const r = spinWheel(rng(5));
@@ -28,25 +25,27 @@ describe('the Gull Wheel', () => {
 describe('the Bait Bandit', () => {
   const total = Object.values(REEL_WEIGHTS).reduce((a, b) => a + b, 0);
   const all = Object.keys(REEL_WEIGHTS) as Reel[];
-  it('pays back between 88% and 98% of what is staked, counting tokens at 60 coins', () => {
-    let ev = 0;
+  it('wins something on a good share of pulls, and a legend rarely', () => {
+    let some = 0;
+    let legend = 0;
     for (const a of all) for (const b of all) for (const c of all) {
       const p = (REEL_WEIGHTS[a] * REEL_WEIGHTS[b] * REEL_WEIGHTS[c]) / total ** 3;
-      const r = scoreSlots([a, b, c], 100);
-      ev += p * (r.coins + r.tokens * 60);
+      const r = scoreSlots([a, b, c]);
+      if (r.prize || r.pearls) some += p;
+      if (r.prize === 'legendary') legend += p;
     }
-    if (process.env.ARCADE_REPORT) console.log('slots pay back', (ev / 100).toFixed(3));
-    expect(ev / 100).toBeGreaterThan(0.88);
-    expect(ev / 100).toBeLessThan(0.98);
+    if (process.env.ARCADE_REPORT) console.log('slots win', some.toFixed(3), 'legendary', legend.toFixed(5));
+    expect(some).toBeGreaterThan(0.3);
+    expect(some).toBeLessThan(0.6);
+    expect(legend).toBeLessThan(0.001);
   });
   it('scores lines', () => {
-    expect(scoreSlots(['gold', 'gold', 'gold'], 10).kind).toBe('jackpot');
-    expect(scoreSlots(['fish', 'fish', 'fish'], 10).coins).toBe(220);
-    expect(scoreSlots(['boot', 'boot', 'boot'], 10).kind).toBe('boots');
-    expect(scoreSlots(['gold', 'worm', 'shell'], 10).coins).toBe(10);
-    expect(scoreSlots(['worm', 'shell', 'fish'], 10).coins).toBe(0);
-    expect(scoreSlots(['pearl', 'pearl', 'worm'], 100).tokens).toBe(1);
-    expect(scoreSlots(['pearl', 'pearl', 'worm'], 10).tokens).toBe(0);
+    expect(scoreSlots(['crown', 'crown', 'crown']).prize).toBe('legendary');
+    expect(scoreSlots(['fish', 'fish', 'worm']).prize).toBe('uncommon');
+    expect(scoreSlots(['worm', 'worm', 'fish']).prize).toBe('common');
+    expect(scoreSlots(['worm', 'boot', 'fish']).prize).toBeNull();
+    expect(scoreSlots(['boot', 'boot', 'boot']).kind).toBe('boots');
+    expect(scoreSlots(['pearl', 'pearl', 'pearl']).pearls).toBe(3);
   });
   it('builds a reel strip ending on the result', () => {
     const s = reelStrip('gold', 30, 9);
@@ -56,25 +55,34 @@ describe('the Bait Bandit', () => {
 });
 
 describe('Flying Fish', () => {
-  it('pays back about 96% whatever the target', () => {
+  it('climbs through the rarities, each reached less often', () => {
     const r = rng(11);
     const points = Array.from({ length: 40000 }, () => snatchPoint(r));
-    for (const target of [1.2, 2, 5]) {
-      const ev = points.filter((p) => p >= target).length / points.length * target;
-      expect(ev, String(target)).toBeGreaterThan(0.9);
-      expect(ev, String(target)).toBeLessThan(1.0);
+    let last = 1;
+    for (const t of FLIGHT_TIERS) {
+      const reach = points.filter((p) => p >= t.at).length / points.length;
+      expect(reach, t.rarity).toBeLessThan(last);
+      expect(reach, t.rarity).toBeCloseTo((1 - SNATCH_AT_ONCE) / t.at, 1);
+      last = reach;
     }
-    expect(points.filter((p) => p === 1).length / points.length).toBeCloseTo(SNATCH_AT_ONCE, 1);
   });
-  it('rises with time and can be inverted', () => {
-    expect(flightAt(0)).toBe(1);
-    expect(flightAt(5)).toBeGreaterThan(flightAt(2));
+  it('pays the tier reached, and nothing below the first', () => {
+    expect(flightPrize(1.2)).toBeNull();
+    expect(flightPrize(3)).toBe('uncommon');
+    expect(flightPrize(25)).toBe('legendary');
+    expect(nextTier(3)?.rarity).toBe('rare');
     expect(flightAt(timeTo(3))).toBeCloseTo(3, 1);
   });
-  it('rates wins for the fanfare', () => {
-    expect(grandness(0, 10)).toBe('none');
-    expect(grandness(20, 10)).toBe('small');
-    expect(grandness(140, 10)).toBe('huge');
-    expect(grandness(1500, 10)).toBe('jackpot');
+});
+
+describe('prizes', () => {
+  it('favours what is not owned yet', () => {
+    const r = rng(3);
+    const owned = new Set(PRIZES.filter((p) => p.rarity === 'common').slice(1).map((p) => p.id));
+    let fresh = 0;
+    for (let i = 0; i < 3000; i++) if (!owned.has(pickPrize('common', (p) => owned.has(p.id), r).id)) fresh++;
+    const commons = PRIZES.filter((p) => p.rarity === 'common').length;
+    // One unowned of n, three times as likely: 3 / (3 + n - 1).
+    expect(fresh / 3000).toBeCloseTo(3 / (3 + commons - 1), 1);
   });
 });

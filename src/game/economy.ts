@@ -157,15 +157,16 @@ export const FURNITURE: readonly Furniture[] = [
 ];
 
 /** Things to wear besides a hat. */
-export const EXTRAS: readonly { id: string; name: string; price: number }[] = [
+/** Things to wear besides hats. `gift` ones are won at the Lucky Gull, not sold. */
+export const EXTRAS: readonly { id: string; name: string; price: number; gift?: boolean }[] = [
   { id: 'x-flower', name: 'Flower Pin', price: 200 },
   { id: 'x-bowtie', name: 'Bow Tie', price: 250 },
   { id: 'x-glasses', name: 'Round Glasses', price: 300 },
   { id: 'x-scarf', name: 'Cosy Scarf', price: 350 },
   { id: 'x-shades', name: 'Sunglasses', price: 450 },
   { id: 'x-backpack', name: 'Backpack', price: 700 },
-  { id: 'x-mustache', name: 'Fine Mustache', price: 420 },
-  { id: 'x-snorkel', name: 'Snorkel Mask', price: 650 },
+  { id: 'x-mustache', name: 'Fine Mustache', price: 0, gift: true },
+  { id: 'x-snorkel', name: 'Snorkel Mask', price: 0, gift: true },
 ];
 
 /** Characters the player can be. */

@@ -30,7 +30,7 @@ export class Audio {
       this.ambBus = this.bus(this.volumes.ambience);
       this.musicBus = this.bus(this.volumes.music * 0.55);
       // Fetch the effects up front so the first cast is not silent.
-      for (const n of ['cast', 'plop', 'nibble', 'bite', 'reel', 'snap', 'splash', 'catch', 'rare', 'coin', 'click', 'open', 'step', 'stepwood']) this.load(n);
+      for (const n of ['cast', 'plop', 'nibble', 'bite', 'reel', 'snap', 'splash', 'catch', 'rare', 'coin', 'click', 'open', 'step', 'stepwood', 'tick', 'chip', 'jingle-small', 'jingle-big', 'jingle-lose']) this.load(n);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
@@ -96,30 +96,22 @@ export class Audio {
 
   /** The tick of a strip or reel going past a marker; rises in pitch as `k` goes from 0 to 1. */
   tick(k = 0): void {
-    this.tone(900 + k * 500, 0, 0.045, 'square', 0.05);
+    this.play('tick', { volume: 0.5, rate: 1 + k * 0.45 });
   }
 
-  /** A little brass band for a win, grander as the win is; a slide down for a loss. */
+  /**
+   * A jingle for a win, grander as the win is (steel drums, from Kenney's CC0 jingles through
+   * patch.gg); a soft sax for a loss. The biggest wins add a synthesised shimmer on top.
+   */
   band(level: 'none' | 'small' | 'big' | 'huge' | 'jackpot'): void {
-    const n = (semi: number): number => 523.25 * 2 ** (semi / 12);
-    if (level === 'none') {
-      [0, -1, -2, -5].forEach((s, i) => this.tone(n(s - 5), i * 0.18, 0.28, 'sawtooth', 0.06));
-      return;
+    const jingle = { none: 'jingle-lose', small: 'jingle-small', big: 'jingle-big', huge: 'jingle-huge', jackpot: 'jingle-jackpot' }[level];
+    this.play(jingle, { volume: level === 'none' ? 0.55 : 0.85 });
+    if (level === 'huge' || level === 'jackpot') {
+      const n = (semi: number): number => 523.25 * 2 ** (semi / 12);
+      for (let i = 0; i < 14; i++) this.tone(n(24 + ((i * 5) % 12)), 0.25 + i * 0.06, 0.14, 'sine', 0.04);
+      this.play('chips', { volume: 0.6 });
     }
-    if (level === 'small') {
-      [0, 4, 7].forEach((s, i) => this.tone(n(s), i * 0.07, 0.2, 'triangle', 0.14));
-      return;
-    }
-    const line = level === 'big' ? [0, 4, 7, 12] : level === 'huge' ? [0, 4, 7, 12, 7, 12, 16] : [0, 4, 7, 12, 16, 19, 24, 19, 24, 28];
-    line.forEach((s, i) => {
-      this.tone(n(s), i * 0.09, 0.3, 'triangle', 0.15);
-      this.tone(n(s - 12), i * 0.09, 0.3, 'square', 0.035);
-    });
-    const end = line.length * 0.09;
-    // A held chord to finish, with a shimmer on the biggest wins.
-    for (const s of [0, 4, 7, 12]) this.tone(n(s + 12), end, level === 'jackpot' ? 1.4 : 0.8, 'triangle', 0.08);
-    if (level !== 'big') for (let i = 0; i < 12; i++) this.tone(n(24 + ((i * 5) % 12)), end + i * 0.05, 0.12, 'sine', 0.05);
-    this.play(level === 'jackpot' ? 'levelup' : 'coin', { volume: 0.7 });
+    if (level === 'jackpot') this.play('levelup', { volume: 0.5 });
   }
 
   /** A drum roll: ticks closing in, for while a reel or a fish keeps everyone waiting. */

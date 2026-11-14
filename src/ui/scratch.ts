@@ -1,9 +1,9 @@
 // A scratch ticket: nine squares under a silver coat, scratched off with a finger. Three of a
 // kind wins. The prize is decided when the ticket is bought (tickets.ts); scratching only shows it.
 import type { Audio } from '../audio/audio';
-import { grandness } from '../game/arcade';
-import { spend } from '../game/progress';
 import type { Session } from '../game/session';
+import { RARITY_LABEL } from '../game/crates';
+import { showPrize, winPrize } from './chests';
 import { type Symbol, type Ticket, type TicketKind, makeTicket } from '../game/tickets';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
@@ -11,25 +11,28 @@ import { el, icon } from './hud';
 /** Each symbol as one of the game's own pictures. */
 const PICTURE: Record<Symbol, string> = { shell: 'shell', fish: 'fish-mackerel', crab: 'fish-crab', star: 'fish-starfish', pearl: 'token', crown: 'hat-crown' };
 
-/** Buy a ticket: paid for and paid out at once (nothing is lost if the game closes), then scratched. */
+/** Buy a ticket with pearls: the prize is decided and given at once (nothing is lost if the game closes), then scratched. */
 export function buyTicket(app: HTMLElement, s: Session, fanfare: Fanfare, k: TicketKind, after: () => void): void {
   const save = s.save;
-  if (!spend(save, k.price)) {
-    s.hud.toast("You can't afford that yet.");
+  if (save.tokens < k.price) {
+    s.hud.toast('Not enough pearls. Golden, prismatic and legendary fish bring them.');
     return;
   }
+  save.tokens -= k.price;
+  s.audio.play('shuffle', { volume: 0.5 });
   const t = makeTicket(k, (Date.now() ^ (save.tickets.played * 2654435761)) >>> 0);
   save.tickets.played++;
   s.hud.hold = true;
-  save.coins += t.coins;
-  save.tokens += t.tokens;
-  save.tickets.best = Math.max(save.tickets.best, t.coins);
+  save.tokens += t.pearls;
+  const won = t.prize ? winPrize(s, t.prize) : null;
   s.changed();
   scratchTicket(app, s.audio, t, () => {
     s.hud.hold = false;
-    const level = grandness(t.coins, k.price, t.tokens);
-    if (t.win) fanfare.win(level, t.win === 'crown' ? 'CROWNED!' : level === 'huge' || level === 'jackpot' ? 'BIG WIN!' : 'WINNER!', [t.coins ? `+${t.coins.toLocaleString()} coins` : '', t.tokens ? `+${t.tokens} token${t.tokens > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · '));
-    after();
+    if (won) showPrize(app, s, fanfare, won, after);
+    else {
+      if (t.pearls) fanfare.win('small', 'PEARLS!', `+${t.pearls} pearls`);
+      after();
+    }
   });
 }
 
@@ -134,8 +137,7 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket,
     setTimeout(() => coat.remove(), 450);
     board.classList.add('done');
     if (ticket.win) {
-      const parts = [ticket.coins ? `${ticket.coins.toLocaleString()} coins` : '', ticket.tokens ? `${ticket.tokens} token${ticket.tokens > 1 ? 's' : ''}` : ''].filter(Boolean);
-      result.innerHTML = `<b>Winner!</b> ${parts.join(' and ')}`;
+      result.innerHTML = ticket.prize ? `<b>Three alike!</b> A ${RARITY_LABEL[ticket.prize].toLowerCase()} prize.` : `<b>Three pearls!</b> ${ticket.pearls} pearls back.`;
       result.className = `scratch-result win ${ticket.win}`;
     } else {
       audio.play('click', { rate: 0.6 });

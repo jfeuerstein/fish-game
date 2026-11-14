@@ -63,7 +63,7 @@ export const NPCS: NpcDef[] = [
     lines: [
       'Mmm, campfire weather. The night sky is lovely from the camp.',
       'Gus will buy anything. Even old boots. Okay, maybe not boots.',
-      'I spent all my tokens on chests. No regrets! Okay, one regret.',
+      'I spent all my pearls at the Lucky Gull. No regrets! Okay, one regret.',
       'Errands on the board pay well. And every third one, a little extra.',
     ],
   },
@@ -72,7 +72,7 @@ export const NPCS: NpcDef[] = [
 export const GUS_LINES = [
   'Welcome to the shop! I buy fish, I sell everything else.',
   'Better bait means fussier fish. Fussier fish means more coins!',
-  'Got tokens? Those chests behind me have all sorts inside.',
+  'Got pearls? The gull by the plaza will take them. Prizes only, mind.',
   'A bigger cooler means fewer trips back here. Not that I mind the company.',
   'The Starlight Rod hums near rare fish. Or so they tell me.',
 ];

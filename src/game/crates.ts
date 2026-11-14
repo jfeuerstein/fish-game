@@ -1,4 +1,6 @@
-// Chests opened with tokens: a strip of prizes spins past and slows to a stop on one. Pure.
+// Pearls (the save calls them tokens) are the premium currency: only the rarest catches give
+// them, and they are spent at the Lucky Gull on chests and games that pay out cosmetics, never
+// coins. A chest: a strip of prizes spins past and slows to a stop on one. Pure.
 import { rng } from '../core/rng';
 import type { Variant } from '../fishing/fish';
 
@@ -8,7 +10,7 @@ export interface Prize {
   id: string;
   name: string;
   rarity: Rarity;
-  kind: 'hat' | 'character' | 'furniture';
+  kind: 'hat' | 'character' | 'furniture' | 'extra';
 }
 
 /** Everything a chest can hold. Some things (the frog and raccoon, the crown) come only from chests. */
@@ -34,6 +36,7 @@ export const PRIZES: readonly Prize[] = [
   { id: 'hat-mushroom', name: 'Mushroom Cap', rarity: 'rare', kind: 'hat' },
   { id: 'hat-duck', name: 'Rubber Duck', rarity: 'rare', kind: 'hat' },
   { id: 'hat-bread', name: 'Loaf of Bread', rarity: 'rare', kind: 'hat' },
+  { id: 'x-mustache', name: 'Fine Mustache', rarity: 'rare', kind: 'extra' },
   { id: 'f-tiki', name: 'Tiki Torch', rarity: 'rare', kind: 'furniture' },
   { id: 'f-radio', name: 'Radio', rarity: 'rare', kind: 'furniture' },
   { id: 'hat-pirate', name: 'Pirate Hat', rarity: 'epic', kind: 'hat' },
@@ -41,6 +44,7 @@ export const PRIZES: readonly Prize[] = [
   { id: 'hat-fish', name: 'Fish Hat', rarity: 'epic', kind: 'hat' },
   { id: 'hat-crab', name: 'Grumpy Crab', rarity: 'epic', kind: 'hat' },
   { id: 'hat-shark', name: 'Shark Hood', rarity: 'epic', kind: 'hat' },
+  { id: 'x-snorkel', name: 'Snorkel Mask', rarity: 'epic', kind: 'extra' },
   { id: 'f-telescope', name: 'Telescope', rarity: 'epic', kind: 'furniture' },
   { id: 'char-raccoon', name: 'Raccoon', rarity: 'epic', kind: 'character' },
   { id: 'hat-crown', name: 'Little Crown', rarity: 'legendary', kind: 'hat' },
@@ -63,12 +67,17 @@ export interface Chest {
 
 export const CHESTS: readonly Chest[] = [
   { id: 'tide', name: 'Tide Chest', cost: 2, odds: { common: 0.55, uncommon: 0.26, rare: 0.13, epic: 0.05, legendary: 0.01 }, blurb: 'Washed up on the beach. Mostly hats.' },
-  { id: 'gilded', name: 'Gilded Chest', cost: 6, odds: { common: 0.2, uncommon: 0.32, rare: 0.28, epic: 0.15, legendary: 0.05 }, blurb: 'Heavier. Something rattles inside.' },
+  { id: 'gilded', name: 'Gilded Chest', cost: 5, odds: { common: 0.2, uncommon: 0.32, rare: 0.28, epic: 0.15, legendary: 0.05 }, blurb: 'Heavier. Something rattles inside.' },
 ];
 
-/** How many tokens a catch is worth: shiny and golden fish, and a first-ever legend. */
-export function tokensFor(variant: Variant, firstLegend: boolean): number {
-  return ({ normal: 0, fine: 0, shiny: 1, golden: 3, prismatic: 8 } as const)[variant] + (firstLegend ? 1 : 0);
+/**
+ * How many pearls a catch is worth: only the rarest. A golden fish 1, a prismatic one 3, any
+ * legendary fish 2 more (and 2 again the first time), the first of each epic kind 1.
+ */
+export function tokensFor(variant: Variant, tier = 'common', first = false): number {
+  const v = ({ normal: 0, fine: 0, shiny: 0, golden: 1, prismatic: 3 } as const)[variant];
+  const t = tier === 'legendary' ? 2 + (first ? 2 : 0) : tier === 'epic' && first ? 1 : 0;
+  return v + t;
 }
 
 /** What a prize already owned is worth instead, in tokens. */
@@ -83,11 +92,24 @@ function pickRarity(odds: Record<Rarity, number>, r: number): Rarity {
   return 'common';
 }
 
-/** Open a chest: which prize it gives. */
-export function openChest(chest: Chest, rand: () => number): Prize {
-  const rarity = pickRarity(chest.odds, rand());
+/**
+ * A prize of a rarity, from everything a chest or game can give. What the player does not have
+ * yet is three times as likely, so the shelves fill rather than repeat.
+ */
+export function pickPrize(rarity: Rarity, owned: (p: Prize) => boolean, rand: () => number): Prize {
   const pool = PRIZES.filter((p) => p.rarity === rarity);
-  return pool[Math.floor(rand() * pool.length)];
+  const weights = pool.map((p) => (owned(p) ? 1 : 3));
+  let r = rand() * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r < 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
+/** Open a chest: which prize it gives. */
+export function openChest(chest: Chest, rand: () => number, owned: (p: Prize) => boolean = () => false): Prize {
+  return pickPrize(pickRarity(chest.odds, rand()), owned, rand);
 }
 
 /** How many tiles the strip has, and where the winner sits on it. */

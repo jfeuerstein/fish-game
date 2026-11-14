@@ -1,13 +1,14 @@
-// The Lucky Gull: the arcade booth on the plaza. Five games in one dark sheet: the Gull Wheel (a
-// strip of crabs, shells and one gull that slides past a marker), the Bait Bandit (three reels),
-// Flying Fish (cash out before the gull snatches it), the token chests and the scratch tickets.
-// The odds and payouts are in game/arcade.ts; this is only the show.
+// The Lucky Gull: the arcade booth on the plaza. Everything here costs pearls, the premium
+// currency from the rarest catches, and pays out cosmetics: the Gull Wheel (a strip of shells,
+// crabs and one gull sliding past a marker; bet on one), the Bait Bandit (three reels), Flying Fish
+// (the prize grows rarer the higher the fish flies; cash out before the gull snatches it), the
+// chests and the scratch tickets. The odds are in game/arcade.ts; this is only the show.
 import { rng } from '../core/rng';
-import { type Pocket, type Reel, STAKES, THREE_PAYS, WHEEL, WHEEL_PAYS, flightAt, grandness, reelStrip, snatchPoint, spinSlots, spinWheel, wheelPayout, wheelStrip } from '../game/arcade';
-import { spend } from '../game/progress';
+import { FLIGHT_COST, FLIGHT_TIERS, POCKET_PRIZE, type Pocket, REEL_PRIZE, type Reel, SLOTS_COST, WHEEL, WHEEL_COST, flightAt, flightPrize, nextTier, reelStrip, snatchPoint, spinSlots, spinWheel, wheelPrize, wheelStrip } from '../game/arcade';
+import { RARITY_COLOR, RARITY_LABEL, type Rarity } from '../game/crates';
 import type { Session } from '../game/session';
 import { TICKETS } from '../game/tickets';
-import { chestBusy, chestList, spinChest } from './chests';
+import { chestBusy, chestList, showPrize, spinChest, winPrize } from './chests';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
 import { buyTicket } from './scratch';
@@ -22,66 +23,68 @@ export interface ArcadeHooks {
   cheer(): void;
 }
 
-const POCKET_PIC: Record<Pocket, string> = { crab: 'fish-crab', mussel: 'shell', gull: 'gull' };
-const POCKET_NAME: Record<Pocket, string> = { crab: 'Crab', mussel: 'Shell', gull: 'Gull' };
-const REEL_PIC: Record<Reel, string> = { worm: 'bait-worm', bobber: 'bobber', shell: 'shell', fish: 'fish-mackerel', boot: 'fish-boot', gold: 'fish-golden-trout', pearl: 'token' };
-const SMUG = ['The gull pockets it.', 'The gull looks very pleased with itself.', 'Somewhere, a gull is laughing.', 'House rules. The house is a gull.', 'The gull does a little dance.'];
+const POCKET_PIC: Record<Pocket, string> = { shell: 'shell', crab: 'fish-crab', gull: 'gull' };
+const POCKET_NAME: Record<Pocket, string> = { shell: 'Shell', crab: 'Crab', gull: 'Gull' };
+const REEL_PIC: Record<Reel, string> = { worm: 'bait-worm', bobber: 'bobber', fish: 'fish-mackerel', gold: 'fish-golden-trout', crown: 'hat-crown', boot: 'fish-boot', pearl: 'token' };
+const SMUG = ['The gull pockets your pearl.', 'The gull looks very pleased with itself.', 'Somewhere, a gull is laughing.', 'House rules. The house is a gull.', 'The gull does a little dance.'];
 const quick = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
+const pearl = '<b class="pearl"></b>';
+const tier = (r: Rarity): string => `<span class="tier" style="--rar:${RARITY_COLOR[r]}">${RARITY_LABEL[r]}</span>`;
 
 export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): Sheet {
   const save = s.save;
   const { fanfare } = hooks;
-  let stakeAt = 1;
   let busy = false;
-  const stake = (): number => STAKES[stakeAt];
 
-  /** The stake: fewer and more, and how much is in the purse. */
-  const stakeRow = (body: HTMLElement): HTMLElement => {
-    const row = el('div', 'stake');
-    const less = el('button', 'stake-step', '−');
-    const more = el('button', 'stake-step', '+');
-    const v = el('div', 'stake-v');
-    const show = (): void => {
-      v.innerHTML = `<span class="eyebrow">Stake</span><b><img src="${icon('coin')}" alt="">${stake().toLocaleString()}</b>`;
-      less.disabled = stakeAt === 0 || busy;
-      more.disabled = stakeAt === STAKES.length - 1 || busy;
-    };
-    less.onclick = () => {
-      stakeAt = Math.max(0, stakeAt - 1);
-      show();
-    };
-    more.onclick = () => {
-      stakeAt = Math.min(STAKES.length - 1, stakeAt + 1);
-      show();
-    };
-    show();
-    row.append(less, v, more);
-    body.append(row);
-    return row;
+  const purse = (): string => `<div class="purse"><span class="eyebrow">Your pearls</span><span>${pearl}${save.tokens}</span></div>`;
+  const refreshPurse = (): void => {
+    purseEl.innerHTML = purse();
   };
-
-  const purse = (): string => `<div class="purse"><span><img src="${icon('coin')}" alt="">${save.coins.toLocaleString()}</span><span><b class="pearl"></b>${save.tokens}</span></div>`;
-
-  const settle = (won: number, staked: number, tokens: number): void => {
+  /** Take the pearls a game costs, or say there are not enough. */
+  const pay = (n: number): boolean => {
+    if (save.tokens < n) {
+      s.hud.toast('Not enough pearls. Golden, prismatic and legendary fish bring them.');
+      return false;
+    }
+    save.tokens -= n;
     save.arcade.played++;
-    save.arcade.best = Math.max(save.arcade.best, won - staked);
+    s.audio.play('chip', { volume: 0.8 });
+    s.hud.hold = true;
     s.changed();
-    s.hud.hold = false;
-    if (won <= 0 && tokens <= 0) {
-      fanfare.lose();
-      hooks.gull('smug');
-      s.hud.toast(pick(SMUG));
-    } else if (grandness(won, staked, tokens) === 'huge' || grandness(won, staked, tokens) === 'jackpot') {
+    refreshPurse();
+    return true;
+  };
+  /** A prize was won: the card comes up, and the gull is astonished at the rare ones. */
+  const celebrate = (got: ReturnType<typeof winPrize>): void => {
+    save.arcade.best++;
+    if (got.prize.rarity === 'epic' || got.prize.rarity === 'legendary') {
       hooks.gull('shocked');
       hooks.cheer();
     }
+    showPrize(app, s, fanfare, got, refreshPurse);
+  };
+  /** A game ended: the prize card if something was won, the gull's gloating if not. */
+  const end = (won: Rarity | null, pearlsBack = 0, note = ''): void => {
+    s.hud.hold = false;
+    if (pearlsBack) {
+      save.tokens += pearlsBack;
+      s.hud.toast(`${note ? `${note} ` : ''}+${pearlsBack} pearl${pearlsBack > 1 ? 's' : ''}.`, 'gold');
+    }
+    if (won) celebrate(winPrize(s, won));
+    else if (!pearlsBack) {
+      fanfare.lose();
+      hooks.gull('smug');
+      s.hud.toast(pick(SMUG));
+    }
+    s.changed();
+    refreshPurse();
   };
 
   // ---------- The Gull Wheel ----------
   const TILE = 76;
   function wheel(body: HTMLElement): void {
-    body.append(el('p', 'casino-blurb', 'Bet on the crabs or the shells to double up, or the gull for fourteen times your stake and a token per hundred. One gull in fifteen.'));
+    body.append(el('p', 'casino-blurb', `Pick a pocket and spin. Land on it and win a prize that rare. ${WHEEL_COST} pearl a spin.`));
     const hist = el('div', 'wheel-hist');
     const drawHist = (): void => {
       hist.innerHTML = save.arcade.wheel.map((i) => `<i class="pk-${WHEEL[i]}"></i>`).join('');
@@ -100,10 +103,10 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     track.style.transform = `translateX(${-(STOP * TILE + TILE / 2 - centre())}px)`;
     win.append(track, el('div', 'wheel-marker'));
     body.append(hist, win);
-    stakeRow(body);
     const bets = el('div', 'wheel-bets');
-    for (const on of ['crab', 'gull', 'mussel'] as Pocket[]) {
-      const b = el('button', `wheel-bet pk-${on}`, `<img src="${icon(POCKET_PIC[on])}" alt=""><span>${POCKET_NAME[on]}</span><b>×${WHEEL_PAYS[on]}</b>`);
+    for (const on of ['shell', 'crab', 'gull'] as Pocket[]) {
+      const n = WHEEL.filter((p) => p === on).length;
+      const b = el('button', `wheel-bet pk-${on}`, `<img src="${icon(POCKET_PIC[on])}" alt=""><span>${POCKET_NAME[on]}</span>${tier(POCKET_PRIZE[on])}<small>${n} in ${WHEEL.length}</small>`);
       b.disabled = busy;
       b.onclick = () => spin(on);
       bets.append(b);
@@ -113,26 +116,19 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     body.append(out);
 
     function spin(on: Pocket): void {
-      if (busy) return;
-      const st = stake();
-      if (!spend(save, st)) {
-        s.hud.toast("You can't cover that stake.");
-        return;
-      }
+      if (busy || !pay(WHEEL_COST)) return;
       busy = true;
       for (const b of bets.children) (b as HTMLButtonElement).disabled = true;
       const result = spinWheel(rng((Date.now() ^ (save.arcade.played * 2654435761)) >>> 0));
       const pocket = WHEEL[result];
-      const pay = wheelPayout(on, st, pocket);
-      // Paid now: closing the game mid-spin loses nothing.
-      save.coins += pay.coins;
-      save.tokens += pay.tokens;
+      const prize = wheelPrize(on, pocket);
       save.arcade.wheel = [...save.arcade.wheel, result].slice(-14);
-      s.hud.hold = true;
+      // Won now, so closing the game mid-spin loses nothing; the strip only shows it.
+      const got = prize ? winPrize(s, prize) : null;
       s.changed();
       fill(wheelStrip(result, N, STOP));
       out.className = 'casino-out';
-      out.textContent = `${st.toLocaleString()} on the ${POCKET_NAME[on].toLowerCase()}…`;
+      out.textContent = `On the ${POCKET_NAME[on].toLowerCase()}…`;
       const c = centre();
       const from = 6 * TILE + TILE / 2 - c;
       const to = STOP * TILE + (0.15 + Math.random() * 0.7) * TILE - c;
@@ -158,17 +154,13 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         track.children[STOP]?.classList.add('win');
         drawHist();
         for (const b of bets.children) (b as HTMLButtonElement).disabled = false;
-        if (pay.coins) {
-          out.className = 'casino-out good';
-          out.innerHTML = `${POCKET_NAME[pocket]}! <b>+${pay.coins.toLocaleString()}</b>${pay.tokens ? ` and <b>${pay.tokens} token${pay.tokens > 1 ? 's' : ''}</b>` : ''}`;
-          const level = on === 'gull' ? (pay.tokens >= 3 ? 'jackpot' : 'huge') : st >= 250 ? 'big' : 'small';
-          fanfare.win(level, on === 'gull' ? 'GULL!' : 'DOUBLED!', `+${pay.coins.toLocaleString()} coins${pay.tokens ? ` · +${pay.tokens} tokens` : ''}`, on === 'gull' ? '#ecc77d' : on === 'crab' ? '#e0735a' : '#7cc2c6');
-        } else {
-          out.className = 'casino-out bad';
-          out.textContent = `${POCKET_NAME[pocket]}. Not this time.`;
-        }
-        settle(pay.coins, st, pay.tokens);
-        purseEl.innerHTML = purse();
+        out.className = `casino-out ${got ? 'good' : 'bad'}`;
+        out.textContent = got ? `${POCKET_NAME[pocket]}!` : `${POCKET_NAME[pocket]}. Not this time.`;
+        if (got) {
+          s.hud.hold = false;
+          celebrate(got);
+          refreshPurse();
+        } else end(null);
       }
     }
   }
@@ -176,13 +168,13 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
   // ---------- The Bait Bandit ----------
   const CELL = 84;
   function slots(body: HTMLElement): void {
-    body.append(el('p', 'casino-blurb', 'Three alike pays big; two golden fish pay six times, one gives your stake back. Two shells or fish double it. Pearls pay tokens when the stake is 50 or more.'));
+    body.append(el('p', 'casino-blurb', `Three alike win a prize that rare; two alike, one a step down. Three pearls give three back. ${SLOTS_COST} pearl a pull.`));
     const machine = el('div', 'slots');
     const reels: HTMLElement[] = [];
     for (let i = 0; i < 3; i++) {
       const w = el('div', 'reel');
       const strip = el('div', 'reel-strip');
-      strip.innerHTML = ['worm', 'gold', 'shell'].map((k) => `<div class="reel-cell"><img src="${icon(REEL_PIC[k as Reel])}" alt=""></div>`).join('');
+      strip.innerHTML = ['worm', 'crown', 'fish'].map((k) => `<div class="reel-cell"><img src="${icon(REEL_PIC[k as Reel])}" alt=""></div>`).join('');
       strip.style.transform = `translateY(${-CELL * 0.5}px)`;
       w.append(strip);
       machine.append(w);
@@ -190,57 +182,48 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     }
     machine.append(el('div', 'payline'));
     body.append(machine);
-    stakeRow(body);
-    const pull = el('button', 'big-btn casino-go', 'Pull the lever');
+    const pull = el('button', 'big-btn casino-go', `Pull the lever · ${pearl}${SLOTS_COST}`);
     pull.disabled = busy;
     body.append(pull);
     const out = el('div', 'casino-out');
     body.append(out);
     const table = el('div', 'paytable');
-    table.innerHTML = (['gold', 'fish', 'shell', 'bobber', 'worm', 'boot'] as Reel[])
-      .map((k) => `<div><span>${`<img src="${icon(REEL_PIC[k])}" alt="">`.repeat(3)}</span><b>×${THREE_PAYS[k]}</b></div>`)
-      .join('') + `<div><span>${`<img src="${icon('token')}" alt="">`.repeat(3)}</span><b>6 tokens</b></div>`;
-    body.append(el('div', 'section', 'Pays'), table);
+    table.innerHTML =
+      (['crown', 'gold', 'fish', 'bobber', 'worm'] as Reel[]).map((k) => `<div><span>${`<img src="${icon(REEL_PIC[k])}" alt="">`.repeat(3)}</span>${tier(REEL_PRIZE[k]!)}</div>`).join('') +
+      `<div><span>${`<img src="${icon('token')}" alt="">`.repeat(3)}</span><b>3 pearls</b></div>`;
+    body.append(el('div', 'section', 'Three alike win'), table);
 
     pull.onclick = () => {
-      if (busy) return;
-      const st = stake();
-      if (!spend(save, st)) {
-        s.hud.toast("You can't cover that stake.");
-        return;
-      }
+      if (busy || !pay(SLOTS_COST)) return;
       busy = true;
       pull.disabled = true;
-      const res = spinSlots(st, rng((Date.now() ^ (save.arcade.played * 40503)) >>> 0));
-      save.coins += res.coins;
-      save.tokens += res.tokens;
-      s.hud.hold = true;
-      s.changed();
+      const res = spinSlots(rng((Date.now() ^ (save.arcade.played * 40503)) >>> 0));
       s.audio.play('cast', { volume: 0.4, rate: 0.8 });
       out.className = 'casino-out';
       out.textContent = '';
       // Two alike on the first reels: the last one teases, slower, with a drum roll.
-      const tease = res.reels[0] === res.reels[1];
+      const tease = res.reels[0] === res.reels[1] && res.reels[0] !== 'boot';
       const durs = quick() ? [400, 600, 800] : [1300, 1900, tease ? 3900 : 2500];
-      if (tease && !quick()) setTimeout(() => {
-        reels[2].parentElement!.classList.add('tease');
-        s.audio.roll(1.9);
-      }, 1900);
+      if (tease && !quick())
+        setTimeout(() => {
+          reels[2].parentElement!.classList.add('tease');
+          s.audio.roll(1.9);
+        }, 1900);
       let stopped = 0;
       res.reels.forEach((r, i) => {
         const len = 22 + i * 8 + (i === 2 && tease ? 12 : 0);
         const strip = reelStrip(r, len, Date.now() + i * 77);
-        const el_ = reels[i];
-        el_.innerHTML = strip.map((k) => `<div class="reel-cell"><img src="${icon(REEL_PIC[k])}" alt=""></div>`).join('') + `<div class="reel-cell"><img src="${icon(REEL_PIC.worm)}" alt=""></div>`;
-        const end = (len - 1) * CELL - CELL * 0.5;
+        const reel = reels[i];
+        reel.innerHTML = strip.map((k) => `<div class="reel-cell"><img src="${icon(REEL_PIC[k])}" alt=""></div>`).join('') + `<div class="reel-cell"><img src="${icon(REEL_PIC.worm)}" alt=""></div>`;
+        const endY = (len - 1) * CELL - CELL * 0.5;
         const t0 = performance.now();
         let lastCell = -1;
         const step = (now: number): void => {
           const t = Math.min(1, (now - t0) / durs[i]);
           // Eases out with a small bounce past the line and back.
           const e = t < 1 ? 1 - Math.pow(1 - t, 3) * Math.cos(t * 3.6) : 1;
-          const y = e * end;
-          el_.style.transform = `translateY(${-y}px)`;
+          const y = e * endY;
+          reel.style.transform = `translateY(${-y}px)`;
           const cell = Math.floor(y / CELL);
           if (cell !== lastCell && t < 0.9) {
             lastCell = cell;
@@ -258,44 +241,35 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         busy = false;
         pull.disabled = false;
         reels[2].parentElement!.classList.remove('tease');
-        const level = res.kind === 'jackpot' ? 'jackpot' : grandness(res.coins, st, res.tokens);
-        if (res.coins || res.tokens) {
-          out.className = 'casino-out good';
-          out.innerHTML = res.kind === 'boots' ? `Three boots! A matching pair… and a spare. <b>+${res.coins.toLocaleString()}</b>` : `<b>+${res.coins.toLocaleString()}</b>${res.tokens ? ` and <b>${res.tokens} token${res.tokens > 1 ? 's' : ''}</b>` : ''}`;
-          if (res.coins > st || res.tokens) {
-            machine.classList.add('lit');
-            setTimeout(() => machine.classList.remove('lit'), 1600);
-            fanfare.win(level, res.kind === 'jackpot' ? 'JACKPOT!' : res.kind === 'boots' ? 'BOOTS!' : level === 'huge' ? 'BIG WIN!' : 'WIN!', `+${res.coins.toLocaleString()} coins${res.tokens ? ` · +${res.tokens} tokens` : ''}`);
-          }
-        } else {
-          out.className = 'casino-out bad';
-          out.textContent = 'Nothing lines up.';
+        if (res.prize || res.pearls) {
+          machine.classList.add('lit');
+          setTimeout(() => machine.classList.remove('lit'), 1600);
         }
-        settle(res.coins, st, res.tokens);
-        purseEl.innerHTML = purse();
+        out.className = `casino-out ${res.prize || res.pearls ? 'good' : 'bad'}`;
+        out.innerHTML = res.kind === 'boots' ? 'Three boots! A matching pair… and a spare.' : res.kind === 'pearls' ? 'Three pearls!' : res.prize ? `${res.kind === 'pair' ? 'Two alike' : 'Three alike'}: ${tier(res.prize)}` : 'Nothing lines up.';
+        end(res.prize, res.pearls, res.kind === 'boots' ? 'The gull is embarrassed for you.' : '');
       }
     };
   }
 
   // ---------- Flying Fish ----------
-  let flight: { stake: number; at: number; snatch: number; t0: number; cashed: boolean; raf: number } | null = null;
+  let flight: { at: number; snatch: number; t0: number; cashed: boolean; raf: number } | null = null;
   function flying(body: HTMLElement): void {
-    body.append(el('p', 'casino-blurb', 'The fish leaps and the prize climbs. Cash out before the gull swoops in and snatches it.'));
+    body.append(el('p', 'casino-blurb', `The fish leaps, and the prize grows rarer the higher it flies. Cash out before the gull swoops in. ${FLIGHT_COST} pearl a flight.`));
+    const ladder = el('div', 'flight-ladder');
+    ladder.innerHTML = FLIGHT_TIERS.map((t) => `<span style="--rar:${RARITY_COLOR[t.rarity]}"><b>${t.at}×</b>${RARITY_LABEL[t.rarity]}</span>`).join('');
     const hist = el('div', 'flight-hist');
     const drawHist = (): void => {
-      hist.innerHTML = save.arcade.flights.map((m) => `<i class="${m >= 2 ? 'hi' : m < 1.2 ? 'lo' : ''}">${m.toFixed(2)}×</i>`).join('');
+      hist.innerHTML = save.arcade.flights.map((m) => `<i class="${m >= 4.5 ? 'hi' : m < 1.5 ? 'lo' : ''}">${m.toFixed(2)}×</i>`).join('');
     };
     drawHist();
     const sky = el('canvas', 'flight-sky');
-    body.append(hist, sky);
-    const stakeEl = stakeRow(body);
-    const go = el('button', 'big-btn casino-go', 'Launch');
+    body.append(hist, sky, ladder);
+    const go = el('button', 'big-btn casino-go', `Launch · ${pearl}${FLIGHT_COST}`);
     body.append(go);
     const out = el('div', 'casino-out');
     body.append(out);
     const fish = new Image();
-    fish.onload = () => draw(flight ? flightAt((performance.now() - flight.t0) / 1000) : 1, false);
-    fish.src = icon('fish-mackerel');
     const gull = new Image();
     gull.src = icon('gull');
     const ctx = sky.getContext('2d')!;
@@ -316,16 +290,17 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       g.addColorStop(1, '#22414a');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
-      // A faint grid of multipliers, like a chart.
-      ctx.strokeStyle = 'rgba(244,238,227,0.07)';
+      // The tiers as faint lines, coloured by rarity.
+      const k = (x: number): number => Math.min(1, Math.log(x) / Math.log(24));
+      const yAt = (x: number): number => H - 40 - Math.pow(k(x), 0.7) * (H - 90);
       ctx.lineWidth = 1;
-      for (let i = 1; i < 5; i++) {
+      for (const t of FLIGHT_TIERS) {
+        ctx.strokeStyle = `${RARITY_COLOR[t.rarity]}55`;
         ctx.beginPath();
-        ctx.moveTo(0, (H * i) / 5);
-        ctx.lineTo(W, (H * i) / 5);
+        ctx.moveTo(0, yAt(t.at));
+        ctx.lineTo(W, yAt(t.at));
         ctx.stroke();
       }
-      // The sea.
       const now = performance.now() / 600;
       ctx.fillStyle = '#2c6b78';
       ctx.beginPath();
@@ -333,10 +308,8 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       for (let x = 0; x <= W; x += 8) ctx.lineTo(x, H - 26 + Math.sin(x / 22 + now) * 3);
       ctx.lineTo(W, H);
       ctx.fill();
-      // The fish's arc: further and higher as the prize grows.
-      const k = Math.min(1, Math.log(m) / Math.log(12));
-      const fx = 34 + k * (W - 90);
-      const fy = H - 40 - Math.pow(k, 0.7) * (H - 90);
+      const fx = 34 + k(m) * (W - 90);
+      const fy = yAt(m);
       ctx.strokeStyle = lost ? 'rgba(214,90,60,0.6)' : 'rgba(236,199,125,0.7)';
       ctx.lineWidth = 2.5;
       ctx.setLineDash([2, 6]);
@@ -345,14 +318,14 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       ctx.quadraticCurveTo(fx * 0.55, H - 30, fx, fy);
       ctx.stroke();
       ctx.setLineDash([]);
-      if (!lost || swoop < 1) {
+      if (fish.complete && (!lost || swoop < 1)) {
         ctx.save();
         ctx.translate(fx, fy);
         ctx.rotate(-0.5 + Math.sin(now * 3) * 0.12);
         ctx.drawImage(fish, -26, -26, 52, 52);
         ctx.restore();
       }
-      if (lost) {
+      if (lost && gull.complete) {
         // The gull comes down from the corner and carries the fish off.
         swoop = Math.min(2, swoop + 0.05);
         const a = Math.min(1, swoop);
@@ -361,16 +334,23 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         ctx.drawImage(gull, gx - 34, gy - 34, 68, 68);
         if (swoop > 1) ctx.drawImage(fish, gx - 18, gy + 10, 36, 36);
       }
-      ctx.fillStyle = lost ? '#e0735a' : '#f4eee3';
-      ctx.font = `600 ${44}px 'Fraunces Variable', Georgia, serif`;
+      const reached = flightPrize(m);
       ctx.textAlign = 'center';
-      ctx.fillText(`${m.toFixed(2)}×`, W / 2, 62);
+      ctx.fillStyle = lost ? '#e0735a' : '#f4eee3';
+      ctx.font = `600 44px 'Fraunces Variable', Georgia, serif`;
+      ctx.fillText(`${m.toFixed(2)}×`, W / 2, 58);
+      ctx.font = `800 11px 'Manrope Variable', sans-serif`;
       if (lost) {
-        ctx.font = `800 11px 'Manrope Variable', sans-serif`;
-        ctx.fillStyle = 'rgba(244,238,227,0.8)';
-        ctx.fillText('SNATCHED', W / 2, 84);
+        ctx.fillStyle = 'rgba(244,238,227,0.85)';
+        ctx.fillText('SNATCHED', W / 2, 80);
+      } else {
+        ctx.fillStyle = reached ? RARITY_COLOR[reached] : 'rgba(244,238,227,0.6)';
+        const next = nextTier(m);
+        ctx.fillText(reached ? `${RARITY_LABEL[reached].toUpperCase()} PRIZE${next ? `  ·  ${RARITY_LABEL[next.rarity].toUpperCase()} AT ${next.at}×` : ''}` : `${RARITY_LABEL.common.toUpperCase()} AT ${FLIGHT_TIERS[0].at}×`, W / 2, 80);
       }
     };
+    fish.onload = () => draw(flight ? flightAt((performance.now() - flight.t0) / 1000) : 1, false);
+    fish.src = icon('fish-mackerel');
     requestAnimationFrame(() => {
       size();
       draw(flight ? flightAt((performance.now() - flight.t0) / 1000) : 1, false);
@@ -380,13 +360,10 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       if (!flight || flight.cashed) return;
       const m = Math.min(flight.snatch, flightAt((performance.now() - flight.t0) / 1000));
       flight.cashed = true;
-      const won = Math.floor(flight.stake * m);
-      save.coins += won;
+      const won = flightPrize(m);
       out.className = 'casino-out good';
-      out.innerHTML = `Cashed out at ${m.toFixed(2)}×: <b>+${won.toLocaleString()}</b>`;
-      fanfare.win(grandness(won, flight.stake), m >= 10 ? 'SKY HIGH!' : 'CASHED OUT!', `${m.toFixed(2)}× · +${won.toLocaleString()} coins`, '#7cc2c6');
-      settle(won, flight.stake, 0);
-      purseEl.innerHTML = purse();
+      out.innerHTML = won ? `Cashed out at ${m.toFixed(2)}×: ${tier(won)}` : `Cashed out at ${m.toFixed(2)}×, too low for a prize.`;
+      end(won, won ? 0 : FLIGHT_COST, won ? '' : 'Too low for a prize:');
     };
     const land = (): void => {
       if (!flight) return;
@@ -394,9 +371,9 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       s.changed();
       flight = null;
       busy = false;
-      go.textContent = 'Launch';
+      go.innerHTML = `Launch · ${pearl}${FLIGHT_COST}`;
       go.className = 'big-btn casino-go';
-      for (const b of stakeEl.querySelectorAll('button')) (b as HTMLButtonElement).disabled = false;
+      go.disabled = false;
       drawHist();
     };
     go.onclick = () => {
@@ -406,18 +383,10 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         go.disabled = true;
         return;
       }
-      if (busy) return;
-      const st = stake();
-      if (!spend(save, st)) {
-        s.hud.toast("You can't cover that stake.");
-        return;
-      }
-      s.hud.hold = true;
-      s.changed();
+      if (busy || !pay(FLIGHT_COST)) return;
       busy = true;
       swoop = 0;
-      for (const b of stakeEl.querySelectorAll('button')) (b as HTMLButtonElement).disabled = true;
-      flight = { stake: st, at: 1, snatch: snatchPoint(Math.random), t0: performance.now(), cashed: false, raf: 0 };
+      flight = { at: 1, snatch: snatchPoint(Math.random), t0: performance.now(), cashed: false, raf: 0 };
       out.className = 'casino-out';
       out.textContent = '';
       go.className = 'big-btn casino-go cash';
@@ -431,8 +400,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
             out.className = 'casino-out bad';
             out.textContent = `The gull snatched it at ${flight.snatch.toFixed(2)}×!`;
             s.audio.squawk();
-            settle(0, flight.stake, 0);
-            purseEl.innerHTML = purse();
+            end(null);
           }
           go.disabled = true;
           // Let the gull fly off before the next go.
@@ -440,17 +408,18 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
           const after = (): void => {
             draw(flight?.snatch ?? 1, true);
             if (performance.now() - t < 1200) requestAnimationFrame(after);
-            else {
-              go.disabled = false;
-              land();
-            }
+            else land();
           };
           after();
           return;
         }
         draw(m, false);
-        if (!flight.cashed) go.innerHTML = `Cash out <span>${Math.floor(flight.stake * m).toLocaleString()}</span>`;
+        if (!flight.cashed) {
+          const won = flightPrize(m);
+          go.innerHTML = won ? `Cash out <span style="color:${RARITY_COLOR[won]}">${RARITY_LABEL[won]}</span>` : 'Cash out <span>pearl back</span>';
+        }
         if (Math.floor(m * 10) !== Math.floor(flight.at * 10)) s.audio.tick(Math.min(1, m / 10));
+        if (flightPrize(m) !== flightPrize(flight.at)) s.audio.tone(880, 0, 0.18, 'triangle', 0.12);
         flight.at = m;
         flight.raf = requestAnimationFrame(step);
       };
@@ -463,11 +432,12 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     chestList(body, s, chestBusy, (c) => spinChest(app, s, fanfare, c, () => sheet.refresh()));
   }
   function tickets(body: HTMLElement): void {
-    body.append(el('p', 'casino-blurb', `Scratch off three alike to win. Played ${save.tickets.played}, best win ${save.tickets.best.toLocaleString()}.`));
+    body.append(el('p', 'casino-blurb', `Scratch off three alike to win something to wear. Played ${save.tickets.played}.`));
     for (const k of TICKETS) {
       const row = el('div', 'row');
-      row.innerHTML = `<img src="${icon(`ticket-${k.id}`)}" alt=""><div class="grow"><div class="title">${k.name}</div><div class="sub">${k.blurb}</div><div class="sub">Crown pays ${((2500 * k.price) / 25).toLocaleString()}</div></div>`;
-      const b = el('button', 'btn coral', `<span class="price"><img src="${icon('coin')}" alt="">${k.price}</span>`);
+      row.innerHTML = `<img src="${icon(`ticket-${k.id}`)}" alt=""><div class="grow"><div class="title">${k.name}</div><div class="sub">${k.blurb}</div></div>`;
+      const b = el('button', 'btn coral', `<span class="price">${pearl}${k.price}</span>`);
+      b.disabled = save.tokens < k.price;
       b.onclick = () => buyTicket(app, s, fanfare, k, () => sheet.refresh());
       row.append(b);
       body.append(row);
@@ -479,7 +449,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     app,
     'The Lucky Gull',
     (body, tab) => {
-      purseEl.innerHTML = purse();
+      refreshPurse();
       body.append(purseEl);
       if (tab === 'Wheel') wheel(body);
       else if (tab === 'Slots') slots(body);
@@ -495,16 +465,17 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
   sheet.close = () => {
     if (flight && !flight.cashed) {
       const m = Math.min(flight.snatch, flightAt((performance.now() - flight.t0) / 1000));
-      if (m < flight.snatch) {
-        flight.cashed = true;
-        const won = Math.floor(flight.stake * m);
-        save.coins += won;
-        s.hud.toast(`Cashed out at ${m.toFixed(2)}× as you left: +${won}`, 'good');
-        settle(won, flight.stake, 0);
-      }
       cancelAnimationFrame(flight.raf);
       save.arcade.flights = [...save.arcade.flights, flight.snatch].slice(-10);
+      const reached = m < flight.snatch;
       flight = null;
+      busy = false;
+      prevClose();
+      if (reached) {
+        const won = flightPrize(m);
+        end(won, won ? 0 : FLIGHT_COST, 'Cashed out as you left:');
+      } else s.hud.hold = false;
+      return;
     }
     busy = false;
     s.hud.hold = false;

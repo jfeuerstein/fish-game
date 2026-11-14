@@ -82,37 +82,30 @@ await step('chest roulette', async () => {
   await page.tap('.roulette-result .btn.plain');
   await page.tap('.sheet-close');
 });
-await step('scratch ticket', async () => {
-  await page.evaluate(() => {
-    window.__cove.give(1000, 0);
-    window.__cove.open('shop', 'Tickets');
-  });
-  await page.waitForSelector('.sheet.up', { timeout: 10000 });
-  await page.tap('.sheet .btn.coral');
-  await page.waitForSelector('.scratch', { timeout: 10000 });
-  await small('scratch ticket');
-  await page.tap('.scratch .btn.plain');
-  await page.waitForSelector('.scratch .btn.green:not([hidden])', { timeout: 10000 });
+// A prize card may come up after a game: check its buttons, then put it away.
+const clearPrize = async (where) => {
   await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
-  await page.tap('.scratch .btn.green');
-  await page.tap('.sheet-close');
-});
+  if (await page.$('.prize-overlay')) {
+    await small(`${where} › prize`);
+    await page.tap('.prize-overlay .btn.plain');
+  }
+};
 await step('arcade', async () => {
   await page.evaluate(() => {
-    window.__cove.give(5000, 0);
+    window.__cove.give(0, 40);
     window.__cove.open('arcade', 'Wheel');
   });
   await page.waitForSelector('.sheet.up.casino', { timeout: 10000 });
   await small('arcade › wheel');
-  await page.tap('.wheel-bet.pk-crab');
+  await page.tap('.wheel-bet.pk-shell');
   await page.waitForFunction(() => !document.querySelector('.wheel-bet')?.disabled, null, { timeout: 30000 });
-  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
+  await clearPrize('wheel');
   await page.tap('.sheet .tab:nth-child(2)');
   await page.waitForSelector('.slots', { timeout: 10000 });
   await small('arcade › slots');
   await page.tap('.casino-go');
   await page.waitForFunction(() => !document.querySelector('.casino-go')?.disabled && document.querySelector('.casino-out')?.textContent, null, { timeout: 30000 });
-  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
+  await clearPrize('slots');
   await page.tap('.sheet .tab:nth-child(3)');
   await page.waitForSelector('.flight-sky', { timeout: 10000 });
   await small('arcade › flying fish');
@@ -120,7 +113,17 @@ await step('arcade', async () => {
   await page.waitForTimeout(300);
   await page.tap('.casino-go');
   await page.waitForFunction(() => document.querySelector('.casino-out')?.textContent, null, { timeout: 30000 });
-  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
+  await clearPrize('flying fish');
+  await page.tap('.sheet .tab:nth-child(5)');
+  await page.waitForSelector('.sheet .row .btn.coral', { timeout: 10000 });
+  await small('arcade › tickets');
+  await page.tap('.sheet .row .btn.coral');
+  await page.waitForSelector('.scratch', { timeout: 10000 });
+  await small('scratch ticket');
+  await page.tap('.scratch .btn.plain');
+  await page.waitForSelector('.scratch .btn.green:not([hidden])', { timeout: 10000 });
+  await clearPrize('scratch');
+  await page.tap('.scratch .btn.green');
   await page.tap('.sheet-close');
 });
 await step('ukulele', async () => {

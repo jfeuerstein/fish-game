@@ -1,32 +1,30 @@
 // The Lucky Gull arcade: a roulette strip, a slot machine and Flying Fish (cash out before the
-// gull gets it). Pure: no DOM, no three.js. Every game pays back a little under what is staked on
-// average, so coins drift back to the gull, never far; the slots and the wheel's gull can pay
-// tokens, which are what chests cost.
+// gull gets it). Every game costs pearls (the premium currency, from the rarest catches) and pays
+// out a cosmetic of some rarity, never coins: a game only decides how rare the prize is, and
+// crates.ts picks the prize. Pure: no DOM, no three.js.
 import { rng } from '../core/rng';
+import type { Rarity } from './crates';
 
-/** How much can be staked, and the steps the stake buttons go in. */
-export const STAKES = [10, 25, 50, 100, 250, 500, 1000] as const;
+export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+const down = (r: Rarity): Rarity | null => (r === 'common' ? null : RARITIES[RARITIES.indexOf(r) - 1]);
 
 // ---------- The Gull Wheel ----------
 
-/** One slot on the wheel's strip. */
-export type Pocket = 'crab' | 'mussel' | 'gull';
-/** The strip's pattern, repeated: one gull, then crabs and mussels in turn (seven of each). */
-export const WHEEL: readonly Pocket[] = ['gull', 'crab', 'mussel', 'crab', 'mussel', 'crab', 'mussel', 'crab', 'mussel', 'crab', 'mussel', 'crab', 'mussel', 'crab', 'mussel'];
-/** What each pays for each coin staked on it (the stake included). */
-export const WHEEL_PAYS: Record<Pocket, number> = { crab: 2, mussel: 2, gull: 14 };
-/** A gull also pays a token for every 100 coins staked on it. */
-export const GULL_TOKENS_PER = 100;
+/** One pocket on the wheel's strip, and the prize a bet on it wins. */
+export type Pocket = 'shell' | 'crab' | 'gull';
+export const POCKET_PRIZE: Record<Pocket, Rarity> = { shell: 'uncommon', crab: 'rare', gull: 'legendary' };
+/** The strip's pattern, repeated: one gull, five crabs and nine shells, spread out. */
+export const WHEEL: readonly Pocket[] = ['gull', 'shell', 'crab', 'shell', 'shell', 'crab', 'shell', 'shell', 'crab', 'shell', 'shell', 'crab', 'shell', 'shell', 'crab'];
+export const WHEEL_COST = 1;
 
 /** Spin the wheel: which pocket of the pattern it stops on. */
 export function spinWheel(rand: () => number): number {
   return Math.floor(rand() * WHEEL.length) % WHEEL.length;
 }
 
-/** What a bet on `on` brings back when the wheel stops on `pocket`: coins (stake included) and tokens. */
-export function wheelPayout(on: Pocket, stake: number, pocket: Pocket): { coins: number; tokens: number } {
-  if (on !== pocket) return { coins: 0, tokens: 0 };
-  return { coins: stake * WHEEL_PAYS[on], tokens: on === 'gull' ? Math.floor(stake / GULL_TOKENS_PER) : 0 };
+/** What a bet on `on` wins when the wheel stops on `pocket`: a prize's rarity, or nothing. */
+export function wheelPrize(on: Pocket, pocket: Pocket): Rarity | null {
+  return on === pocket ? POCKET_PRIZE[on] : null;
 }
 
 /**
@@ -41,26 +39,20 @@ export function wheelStrip(result: number, length: number, stopAt: number): numb
 
 // ---------- The Bait Bandit (slots) ----------
 
-export type Reel = 'worm' | 'bobber' | 'shell' | 'fish' | 'boot' | 'gold' | 'pearl';
+export type Reel = 'worm' | 'bobber' | 'fish' | 'gold' | 'crown' | 'boot' | 'pearl';
 /** How often each symbol comes up on a reel (relative weights). */
-export const REEL_WEIGHTS: Record<Reel, number> = { worm: 30, bobber: 22, shell: 17, fish: 12, boot: 12, gold: 3, pearl: 4 };
-/** Three of a kind pays this many times the stake. Three pearls pay tokens instead (see below). */
-export const THREE_PAYS: Record<Reel, number> = { worm: 4, bobber: 7, shell: 12, fish: 22, boot: 3, gold: 150, pearl: 0 };
-/** Two golden fish anywhere pay this; one pays the stake back. */
-export const TWO_GOLD = 6;
-/** Two of a kind: worms and bobbers give the stake back, shells and fish double it. */
-export const PAIR_PAYS: Partial<Record<Reel, number>> = { worm: 1, bobber: 1, shell: 2, fish: 2 };
-/** Pearls: tokens for each pearl showing when the stake is at least 100 (three pay many more). */
-export const PEARL_TOKENS = { one: 0, two: 1, three: 6 } as const;
-export const PEARL_MIN_STAKE = 50;
+export const REEL_WEIGHTS: Record<Reel, number> = { worm: 30, bobber: 22, fish: 14, gold: 7, crown: 3, boot: 16, pearl: 8 };
+/** The rarity each symbol stands for: three alike win a prize of it, two alike a prize one rarity down (two worms a common one). */
+export const REEL_PRIZE: Partial<Record<Reel, Rarity>> = { worm: 'common', bobber: 'uncommon', fish: 'rare', gold: 'epic', crown: 'legendary' };
+export const SLOTS_COST = 1;
 
 export interface SlotResult {
   reels: [Reel, Reel, Reel];
-  /** Coins back, stake included (0 is a loss). */
-  coins: number;
-  tokens: number;
-  /** What to call it. */
-  kind: 'none' | 'small' | 'three' | 'jackpot' | 'boots';
+  /** The prize won, if any. */
+  prize: Rarity | null;
+  /** Pearls given back (three pearls, or three boots for the laugh). */
+  pearls: number;
+  kind: 'none' | 'pair' | 'three' | 'jackpot' | 'boots' | 'pearls';
 }
 
 function pickReel(r: number): Reel {
@@ -73,26 +65,26 @@ function pickReel(r: number): Reel {
   return 'worm';
 }
 
-/** What a line of three pays. */
-export function scoreSlots(reels: [Reel, Reel, Reel], stake: number): SlotResult {
+/** What a line of three wins. */
+export function scoreSlots(reels: [Reel, Reel, Reel]): SlotResult {
   const [a, b, c] = reels;
-  const golds = reels.filter((x) => x === 'gold').length;
-  const pearls = reels.filter((x) => x === 'pearl').length;
-  const tokens = stake >= PEARL_MIN_STAKE ? (pearls === 3 ? PEARL_TOKENS.three : pearls === 2 ? PEARL_TOKENS.two : 0) : 0;
-  if (a === b && b === c && a !== 'pearl') {
-    return { reels, coins: stake * THREE_PAYS[a], tokens, kind: a === 'gold' ? 'jackpot' : a === 'boot' ? 'boots' : 'three' };
+  if (a === b && b === c) {
+    if (a === 'pearl') return { reels, prize: null, pearls: 3, kind: 'pearls' };
+    if (a === 'boot') return { reels, prize: null, pearls: 1, kind: 'boots' };
+    return { reels, prize: REEL_PRIZE[a]!, pearls: 0, kind: a === 'crown' || a === 'gold' ? 'jackpot' : 'three' };
   }
-  if (golds === 2) return { reels, coins: stake * TWO_GOLD, tokens, kind: 'small' };
-  if (golds === 1) return { reels, coins: stake, tokens, kind: 'small' };
-  if (pearls === 3) return { reels, coins: stake * 2, tokens, kind: 'jackpot' };
   const pair = a === b || a === c ? a : b === c ? b : null;
-  if (pair && PAIR_PAYS[pair]) return { reels, coins: stake * PAIR_PAYS[pair]!, tokens, kind: 'small' };
-  return { reels, coins: 0, tokens, kind: tokens ? 'small' : 'none' };
+  const pr = pair ? REEL_PRIZE[pair] : undefined;
+  if (pr) {
+    // Two alike: a prize one rarity down; two worms, a common one all the same.
+    return { reels, prize: down(pr) ?? 'common', pearls: 0, kind: 'pair' };
+  }
+  return { reels, prize: null, pearls: 0, kind: 'none' };
 }
 
 /** Pull the lever. */
-export function spinSlots(stake: number, rand: () => number): SlotResult {
-  return scoreSlots([pickReel(rand()), pickReel(rand()), pickReel(rand())], stake);
+export function spinSlots(rand: () => number): SlotResult {
+  return scoreSlots([pickReel(rand()), pickReel(rand()), pickReel(rand())]);
 }
 
 /** A reel's strip as it spins: random symbols ending on the result. */
@@ -112,11 +104,17 @@ export const SNATCH_AT_ONCE = 0.04;
 export const RATE = 0.16;
 /** The highest it can go. */
 export const MAX_FLIGHT = 100;
+export const FLIGHT_COST = 1;
+/** How high the fish must fly for each rarity of prize; cashed out lower, the pearl comes back. */
+export const FLIGHT_TIERS: readonly { at: number; rarity: Rarity }[] = [
+  { at: 1.5, rarity: 'common' },
+  { at: 2.5, rarity: 'uncommon' },
+  { at: 4.5, rarity: 'rare' },
+  { at: 9, rarity: 'epic' },
+  { at: 20, rarity: 'legendary' },
+];
 
-/**
- * Where the gull will snatch the fish: a multiplier, 1 or more. Chosen so that cashing out at any
- * m is reached with chance (1 - SNATCH_AT_ONCE) / m: every target pays back 96% on average.
- */
+/** Where the gull will snatch the fish: a multiplier, 1 or more; reaching m has chance (1 - SNATCH_AT_ONCE) / m. */
 export function snatchPoint(rand: () => number): number {
   const u = rand();
   if (u < SNATCH_AT_ONCE) return 1;
@@ -127,13 +125,20 @@ export function snatchPoint(rand: () => number): number {
 export const flightAt = (t: number): number => Math.floor(Math.exp(RATE * t) * 100) / 100;
 export const timeTo = (m: number): number => Math.log(Math.max(1, m)) / RATE;
 
-/** How grand a win is, for the fanfare: by how many times the stake came back. */
-export type Grandness = 'none' | 'small' | 'big' | 'huge' | 'jackpot';
-export function grandness(back: number, stake: number, tokens = 0): Grandness {
-  const x = stake > 0 ? back / stake : 0;
-  if (x >= 40 || tokens >= 5) return 'jackpot';
-  if (x >= 10 || tokens >= 2) return 'huge';
-  if (x >= 3 || tokens >= 1) return 'big';
-  if (x > 1) return 'small';
-  return 'none';
+/** The prize for cashing out at a multiplier, or null below the first tier (the pearl comes back). */
+export function flightPrize(m: number): Rarity | null {
+  let won: Rarity | null = null;
+  for (const t of FLIGHT_TIERS) if (m >= t.at) won = t.rarity;
+  return won;
 }
+
+/** The next tier up from a multiplier, for the display: what is reached at what height. */
+export function nextTier(m: number): { at: number; rarity: Rarity } | null {
+  return FLIGHT_TIERS.find((t) => m < t.at) ?? null;
+}
+
+// ---------- The fanfare ----------
+
+/** How grand a win is, for the fanfare. */
+export type Grandness = 'none' | 'small' | 'big' | 'huge' | 'jackpot';
+export const GRAND: Record<Rarity, Grandness> = { common: 'small', uncommon: 'small', rare: 'big', epic: 'huge', legendary: 'jackpot' };

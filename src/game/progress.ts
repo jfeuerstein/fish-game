@@ -32,7 +32,7 @@ export function applyCatch(save: Save, c: Catch, zone: Zone, night: boolean, rai
   const rec = record(save, c);
   const xp = Math.round(TIER_XP[s.tier] * VARIANT_XP[c.variant] * (rec.first ? 2 : 1) * (1 + Math.min(1, c.size / 400) * 0.5));
   const levelUp = addXp(save, xp);
-  const tokens = tokensFor(c.variant, rec.first && s.tier === 'legendary');
+  const tokens = s.tier === 'junk' ? 0 : tokensFor(c.variant, s.tier, rec.first);
   save.tokens += tokens;
   save.stats.caught++;
   // Bait is used up by a catch (worms never run out).
@@ -83,7 +83,7 @@ export function claimQuest(save: Save, id: number): { coins: number; xp: number;
   const level = levelFor(save.xp).level;
   save.quests[i] = makeQuest(save.questsMade++, level);
   const gift = save.questsDone % GIFT_EVERY === 0;
-  if (gift) save.tokens += 2;
+  if (gift) save.tokens += 1;
   return { coins: q.reward.coins, xp: q.reward.xp, levelUp, gift };
 }
 

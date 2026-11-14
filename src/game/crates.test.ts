@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { rng } from '../core/rng';
 import { CHESTS, PRIZES, STRIP_LENGTH, WIN_AT, makeStrip, openChest, tokensFor } from './crates';
-import { HATS, FURNITURE, CHARACTERS } from './economy';
+import { HATS, FURNITURE, CHARACTERS, EXTRAS } from './economy';
 import { applyCatch, claimQuest, sell } from './progress';
 import { newSave } from './save';
 
 describe('chests', () => {
   it('only holds things that exist', () => {
-    const ids = new Set([...HATS.map((h) => h.id), ...FURNITURE.map((f) => f.id), ...CHARACTERS.map((c) => c.id)]);
+    const ids = new Set([...HATS.map((h) => h.id), ...FURNITURE.map((f) => f.id), ...CHARACTERS.map((c) => c.id), ...EXTRAS.map((x) => x.id)]);
     for (const p of PRIZES) expect(ids.has(p.id), p.id).toBe(true);
     for (const c of CHESTS) expect(Object.values(c.odds).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
   });
@@ -26,16 +26,17 @@ describe('chests', () => {
     expect(strip[WIN_AT]).toBe(win);
   });
   it('pays tokens for special catches', () => {
-    expect(tokensFor('normal', false)).toBe(0);
-    expect(tokensFor('shiny', false)).toBe(1);
-    expect(tokensFor('golden', true)).toBe(4);
+    expect(tokensFor('normal')).toBe(0);
+    expect(tokensFor('shiny')).toBe(0);
+    expect(tokensFor('golden')).toBe(1);
+    expect(tokensFor('prismatic', 'legendary', true)).toBe(7);
   });
 });
 
 describe('progress', () => {
   it('records a catch, pays tokens, and sells', () => {
     const s = newSave();
-    const r = applyCatch(s, { species: 'trout', size: 40, variant: 'shiny', huge: false, at: 1 }, 'creek', false, false);
+    const r = applyCatch(s, { species: 'trout', size: 40, variant: 'golden', huge: false, at: 1 }, 'creek', false, false);
     expect(r.first).toBe(true);
     expect(r.tokens).toBe(1);
     expect(s.tokens).toBe(1);

@@ -256,7 +256,7 @@ export class Game implements Session {
           if (this.mode === 'walk' && !this.fishing.busy) setTimeout(() => this.emote('cheer'), 300);
         },
       }),
-      shop: shopSheet(this.app, this, openChests, this.fanfare),
+      shop: shopSheet(this.app, this, openChests),
       journal: journalSheet(this.app, this),
       bag: bagSheet(this.app, this),
       board: boardSheet(this.app, this),
@@ -363,7 +363,7 @@ export class Game implements Session {
     else if (c.variant === 'golden' || s.tier === 'epic') this.fanfare.burst(120, 0.5, 0.3, false);
     if (!r.kept) this.hud.toast('Your cooler is full, so you let it go. Sell some at the shop!');
     if (c.variant !== 'normal') this.tip('quality');
-    if (r.tokens) setTimeout(() => this.hud.toast(`+${r.tokens} token${r.tokens > 1 ? 's' : ''}! Open a chest at the shop.`, 'gold'), 700);
+    if (r.tokens) setTimeout(() => this.hud.toast(`+${r.tokens} pearl${r.tokens > 1 ? 's' : ''}! Spend them at the Lucky Gull.`, 'gold'), 700);
     for (const _ of r.finished) setTimeout(() => this.hud.toast('An errand is done! Hand it in at the board.', 'good'), 1200);
     if (r.levelUp) {
       setTimeout(() => {
@@ -899,7 +899,7 @@ export class Game implements Session {
       if (at) this.fx.sparkle(at, false);
       this.audio.play('rare', { volume: 0.7 });
       const n = this.save.glass.length;
-      this.hud.toast(n >= SEA_GLASS.length ? 'All twelve pieces of sea glass! +1 token, and the title Beachcomber.' : `Sea glass! ${n} of ${SEA_GLASS.length} found. +1 token`, 'gold');
+      this.hud.toast(n >= SEA_GLASS.length ? 'All twelve pieces of sea glass! +1 pearl, and the title Beachcomber.' : `Sea glass! ${n} of ${SEA_GLASS.length} found. +1 token`, 'gold');
       this.checkTitles();
       this.changed();
     }
@@ -967,7 +967,7 @@ export class Game implements Session {
       this.audio.play('coin');
     } else if (find.kind === 'token') {
       this.save.tokens += find.tokens;
-      this.hud.toast(`You dug up ${find.name}! +1 token`, 'gold');
+      this.hud.toast(`You dug up ${find.name}! +1 pearl`, 'gold');
       this.audio.play('rare');
     } else {
       this.save.hats.push(find.id);

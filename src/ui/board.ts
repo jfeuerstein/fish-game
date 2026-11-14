@@ -8,7 +8,7 @@ import { Sheet } from './sheet';
 export function boardSheet(app: HTMLElement, s: Session): Sheet {
   const sheet: Sheet = new Sheet(app, 'Notice Board', (body) => {
     const save = s.save;
-    body.append(el('p', '', 'Errands from around the island. Every third one done, the board leaves you two tokens.'));
+    body.append(el('p', '', 'Errands from around the island. Every third one done, the board leaves you a pearl.'));
     for (const q of save.quests) {
       const row = el('div', 'row');
       const pct = Math.min(1, q.progress / q.goal);
@@ -20,7 +20,7 @@ export function boardSheet(app: HTMLElement, s: Session): Sheet {
         if (!r) return;
         s.audio.play('quest');
         s.hud.toast(`Thanks! +${r.coins} coins`, 'good');
-        if (r.gift) s.hud.toast('The board left you 2 tokens!', 'gold');
+        if (r.gift) s.hud.toast('The board left you a pearl!', 'gold');
         if (r.levelUp) {
           s.audio.play('levelup');
           s.hud.toast(`Level ${r.levelUp}!`, 'gold');

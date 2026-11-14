@@ -2209,3 +2209,102 @@ button {
     animation: none;
   }
 }
+
+/* ---------- Prizes from the arcade ---------- */
+.prize-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 80% at 50% 40%, rgba(29, 58, 66, 0.82), rgba(8, 16, 22, 0.92));
+  pointer-events: auto;
+}
+.prize-overlay .roulette-result {
+  width: calc(100% - 48px);
+  padding: 18px 16px 16px;
+  text-align: center;
+}
+.tier {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--rar) 22%, transparent);
+  color: var(--rar);
+  font-family: var(--font);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 55%, transparent);
+}
+.casino .purse {
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 0 0 8px;
+  border-radius: 10px;
+  background: rgba(244, 238, 227, 0.05);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.casino .purse .eyebrow {
+  color: rgba(244, 238, 227, 0.55);
+}
+.casino .purse .pearl {
+  width: 20px;
+  height: 20px;
+}
+.wheel-bet {
+  height: 112px;
+  gap: 3px;
+}
+.wheel-bet .tier {
+  background: rgba(10, 18, 24, 0.55);
+  color: #fff;
+  box-shadow: none;
+}
+.wheel-bet small {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+.wheel-bet.pk-gull small,
+.wheel-bet.pk-gull span {
+  color: #2a1d05;
+}
+.flight-ladder {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: 8px 0 4px;
+}
+.flight-ladder span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 2px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--rar) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 45%, transparent);
+  color: var(--rar);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.flight-ladder b {
+  font-family: var(--display);
+  font-size: 15px;
+  color: var(--on-glass) !important;
+  letter-spacing: 0;
+}
+.paytable .tier {
+  font-size: 10px;
+}
+.btn .price .pearl,
+.big-btn .pearl {
+  width: 15px;
+  height: 15px;
+  vertical-align: -2px;
+}

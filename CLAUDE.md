@@ -63,14 +63,23 @@ deploys to GitHub Pages.
 - **Fishing** (`src/fishing/`): `fish.ts` (43 kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
   size, shiny/golden), `reel.ts` (the reeling minigame, fixed-step), `fishing.ts` (cast, bobber,
   line, bite, hook, reel, land). Tune feel with `REEL` and the tests in `fishing.test.ts`.
-- **The Lucky Gull** (`src/game/arcade.ts`, pure and tested; `src/ui/arcade.ts`): the arcade
-  booth on the plaza, with a gull dealer who gloats and leaps. The Gull Wheel (a CS-style strip of
-  crabs and shells at ×2 and one gull at ×14 plus tokens), the Bait Bandit slots, Flying Fish (a
-  crash game: cash out before the gull snatches the fish), and the chests and tickets. Each game
-  pays back a little under the stake (the tests hold it there); stakes are paid and wins paid out
-  at once, so nothing is lost by closing the game mid-spin. `src/ui/fanfare.ts` celebrates wins
-  by how grand they are (confetti, coin rain, flash, shake, rays, a stamped headline and a synth
-  band from `Audio.band`); legendary and prismatic catches get it too.
+- **Pearls and the Lucky Gull.** Pearls (the save's `tokens`) are the premium currency: only the
+  rarest catches give them (`tokensFor` in `crates.ts`: golden 1, prismatic 3, any legendary 2,
+  more the first time), plus a few from errands, treasure and digging. They are spent only at the
+  Lucky Gull arcade booth on the plaza (`src/game/arcade.ts`, pure and tested; `src/ui/arcade.ts`),
+  and every game there pays out a cosmetic, never coins: a game decides only how rare the prize is,
+  and `pickPrize` chooses it (what is not owned yet is three times as likely; a duplicate gives
+  pearls back). The Gull Wheel (a CS-style strip: bet on shell, crab or the one gull for an
+  uncommon, rare or legendary prize), the Bait Bandit slots (three alike win that rarity, two alike
+  one step down), Flying Fish (a crash game: the prize tier climbs with the multiplier; cash out
+  before the gull snatches it), the chests and the scratch tickets (`tickets.ts`). Prizes are won
+  the moment a game is paid for, so closing the game mid-spin loses nothing. `showPrize` in
+  `src/ui/chests.ts` is the card every game shows; `src/ui/fanfare.ts` celebrates by rarity.
+  Coins are only for Gus's shop.
+- **Sounds from patch.gg**: `tools/assets/get-patch-sounds.mjs` fetches Kenney's CC0 casino
+  sounds, steel-drum jingles and ticks from Patch's open asset library (public API, no sign-in),
+  makes them MP3s in `public/audio/` and writes their credits to `public/audio/credits.json`.
+  Patch's models are flat low-poly and do not match the Tripo look; its sounds do fit.
 - **Progress** (`src/game/`): `economy.ts` (rods, bait, coolers, hats, furniture, levels),
   `quests.ts` (the board), `crates.ts` (chests, odds, the strip), `progress.ts` (what a catch, a
   sale or an errand does), `save.ts` (read defensively; add a field with a default, never change
