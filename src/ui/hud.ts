@@ -150,7 +150,11 @@ export class Hud {
     parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.bang, this.blip, this.second, this.jumpBtn, this.action, row);
   }
 
+  /** While a prize is being revealed, the counters wait, so they don't give it away. */
+  hold = false;
+
   setStats(coins: number, tokens: number, level: number, xpFrac: number): void {
+    if (this.hold) return;
     this.coins.textContent = coins.toLocaleString();
     this.tokens.textContent = String(tokens);
     this.level.textContent = `Lv ${level}`;
@@ -218,6 +222,7 @@ export class Hud {
 
   /** The reeling meter: how far in, and the strain on the line. */
   setReel(progress: number | null, tension = 0, thrashing = false, fishIcon = ''): void {
+    this.root.classList.toggle('reeling', progress !== null);
     if (progress === null) {
       this.meter.hidden = true;
       return;

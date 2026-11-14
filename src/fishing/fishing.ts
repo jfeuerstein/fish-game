@@ -7,7 +7,7 @@ import { rng } from '../core/rng';
 import type { Bait, Rod } from '../game/economy';
 import type { Character } from '../player/character';
 import type { Effects } from '../fx/particles';
-import { type Zone, waterAt } from '../world/island';
+import { type Zone, fishingZone, waterAt } from '../world/island';
 import type { Heightfield } from '../world/island';
 import { BY_ID, type Catch, VARIANT_STARS } from './fish';
 import { type Conditions, biteDelay, nibbles, rollCatch } from './roll';
@@ -146,7 +146,8 @@ export class Fishing {
     const from = this.body.rodTip.clone();
     const to = this.body.group.position.clone().addScaledVector(dir, dist);
     const w = waterAt(this.field, to.x, to.z);
-    this.zone = w && w.depth > 0.35 ? w.zone : null;
+    // Water under the pier's boards is not water to cast into.
+    this.zone = fishingZone(this.field, to.x, to.z);
     this.level = w ? w.level : this.field.heightAt(to.x, to.z);
     to.y = this.level;
     this.flight = { from, to, t: 0, dur: 0.55 + dist * 0.025 };

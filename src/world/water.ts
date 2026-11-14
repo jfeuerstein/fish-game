@@ -138,11 +138,11 @@ export class Water {
     pond.renderOrder = 1;
     this.group.add(pond);
 
-    this.group.add(this.creek());
+    this.group.add(this.creek(field));
   }
 
   /** A ribbon of water down the creek's line, falling with it. */
-  private creek(): THREE.Mesh {
+  private creek(field: Heightfield): THREE.Mesh {
     const pts: THREE.Vector3[] = [];
     let total = 0;
     const lens = [0];
@@ -157,6 +157,8 @@ export class Water {
       const u = (s - lens[i - 1]) / (lens[i] - lens[i - 1]);
       const x = CREEK[i - 1][0] + (CREEK[i][0] - CREEK[i - 1][0]) * u;
       const z = CREEK[i - 1][1] + (CREEK[i][1] - CREEK[i - 1][1]) * u;
+      // Where the creek reaches the sea, the sea's own surface takes over: stop before the two overlap.
+      if (creekLevel(s / total) < 0.25 || field.heightAt(x, z) < -0.2) break;
       pts.push(new THREE.Vector3(x, creekLevel(s / total), z));
     }
     const w = CREEK_WIDTH * 1.7;

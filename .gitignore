@@ -4,3 +4,4 @@ tools/assets/cache
 *.log
 .env
 .blender
+__pycache__

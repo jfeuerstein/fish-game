@@ -739,7 +739,7 @@ export class Game implements Session {
     }
     const lv = levelFor(this.save.xp);
     const stats = `${this.save.coins}|${this.save.tokens}|${lv.level}|${lv.into}`;
-    if (stats !== this.lastStats) {
+    if (stats !== this.lastStats && !this.hud?.hold) {
       this.lastStats = stats;
       this.hud?.setStats(this.save.coins, this.save.tokens, lv.level, lv.into / lv.need);
     }

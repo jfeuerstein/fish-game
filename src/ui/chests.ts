@@ -57,6 +57,7 @@ export function chestSheet(app: HTMLElement, s: Session): Sheet {
     const prize = openChest(chest, rng(seed));
     const strip = makeStrip(chest, prize, seed + 1);
     // Given now, so closing the game mid-spin loses nothing; the strip only shows it.
+    s.hud.hold = true;
     const got = award(s, prize);
     s.changed();
     sheet.refresh();
@@ -103,6 +104,7 @@ export function chestSheet(app: HTMLElement, s: Session): Sheet {
 
     function reveal(): void {
       const { owned, refund } = got;
+      s.hud.hold = false;
       const tiles = track.children;
       tiles[WIN_AT]?.classList.add('win');
       s.audio.play(prize.rarity === 'legendary' || prize.rarity === 'epic' ? 'rare' : 'catch');

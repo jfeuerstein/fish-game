@@ -50,3 +50,13 @@ describe('water', () => {
       for (let r = 0; r < POND.r; r += 1) expect(field.heightAt(POND.x + Math.cos(a) * r, POND.z + Math.sin(a) * r)).toBeGreaterThan(0.2);
   });
 });
+
+describe('pier', () => {
+  it('has boards under every metre that can be walked on', async () => {
+    const { FLOORS, pierSections } = await import('./layout');
+    const tiles = pierSections();
+    for (const f of FLOORS)
+      for (let x = f.x0 + 0.3; x < f.x1; x += 0.5)
+        for (let z = f.z0 + 0.3; z < f.z1; z += 0.5) expect(tiles.some((t) => Math.abs(t.x - x) <= 1.51 && Math.abs(t.z - z) <= 1.51), `${x},${z}`).toBe(true);
+  });
+});

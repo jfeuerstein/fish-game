@@ -159,12 +159,14 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
           }
           const t = makeTicket(k, (Date.now() ^ (save.tickets.played * 2654435761)) >>> 0);
           save.tickets.played++;
+          s.hud.hold = true;
           // Paid out now, so nothing is lost if the game is closed before scratching.
           save.coins += t.coins;
           save.tokens += t.tokens;
           save.tickets.best = Math.max(save.tickets.best, t.coins);
           s.changed();
           scratchTicket(app, s.audio, t, () => {
+            s.hud.hold = false;
             for (const n of newTitles(save)) s.hud.toast(`New title: ${n}!`, 'gold');
             sheet.refresh();
           });

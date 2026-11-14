@@ -1334,3 +1334,8 @@ button {
     animation: none !important;
   }
 }
+
+/* While a fish is on, tips go below the reel meter rather than under it. */
+#hud.reeling .toasts {
+  top: calc(var(--top-clear) + 200px);
+}

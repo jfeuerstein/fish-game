@@ -25,31 +25,34 @@ export interface Fit {
   per?: Partial<Record<string, Partial<Omit<Fit, 'per' | 'bone' | 'place'>>>>;
 }
 
+/** On the frog, whose eyes stand up above its skull, hats sit behind the eyes and a little higher. */
+const FROG = { forward: -0.16, sink: 0.82, lift: 0.015 };
+
 const hat = (width: number, sink: number, more: Partial<Fit> = {}): Fit => ({ bone: 'head', place: 'crown', width, sink, lift: 0, forward: 0, tilt: 0, ...more });
 
 export const FITS: Record<string, Fit> = {
   // For hats, the crown (measured from the model just above the brim) is fitted to the head's
   // width where the hat sits; `sink` says where that is, from the eyes (0) to the top of the head
   // (1). The frog's eyes are on top of its head, so hats sit further back on it.
-  'hat-bucket': hat(0.84, 0.52, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-straw': hat(0.86, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-beanie': hat(0.84, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-captain': hat(0.86, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
-  'hat-flowers': hat(1.06, 0.58, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-frog': hat(0.88, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-pirate': hat(0.95, 0.55, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-top': hat(0.64, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-propeller': hat(0.7, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
-  'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { forward: -0.08, sink: 0.95 } } }),
-  'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-fish': hat(1.05, 0.74, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-viking': hat(0.85, 0.5, { turn: Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-bucket': hat(0.84, 0.52, { per: { 'char-frog': FROG } }),
+  'hat-straw': hat(0.86, 0.56, { per: { 'char-frog': FROG } }),
+  'hat-beanie': hat(0.84, 0.5, { per: { 'char-frog': FROG } }),
+  'hat-captain': hat(0.86, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': FROG }, forward: 0.012 }),
+  'hat-flowers': hat(1.06, 0.58, { per: { 'char-frog': FROG } }),
+  'hat-frog': hat(0.88, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': FROG } }),
+  'hat-pirate': hat(0.95, 0.55, { turn: -Math.PI / 2, per: { 'char-frog': FROG } }),
+  'hat-top': hat(0.64, 0.74, { per: { 'char-frog': FROG } }),
+  'hat-propeller': hat(0.7, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': FROG }, forward: 0.012 }),
+  'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': FROG } }),
+  'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { ...FROG, sink: 1.05 } } }),
+  'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': FROG } }),
+  'hat-fish': hat(1.05, 0.74, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': FROG } }),
+  'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': FROG } }),
+  'hat-viking': hat(0.85, 0.5, { turn: Math.PI / 2, per: { 'char-frog': FROG } }),
+  'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': FROG } }),
   'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
-  'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
-  'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, per: { 'char-frog': { width: 0.92, lift: -0.06 } } },
+  'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.205, forward: -0.05 } } },
+  'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, per: { 'char-frog': { width: 1.06, lift: -0.035 }, 'char-raccoon': { width: 1.12, lift: -0.015 } } },
   'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.02 } } },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
   'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0, turn: -Math.PI / 2 },

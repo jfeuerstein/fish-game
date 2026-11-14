@@ -36,10 +36,11 @@ export const HILL = { x: 30, z: -36, r: 20, h: 8.5 } as const;
 export const CAMP = { x: -38, z: 18 } as const;
 
 /** The pier: east from the shore along z, with a wider head at the end. */
-export const PIER = { x0: 58, x1: 104, z: 14, width: 3.4, deck: 2.4, head: { x0: 98, x1: 104, z0: 6, z1: 22 } } as const;
+/** The pier: whole 3 m sections of deck, so the boards cover every metre that can be walked on. */
+export const PIER = { x0: 59, x1: 104, z: 14, width: 3, deck: 2.4, head: { x0: 98, x1: 104, z0: 7, z1: 22 } } as const;
 
 /** Where the rowboat ties up, beside the pier. */
-export const BOAT_MOORING = { x: 80, z: 17.8, yaw: Math.PI / 2 } as const;
+export const BOAT_MOORING = { x: 80, z: 17.6, yaw: Math.PI / 2 } as const;
 
 /** The patch of the square that takes chalk. */
 export const CHALK = { x: -5, z: 19, size: 8 } as const;
@@ -47,7 +48,7 @@ export const CHALK = { x: -5, z: 19, size: 8 } as const;
 /** Footpaths, as polylines. */
 export const PATHS: readonly (readonly V2[])[] = [
   // Square to pier
-  [[9, 13], [22, 11], [38, 12], [50, 13], [59, 14]],
+  [[9, 13], [22, 11], [38, 12], [50, 13], [60, 14]],
   // Square to pond
   [[-7, 6], [-12, -4], [-18, -11]],
   // Round the pond's south and east bank
@@ -92,9 +93,9 @@ export const PLACED: readonly Placed[] = [
   { id: 'lamp-post', x: 10, z: 21 },
   { id: 'lamp-post', x: -9, z: 23 },
   { id: 'lamp-post', x: 8, z: 4 },
-  { id: 'lamp-post', x: 60, z: 11.6, y: PIER.deck },
-  { id: 'lamp-post', x: 80, z: 11.6, y: PIER.deck },
-  { id: 'lamp-post', x: 101, z: 7, y: PIER.deck },
+  { id: 'lamp-post', x: 61, z: 12.8, y: PIER.deck },
+  { id: 'lamp-post', x: 80, z: 12.8, y: PIER.deck },
+  { id: 'lamp-post', x: 101, z: 7.6, y: PIER.deck },
   { id: 'bench', x: -11, z: 14, yaw: Math.PI / 2 },
   { id: 'bench', x: 12, z: 6, yaw: -Math.PI / 2 - 0.4 },
   { id: 'bench', x: 5, z: 26, yaw: Math.PI },
@@ -104,7 +105,7 @@ export const PLACED: readonly Placed[] = [
   { id: 'crates', x: -4.5, z: 0.5, yaw: 0.3 },
   { id: 'barrel', x: 4.6, z: 0.8 },
   { id: 'barrel', x: 53, z: 3 },
-  { id: 'crates', x: 62, z: 12.2, y: PIER.deck, yaw: 1.3 },
+  { id: 'crates', x: 64, z: 13, y: PIER.deck, yaw: 1.3 },
   { id: 'picnic-table', x: 16, z: 26, yaw: 0.4 },
   { id: 'campfire', x: -38, z: 18 },
   { id: 'log', x: -38, z: 14.6, yaw: 0 },
@@ -134,10 +135,11 @@ export function pierSections(): Placed[] {
   const out: Placed[] = [];
   // The model is posts and deck, 2.4 m tall: its top is the deck.
   const y = PIER.deck - 2.4 + 0.02;
+  // The planks run across the way along, as on a real pier.
   const n = Math.round((PIER.head.x0 - PIER.x0) / 3);
-  for (let i = 0; i < n; i++) out.push({ id: 'pier', x: PIER.x0 + 1.5 + i * 3, z: PIER.z, yaw: (i % 2) * Math.PI, y });
+  for (let i = 0; i < n; i++) out.push({ id: 'pier', x: PIER.x0 + 1.5 + i * 3, z: PIER.z, yaw: Math.PI / 2, y });
   for (let x = PIER.head.x0 + 1.5; x < PIER.head.x1; x += 3)
-    for (let z = PIER.head.z0 + 1.5; z < PIER.head.z1; z += 3) out.push({ id: 'pier', x, z, yaw: ((x + z) % 2) * Math.PI, y });
+    for (let z = PIER.head.z0 + 1.5; z < PIER.head.z1; z += 3) out.push({ id: 'pier', x, z, yaw: Math.PI / 2, y });
   return out;
 }
 
