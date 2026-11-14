@@ -11,6 +11,8 @@ export class Sheet {
   private titleEl = el('h2');
   private tab = '';
   onClose: (() => void) | null = null;
+  /** While this says so, the tabs stay put (a game in the middle of a spin). */
+  lock: (() => boolean) | null = null;
 
   constructor(private parent: HTMLElement, title: string, private render: (body: HTMLElement, tab: string) => void, tabs: string[] = []) {
     const head = el('div', 'sheet-head');
@@ -25,6 +27,7 @@ export class Sheet {
       for (const t of tabs) {
         const b = el('button', 'tab', t);
         b.addEventListener('click', () => {
+          if (this.lock?.()) return;
           this.tab = t;
           this.refresh();
         });

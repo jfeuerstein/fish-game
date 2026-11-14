@@ -98,7 +98,7 @@ export interface Hat {
   id: string;
   name: string;
   price: number;
-  /** Not sold: given by the notice board. */
+  /** Not sold: found in treasure and in the sand, or won at the Lucky Gull. */
   gift?: boolean;
   /** Not sold, and not found either: won only at the Lucky Gull. */
   prize?: boolean;
@@ -127,7 +127,7 @@ export const HATS: readonly Hat[] = [
   { id: 'hat-shark', name: 'Shark Hood', price: 0, prize: true },
   { id: 'hat-frog', name: 'Frog Hat', price: 0, gift: true },
   { id: 'hat-mushroom', name: 'Mushroom Cap', price: 0, gift: true },
-  { id: 'hat-fish', name: 'Fish Hat', price: 0, gift: true },
+  { id: 'hat-fish', name: 'Fish Hat', price: 0, prize: true },
   { id: 'hat-crown', name: 'Little Crown', price: 0, prize: true },
 ];
 
@@ -160,7 +160,6 @@ export const FURNITURE: readonly Furniture[] = [
   { id: 'f-snowman', name: 'Snowman', price: 0, prize: true },
 ];
 
-/** Things to wear besides a hat. */
 /** Things to wear besides hats. `prize` ones are won at the Lucky Gull, not sold. */
 export const EXTRAS: readonly { id: string; name: string; price: number; prize?: boolean }[] = [
   { id: 'x-flower', name: 'Flower Pin', price: 200 },

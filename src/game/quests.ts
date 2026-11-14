@@ -119,5 +119,5 @@ export function describe(q: Quest): string {
   }
 }
 
-/** Every third errand finished earns a hat from the board's lost and found. */
+/** Every third errand finished, the board leaves a pearl. */
 export const GIFT_EVERY = 3;

@@ -116,7 +116,7 @@ export class Fanfare {
       gone();
     });
     this.app.append(box);
-    setTimeout(gone, level === 'jackpot' ? 3200 : 2200);
+    setTimeout(gone, level === 'jackpot' ? 2400 : 1800);
   }
 
   private go(): void {

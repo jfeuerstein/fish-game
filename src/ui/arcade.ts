@@ -469,6 +469,8 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     ['Wheel', 'Slots', 'Flying Fish', 'Chests', 'Tickets'],
   );
   sheet.root.classList.add('casino');
+  // Mid-spin or mid-flight, the tabs wait: switching would strand the game's buttons.
+  sheet.lock = () => busy;
   // A fish in the air when the sheet is closed is cashed out where it is: nothing is lost by walking off.
   const prevClose = sheet.close.bind(sheet);
   sheet.close = () => {

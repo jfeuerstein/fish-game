@@ -137,7 +137,7 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket,
     setTimeout(() => coat.remove(), 450);
     board.classList.add('done');
     if (ticket.win) {
-      result.innerHTML = ticket.prize ? `<b>Three alike!</b> A ${RARITY_LABEL[ticket.prize].toLowerCase()} prize.` : `<b>Three pearls!</b> ${ticket.pearls} pearls back.`;
+      result.innerHTML = ticket.prize ? `<b>Three alike!</b> ${/^[aeiou]/i.test(RARITY_LABEL[ticket.prize]) ? 'An' : 'A'} ${RARITY_LABEL[ticket.prize].toLowerCase()} prize.` : `<b>Three pearls!</b> ${ticket.pearls} pearls back.`;
       result.className = `scratch-result win ${ticket.win}`;
     } else {
       audio.play('click', { rate: 0.6 });

@@ -902,7 +902,7 @@ export class Game implements Session {
       if (at) this.fx.sparkle(at, false);
       this.audio.play('rare', { volume: 0.7 });
       const n = this.save.glass.length;
-      this.hud.toast(n >= SEA_GLASS.length ? 'All twelve pieces of sea glass! +1 pearl, and the title Beachcomber.' : `Sea glass! ${n} of ${SEA_GLASS.length} found. +1 token`, 'gold');
+      this.hud.toast(n >= SEA_GLASS.length ? 'All twelve pieces of sea glass! +1 pearl, and the title Beachcomber.' : `Sea glass! ${n} of ${SEA_GLASS.length} found. +1 pearl`, 'gold');
       this.checkTitles();
       this.changed();
     }
