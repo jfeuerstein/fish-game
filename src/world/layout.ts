@@ -114,13 +114,15 @@ export interface Placed {
 /** The buildings, landmarks and village things, placed by hand. Trees, rocks and flowers are scattered (see scatter.ts). */
 export const PLACED: readonly Placed[] = [
   { id: 'shop', x: 0, z: 2.5, yaw: 0 },
+  /** The Lucky Gull arcade, on the west side of the plaza, facing into it (its model faces +x, so turned a quarter less). */
+  { id: 'arcade', x: -17, z: 8, yaw: 1.2 - Math.PI / 2 },
   { id: 'notice-board', x: 10, z: 9, yaw: -0.5 },
   { id: 'lighthouse', x: 31, z: -37, yaw: 0.6 },
   { id: 'fishing-hut', x: 50, z: 5, yaw: -1.2 },
   { id: 'well', x: 8, z: 21, yaw: 0.3 },
   { id: 'mailbox', x: -6.5, z: 5, yaw: 0.2 },
   { id: 'signpost', x: 12, z: 16, yaw: -0.8 },
-  { id: 'lamp-post', x: -10, z: 9 },
+  { id: 'lamp-post', x: -9, z: 3.5 },
   { id: 'lamp-post', x: 10, z: 21 },
   { id: 'lamp-post', x: -9, z: 23 },
   { id: 'lamp-post', x: 8, z: 4 },
@@ -284,4 +286,5 @@ export const PLACES: Record<string, { x: number; z: number; yaw: number }> = {
   lighthouse: { x: 26, z: -30, yaw: 2.52 },
   boat: { x: 80, z: 15.2, yaw: 0 },
   chalk: { x: -5, z: 22, yaw: Math.PI },
+  arcade: { x: -11.5, z: 10.5, yaw: -1.94 },
 };

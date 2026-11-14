@@ -1,8 +1,37 @@
 // A scratch ticket: nine squares under a silver coat, scratched off with a finger. Three of a
 // kind wins. The prize is decided when the ticket is bought (tickets.ts); scratching only shows it.
 import type { Audio } from '../audio/audio';
-import { PRIZES, type Ticket } from '../game/tickets';
-import { el } from './hud';
+import { grandness } from '../game/arcade';
+import { spend } from '../game/progress';
+import type { Session } from '../game/session';
+import { type Symbol, type Ticket, type TicketKind, makeTicket } from '../game/tickets';
+import type { Fanfare } from './fanfare';
+import { el, icon } from './hud';
+
+/** Each symbol as one of the game's own pictures. */
+const PICTURE: Record<Symbol, string> = { shell: 'shell', fish: 'fish-mackerel', crab: 'fish-crab', star: 'fish-starfish', pearl: 'token', crown: 'hat-crown' };
+
+/** Buy a ticket: paid for and paid out at once (nothing is lost if the game closes), then scratched. */
+export function buyTicket(app: HTMLElement, s: Session, fanfare: Fanfare, k: TicketKind, after: () => void): void {
+  const save = s.save;
+  if (!spend(save, k.price)) {
+    s.hud.toast("You can't afford that yet.");
+    return;
+  }
+  const t = makeTicket(k, (Date.now() ^ (save.tickets.played * 2654435761)) >>> 0);
+  save.tickets.played++;
+  s.hud.hold = true;
+  save.coins += t.coins;
+  save.tokens += t.tokens;
+  save.tickets.best = Math.max(save.tickets.best, t.coins);
+  s.changed();
+  scratchTicket(app, s.audio, t, () => {
+    s.hud.hold = false;
+    const level = grandness(t.coins, k.price, t.tokens);
+    if (t.win) fanfare.win(level, t.win === 'crown' ? 'CROWNED!' : level === 'huge' || level === 'jackpot' ? 'BIG WIN!' : 'WINNER!', [t.coins ? `+${t.coins.toLocaleString()} coins` : '', t.tokens ? `+${t.tokens} token${t.tokens > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · '));
+    after();
+  });
+}
 
 export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket, done: () => void): void {
   const overlay = el('div', 'scratch');
@@ -11,7 +40,7 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket,
   const title = el('div', 'scratch-title', ticket.kind.name);
   const hint = el('div', 'scratch-hint', 'Scratch with your finger. Three alike wins!');
   const board = el('div', 'scratch-board');
-  for (const s of ticket.cells) board.append(el('div', `scratch-cell${s === ticket.win ? ' win' : ''}`, PRIZES[s].glyph));
+  for (const s of ticket.cells) board.append(el('div', `scratch-cell${s === ticket.win ? ' win' : ''}`, `<img src="${icon(PICTURE[s])}" alt="">`));
   const coat = document.createElement('canvas');
   coat.className = 'scratch-coat';
   board.append(coat);
@@ -40,7 +69,7 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket,
   g.fillStyle = 'rgba(255,255,255,0.5)';
   for (let i = 0; i < 60; i++) g.fillRect(Math.random() * coat.width, Math.random() * coat.height, 3 * dpr, 3 * dpr);
   g.fillStyle = 'rgba(80,90,110,0.35)';
-  g.font = `${18 * dpr}px Fredoka, sans-serif`;
+  g.font = `800 ${13 * dpr}px 'Manrope Variable', sans-serif`;
   g.textAlign = 'center';
   g.fillText('SCRATCH ME', coat.width / 2, coat.height / 2);
 
@@ -105,7 +134,6 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket,
     setTimeout(() => coat.remove(), 450);
     board.classList.add('done');
     if (ticket.win) {
-      audio.play(ticket.win === 'crown' || ticket.win === 'star' ? 'rare' : 'coin');
       const parts = [ticket.coins ? `${ticket.coins.toLocaleString()} coins` : '', ticket.tokens ? `${ticket.tokens} token${ticket.tokens > 1 ? 's' : ''}` : ''].filter(Boolean);
       result.innerHTML = `<b>Winner!</b> ${parts.join(' and ')}`;
       result.className = `scratch-result win ${ticket.win}`;

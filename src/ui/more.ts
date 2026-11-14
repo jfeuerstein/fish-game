@@ -117,6 +117,8 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
       toggle('Real clock', 'Follow the time where you are, instead of a 24-minute island day.', save.settings.clock === 'real', () => (save.settings.clock = save.settings.clock === 'real' ? 'island' : 'real'));
       toggle('Retro pixels', 'Big soft pixels, like an old computer game. Easier on the battery too. Takes effect when the game is next opened.', save.settings.pixels, () => (save.settings.pixels = !save.settings.pixels));
       toggle('Shadows', 'Softer on the battery when off. Takes effect when the game is next opened.', save.settings.quality === 'high', () => (save.settings.quality = save.settings.quality === 'high' ? 'low' : 'high'));
+      body.append(el('div', 'section', 'Silly'));
+      toggle('Big heads', 'Everyone on the island gets a much bigger head. Hats too.', save.settings.bigHeads, () => (save.settings.bigHeads = !save.settings.bigHeads));
       body.append(el('div', 'section', 'For testing'));
       const pinRow = (label: string, options: (string | null)[], get: () => string | null, set: (v: string | null) => void): void => {
         const row = el('div', 'row');

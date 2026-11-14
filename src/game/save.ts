@@ -25,6 +25,8 @@ export interface Settings {
   quality: 'high' | 'low';
   /** Draw in big soft pixels, for a lo-fi look. */
   pixels: boolean;
+  /** Everyone's heads much bigger. */
+  bigHeads: boolean;
 }
 
 export interface Save {
@@ -72,6 +74,8 @@ export interface Save {
   chords: { root: number; kind: 'maj' | 'min' | '7' }[];
   /** Scratch tickets: how many, and the biggest win. */
   tickets: { played: number; best: number };
+  /** The arcade: games played, the biggest win in coins, and the last few wheel and flight results. */
+  arcade: { played: number; best: number; wheel: number[]; flights: number[] };
 }
 
 export const SAVE_KEY = 'cove.save';
@@ -112,7 +116,7 @@ export function newSave(): Save {
     questsDone: 0,
     boat: false,
     stats: { caught: 0, earned: 0, snapped: 0, played: 0 },
-    settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high', pixels: false },
+    settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high', pixels: false, bigHeads: false },
     hints: [],
     lure: 'lure-none',
     lures: ['lure-none'],
@@ -125,6 +129,7 @@ export function newSave(): Save {
     extra: null,
     chords: DEFAULT_CHORDS.map((c) => ({ ...c })),
     tickets: { played: 0, best: 0 },
+    arcade: { played: 0, best: 0, wheel: [], flights: [] },
   };
 }
 
@@ -198,6 +203,7 @@ export function parseSave(text: string | null): Save {
       clock: s.clock === 'real' ? 'real' : 'island',
       quality: s.quality === 'low' ? 'low' : 'high',
       pixels: s.pixels === true,
+      bigHeads: s.bigHeads === true,
     },
     hints: strs(o.hints),
     lure: str(o.lure, 'lure-none'),
@@ -213,6 +219,12 @@ export function parseSave(text: string | null): Save {
       ? o.chords.map((c) => rec(c)).map((c) => ({ root: Math.floor(num(c.root, 0, 0, 11)), kind: c.kind === 'min' || c.kind === '7' ? c.kind : 'maj' }))
       : DEFAULT_CHORDS.map((c) => ({ ...c })),
     tickets: { played: num(rec(o.tickets).played, 0, 0), best: num(rec(o.tickets).best, 0, 0) },
+    arcade: {
+      played: num(rec(o.arcade).played, 0, 0),
+      best: num(rec(o.arcade).best, 0, 0),
+      wheel: (Array.isArray(rec(o.arcade).wheel) ? (rec(o.arcade).wheel as unknown[]) : []).filter((v): v is number => typeof v === 'number').slice(-14),
+      flights: (Array.isArray(rec(o.arcade).flights) ? (rec(o.arcade).flights as unknown[]) : []).filter((v): v is number => typeof v === 'number').slice(-10),
+    },
   };
 }
 

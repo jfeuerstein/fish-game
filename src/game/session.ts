@@ -3,6 +3,9 @@ import type { Audio } from '../audio/audio';
 import type { Hud } from '../ui/hud';
 import type { Save } from './save';
 
+/** Things to do on the spot, from the Fun menu. */
+export type Emote = 'wave' | 'dance' | 'cheer' | 'clap' | 'sit' | 'flop' | 'spin' | 'honk' | 'slap';
+
 export interface Session {
   save: Save;
   hud: Hud;
@@ -21,7 +24,9 @@ export interface Session {
   setDown(id: string): void;
   /** Start playing the ukulele, or drawing in chalk. */
   playUke(): void;
-  emote(name: 'wave' | 'dance' | 'cheer' | 'clap' | 'sit'): void;
+  emote(name: Emote): void;
+  /** Everyone's heads much bigger, for no good reason. */
+  setBigHeads(on: boolean): void;
   /** For testing: go somewhere. */
   teleport(name: string): void;
   /** Settings that change how the game runs. */

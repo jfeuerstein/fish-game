@@ -78,6 +78,7 @@ await step('chest roulette', async () => {
   await page.tap('.sheet .btn.coral');
   await page.waitForSelector('.roulette-result.show', { timeout: 30000 });
   await small('roulette result');
+  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
   await page.tap('.roulette-result .btn.plain');
   await page.tap('.sheet-close');
 });
@@ -92,7 +93,34 @@ await step('scratch ticket', async () => {
   await small('scratch ticket');
   await page.tap('.scratch .btn.plain');
   await page.waitForSelector('.scratch .btn.green:not([hidden])', { timeout: 10000 });
+  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
   await page.tap('.scratch .btn.green');
+  await page.tap('.sheet-close');
+});
+await step('arcade', async () => {
+  await page.evaluate(() => {
+    window.__cove.give(5000, 0);
+    window.__cove.open('arcade', 'Wheel');
+  });
+  await page.waitForSelector('.sheet.up.casino', { timeout: 10000 });
+  await small('arcade › wheel');
+  await page.tap('.wheel-bet.pk-crab');
+  await page.waitForFunction(() => !document.querySelector('.wheel-bet')?.disabled, null, { timeout: 30000 });
+  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
+  await page.tap('.sheet .tab:nth-child(2)');
+  await page.waitForSelector('.slots', { timeout: 10000 });
+  await small('arcade › slots');
+  await page.tap('.casino-go');
+  await page.waitForFunction(() => !document.querySelector('.casino-go')?.disabled && document.querySelector('.casino-out')?.textContent, null, { timeout: 30000 });
+  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
+  await page.tap('.sheet .tab:nth-child(3)');
+  await page.waitForSelector('.flight-sky', { timeout: 10000 });
+  await small('arcade › flying fish');
+  await page.tap('.casino-go');
+  await page.waitForTimeout(300);
+  await page.tap('.casino-go');
+  await page.waitForFunction(() => document.querySelector('.casino-out')?.textContent, null, { timeout: 30000 });
+  await page.waitForFunction(() => !document.querySelector('.ff-stamp'), null, { timeout: 10000 });
   await page.tap('.sheet-close');
 });
 await step('ukulele', async () => {

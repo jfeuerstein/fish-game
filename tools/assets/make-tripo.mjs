@@ -10,7 +10,7 @@
 // <id>.tripo.png and <id>.tripo.glb, so running this again costs nothing.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { iconFrom, slim } from './finish.mjs';
-import { FISH_ART, MODELS, TRIPO, TRIPO_LOOK } from './manifest.mjs';
+import { FISH_ART, ICONS, MODELS, TRIPO, TRIPO_LOOK } from './manifest.mjs';
 import { save, task } from './tripo.mjs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
@@ -23,6 +23,8 @@ const kinds = new Set((flag('--kinds') ?? '').split(',').filter(Boolean));
 const jobs = {};
 for (const [id, m] of Object.entries(MODELS)) if (m.kind !== 'char') jobs[id] = m;
 for (const [id, what] of Object.entries(FISH_ART)) jobs[`fish-${id}`] = { kind: 'fish', what, h: null, faces: 2500 };
+// Pictures only: icons for the menus (nothing is shaped).
+for (const [id, what] of Object.entries(ICONS)) if (!(id in jobs)) jobs[id] = { kind: 'icon', what, flat: true };
 const named = args.filter((a, i) => a in jobs && !args[i - 1]?.startsWith('--'));
 const ids = named.length ? named : Object.keys(jobs).filter((id) => kinds.has(jobs[id].kind));
 if (!ids.length) {
@@ -47,6 +49,10 @@ async function make(id) {
     picture = painted.task_id;
     spent += painted.credits_consumed ?? 0;
     console.log(`painted ${id}`);
+  }
+  if (job.flat) {
+    await iconFrom(png, `${ROOT}public/icons/${id}.webp`);
+    return id;
   }
   if (again || !existsSync(glb)) {
     const shaped = await task('generation/image-to-model', { input: picture, model: TRIPO.shape, texture: true, pbr: false, texture_quality: 'standard', face_limit: job.faces ?? 3000 });
@@ -74,6 +80,13 @@ await Promise.all(Array.from({ length: Number(flag('--jobs') ?? 3) }, worker));
 
 const indexFile = `${ROOT}public/models/index.json`;
 const index = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : {};
-for (const id of done) index[id] = { kind: jobs[id].kind === 'extra' ? 'extra' : jobs[id].kind, h: jobs[id].h ?? null, source: 'tripo' };
+for (const id of done) {
+  if (jobs[id].flat) {
+    // An icon that was a Blender model's render is now a picture: the model, if any, is unchanged.
+    if (index[id]?.kind === 'icon') index[id] = { ...index[id], source: 'tripo' };
+    continue;
+  }
+  index[id] = { kind: jobs[id].kind, h: jobs[id].h ?? index[id]?.h ?? null, source: 'tripo' };
+}
 writeFileSync(indexFile, JSON.stringify(index, null, 0));
 console.log(`${done.length} made, ${spent} Tripo credits spent; ${failed.length ? `failed: ${failed.join(', ')}` : 'none failed'}`);

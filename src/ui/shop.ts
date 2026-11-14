@@ -1,9 +1,10 @@
 // The bait shop: sell fish, buy rods, bait, hats, things for around the island, upgrades.
 import { valueOf, BY_ID, sayLength, stars } from '../fishing/fish';
 import { BAITS, BOAT_LICENCE, COOLERS, DETECTOR, EXTRAS, FURNITURE, HATS, LURES, RODS, levelFor } from '../game/economy';
-import { TICKETS, makeTicket } from '../game/tickets';
+import { TICKETS } from '../game/tickets';
 import { newTitles } from '../game/titles';
-import { scratchTicket } from './scratch';
+import { buyTicket } from './scratch';
+import type { Fanfare } from './fanfare';
 import { sell, spend } from '../game/progress';
 import type { Session } from '../game/session';
 import { el, icon } from './hud';
@@ -11,7 +12,7 @@ import { Sheet } from './sheet';
 
 const coin = (n: number): string => `<span class="price"><img src="${icon('coin')}" alt="">${n.toLocaleString()}</span>`;
 
-export function shopSheet(app: HTMLElement, s: Session, openChests: () => void): Sheet {
+export function shopSheet(app: HTMLElement, s: Session, openChests: () => void, fanfare: Fanfare): Sheet {
   const sheet: Sheet = new Sheet(app, "Gus's Bait & Tackle", (body, tab) => {
     const save = s.save;
     const level = levelFor(save.xp).level;
@@ -149,28 +150,13 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       body.append(el('p', '', `"Feeling lucky? Scratch off three of a kind and you win." Played ${save.tickets.played}, best win ${save.tickets.best.toLocaleString()}.`));
       for (const k of TICKETS) {
         const row = el('div', 'row');
-        row.innerHTML = `<img src="${icon(`ticket-${k.id}`)}" alt=""><div class="grow"><div class="title">${k.name}</div><div class="sub">${k.blurb}</div><div class="sub">👑 pays ${(2500 * k.price / 25).toLocaleString()}</div></div>`;
+        row.innerHTML = `<img src="${icon(`ticket-${k.id}`)}" alt=""><div class="grow"><div class="title">${k.name}</div><div class="sub">${k.blurb}</div><div class="sub">Crown pays ${(2500 * k.price / 25).toLocaleString()}</div></div>`;
         const b = el('button', 'btn coral');
         b.innerHTML = coin(k.price);
-        b.onclick = () => {
-          if (!spend(save, k.price)) {
-            s.hud.toast("You can't afford that yet.");
-            return;
-          }
-          const t = makeTicket(k, (Date.now() ^ (save.tickets.played * 2654435761)) >>> 0);
-          save.tickets.played++;
-          s.hud.hold = true;
-          // Paid out now, so nothing is lost if the game is closed before scratching.
-          save.coins += t.coins;
-          save.tokens += t.tokens;
-          save.tickets.best = Math.max(save.tickets.best, t.coins);
-          s.changed();
-          scratchTicket(app, s.audio, t, () => {
-            s.hud.hold = false;
-            for (const n of newTitles(save)) s.hud.toast(`New title: ${n}!`, 'gold');
-            sheet.refresh();
-          });
-        };
+        b.onclick = () => buyTicket(app, s, fanfare, k, () => {
+          for (const n of newTitles(save)) s.hud.toast(`New title: ${n}!`, 'gold');
+          sheet.refresh();
+        });
         row.append(b);
         body.append(row);
       }

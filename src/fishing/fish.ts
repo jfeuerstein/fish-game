@@ -155,8 +155,20 @@ const QUIPS = [
   'Ten out of ten. No notes.',
   'Is it smiling? It might be smiling.',
   'You will tell everyone about this one.',
+  'It tried to sell you something. You said no.',
+  'It has the face of someone who left the oven on.',
+  'It whispered a secret. You did not catch it.',
+  'Certified wiggler.',
+  'It looks like it is called Kevin.',
+  'It has seen things. Mostly water.',
+  'It flaps once, for drama.',
+  'You lock eyes. Neither of you blinks. Then it does.',
+  'It was not expecting visitors.',
+  'Smells like the sea and slightly of regret.',
+  'It is doing its best.',
+  'Somebody, somewhere, would pay good money for this. Probably Gus.',
 ];
-const JUNK_QUIPS = ['Well, it counts as something.', 'One fish\'s trash is your... trash.', 'The sea gives back what it is given.', 'Not a fish. Still heavy, though.'];
+const JUNK_QUIPS = ['Well, it counts as something.', 'One fish\'s trash is your... trash.', 'The sea gives back what it is given.', 'Not a fish. Still heavy, though.', 'A fine catch, if you squint.', 'The fish are laughing at you. Quietly.', 'Somebody wants this back. Probably not.'];
 const HUGE_QUIPS = ['It is the size of a small sofa!', 'Your arms will remember this.', 'That is not a fish, that is a neighbour.', 'Absolutely enormous. Wow.'];
 const TINY_QUIPS = ['Itty bitty!', 'You almost missed it.', 'Pocket-sized.', 'It fits in the palm of your paw.'];
 const SHINY_QUIPS = ['It sparkles in the light!', 'Look at it shine!', 'Glittery! Better than glitter.', 'It glows a little. Magic?'];

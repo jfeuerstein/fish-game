@@ -102,18 +102,27 @@ export interface Hat {
   gift?: boolean;
 }
 export const HATS: readonly Hat[] = [
+  { id: 'hat-party', name: 'Party Hat', price: 90 },
   { id: 'hat-bucket', name: 'Bucket Hat', price: 120 },
   { id: 'hat-beanie', name: 'Pom Beanie', price: 150 },
   { id: 'hat-straw', name: 'Straw Hat', price: 220 },
   { id: 'hat-sailor', name: 'Sailor Hat', price: 260 },
   { id: 'hat-flowers', name: 'Flower Crown', price: 320 },
   { id: 'hat-cowboy', name: 'Cowboy Hat', price: 420 },
+  { id: 'hat-cone', name: 'Traffic Cone', price: 380 },
+  { id: 'hat-lampshade', name: 'Lampshade', price: 460 },
+  { id: 'hat-bread', name: 'Loaf of Bread', price: 550 },
   { id: 'hat-captain', name: "Captain's Hat", price: 700 },
   { id: 'hat-propeller', name: 'Propeller Cap', price: 650 },
   { id: 'hat-chef', name: 'Chef Hat', price: 500 },
   { id: 'hat-top', name: 'Top Hat', price: 900 },
   { id: 'hat-pirate', name: 'Pirate Hat', price: 1200 },
   { id: 'hat-viking', name: 'Viking Helmet', price: 1500 },
+  { id: 'hat-wizard', name: 'Wizard Hat', price: 2200 },
+  { id: 'hat-cake', name: 'Birthday Cake', price: 0, gift: true },
+  { id: 'hat-duck', name: 'Rubber Duck', price: 0, gift: true },
+  { id: 'hat-crab', name: 'Grumpy Crab', price: 0, gift: true },
+  { id: 'hat-shark', name: 'Shark Hood', price: 0, gift: true },
   { id: 'hat-frog', name: 'Frog Hat', price: 0, gift: true },
   { id: 'hat-mushroom', name: 'Mushroom Cap', price: 0, gift: true },
   { id: 'hat-fish', name: 'Fish Hat', price: 0, gift: true },
@@ -155,6 +164,8 @@ export const EXTRAS: readonly { id: string; name: string; price: number }[] = [
   { id: 'x-scarf', name: 'Cosy Scarf', price: 350 },
   { id: 'x-shades', name: 'Sunglasses', price: 450 },
   { id: 'x-backpack', name: 'Backpack', price: 700 },
+  { id: 'x-mustache', name: 'Fine Mustache', price: 420 },
+  { id: 'x-snorkel', name: 'Snorkel Mask', price: 650 },
 ];
 
 /** Characters the player can be. */

@@ -294,3 +294,65 @@ export function sweep(t: number): Pose {
   p.nod = 0.25;
   return p;
 }
+
+/** Lying on the belly, flopping like a landed fish: the body itself is tipped over by the character. */
+export function flop(t: number): Pose {
+  const p = neutral();
+  const f = Math.sin(t * 15);
+  p.armL = limb(0.2, 1.4 + f * 0.5);
+  p.armR = limb(0.2, 1.4 - f * 0.5);
+  p.elbowL = 0.2;
+  p.elbowR = 0.2;
+  p.legL = -0.3 + f * 0.4;
+  p.legR = -0.3 - f * 0.4;
+  p.kneeL = 0.6 + f * 0.3;
+  p.kneeR = 0.6 - f * 0.3;
+  p.nod = -0.6 + f * 0.15;
+  p.side = f * 0.15;
+  return p;
+}
+
+/** A twirl, arms out: the character turns the body round. */
+export function spin(t: number): Pose {
+  const p = neutral();
+  p.armL = limb(0.1, 1.45);
+  p.armR = limb(0.1, 1.45);
+  p.elbowL = 0.1;
+  p.elbowR = 0.1;
+  p.bob = Math.abs(Math.sin(t * 9)) * 0.03;
+  p.nod = -0.15;
+  p.legL = Math.max(0, Math.sin(t * 9)) * 0.4;
+  p.kneeL = Math.max(0, Math.sin(t * 9)) * 0.8;
+  return p;
+}
+
+/** A great honk: leaning in, chin out, arms flung back. */
+export function honk(t: number): Pose {
+  const p = neutral();
+  const k = Math.min(1, t * 6);
+  const shake = t < 0.9 ? Math.sin(t * 50) * 0.05 : 0;
+  p.lean = 0.35 * k;
+  p.nod = -0.5 * k + shake;
+  p.armL = limb(-0.8 * k, 0.5);
+  p.armR = limb(-0.8 * k, 0.5);
+  p.elbowL = 0.1;
+  p.elbowR = 0.1;
+  p.kneeL = 0.15 * k;
+  p.kneeR = 0.15 * k;
+  p.bob = -0.01 * k;
+  return p;
+}
+
+/** A slap with a fish: wound up across the body, then swung through. */
+export function slap(t: number): Pose {
+  const p = neutral();
+  const wind = Math.min(1, t / 0.35);
+  const hit = Math.max(0, Math.min(1, (t - 0.35) / 0.12));
+  p.armR = limb(1.3, 0.3 + wind * 1.1 - hit * 1.9, -0.4);
+  p.elbowR = 0.6 - hit * 0.4;
+  p.turn = wind * 0.4 - hit * 0.9;
+  p.lean = 0.1 * hit;
+  p.side = -0.08 * hit;
+  p.armL = limb(0.3, 0.4);
+  return p;
+}

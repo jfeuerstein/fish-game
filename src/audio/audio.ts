@@ -78,6 +78,95 @@ export class Audio {
     });
   }
 
+  /** A single synthesised note on the effects bus: frequency in Hz, start in seconds from now. */
+  tone(freq: number, at = 0, dur = 0.15, type: OscillatorType = 'triangle', volume = 0.18): void {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime + at;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(volume, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
+
+  /** The tick of a strip or reel going past a marker; rises in pitch as `k` goes from 0 to 1. */
+  tick(k = 0): void {
+    this.tone(900 + k * 500, 0, 0.045, 'square', 0.05);
+  }
+
+  /** A little brass band for a win, grander as the win is; a slide down for a loss. */
+  band(level: 'none' | 'small' | 'big' | 'huge' | 'jackpot'): void {
+    const n = (semi: number): number => 523.25 * 2 ** (semi / 12);
+    if (level === 'none') {
+      [0, -1, -2, -5].forEach((s, i) => this.tone(n(s - 5), i * 0.18, 0.28, 'sawtooth', 0.06));
+      return;
+    }
+    if (level === 'small') {
+      [0, 4, 7].forEach((s, i) => this.tone(n(s), i * 0.07, 0.2, 'triangle', 0.14));
+      return;
+    }
+    const line = level === 'big' ? [0, 4, 7, 12] : level === 'huge' ? [0, 4, 7, 12, 7, 12, 16] : [0, 4, 7, 12, 16, 19, 24, 19, 24, 28];
+    line.forEach((s, i) => {
+      this.tone(n(s), i * 0.09, 0.3, 'triangle', 0.15);
+      this.tone(n(s - 12), i * 0.09, 0.3, 'square', 0.035);
+    });
+    const end = line.length * 0.09;
+    // A held chord to finish, with a shimmer on the biggest wins.
+    for (const s of [0, 4, 7, 12]) this.tone(n(s + 12), end, level === 'jackpot' ? 1.4 : 0.8, 'triangle', 0.08);
+    if (level !== 'big') for (let i = 0; i < 12; i++) this.tone(n(24 + ((i * 5) % 12)), end + i * 0.05, 0.12, 'sine', 0.05);
+    this.play(level === 'jackpot' ? 'levelup' : 'coin', { volume: 0.7 });
+  }
+
+  /** A drum roll: ticks closing in, for while a reel or a fish keeps everyone waiting. */
+  roll(secs: number): void {
+    for (let t = 0; t < secs; t += 0.06 - (t / secs) * 0.03) this.tone(180 + Math.random() * 40, t, 0.05, 'triangle', 0.08);
+  }
+
+  /** A goose-like honk: two reedy notes bent downward. */
+  honk(): void {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    for (const [at, f] of [[0, 340], [0.22, 300]] as const) {
+      for (const det of [0, 7]) {
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(f + det, t + at);
+        o.frequency.exponentialRampToValueAtTime((f + det) * 0.82, t + at + 0.2);
+        g.gain.setValueAtTime(0.0001, t + at);
+        g.gain.exponentialRampToValueAtTime(0.12, t + at + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.21);
+        o.connect(g).connect(this.sfxBus);
+        o.start(t + at);
+        o.stop(t + at + 0.25);
+      }
+    }
+  }
+
+  /** The gull: a silly squawk. */
+  squawk(): void {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    for (const [at, f0, f1] of [[0, 900, 600], [0.16, 1000, 520]] as const) {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f0, t + at);
+      o.frequency.exponentialRampToValueAtTime(f1, t + at + 0.14);
+      g.gain.setValueAtTime(0.0001, t + at);
+      g.gain.exponentialRampToValueAtTime(0.09, t + at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.15);
+      o.connect(g).connect(this.sfxBus);
+      o.start(t + at);
+      o.stop(t + at + 0.2);
+    }
+  }
+
   /** A sound that keeps going while wanted (reeling, the ambience). Volume 0 lets it fade and stop. */
   loop(name: string, volume: number, bus: 'sfx' | 'ambience' = 'ambience', rate = 1): void {
     if (!this.ctx || this.muted) return;

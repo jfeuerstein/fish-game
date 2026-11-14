@@ -13,7 +13,7 @@ function clearings(): { x: number; z: number; r: number }[] {
     { x: 0, z: 0, r: 9 },
   ];
   for (const p of PLACED) {
-    const big = p.id === 'shop' || p.id === 'lighthouse' || p.id === 'fishing-hut' ? 9 : p.id === 'cliff' ? 6 : 3;
+    const big = p.id === 'shop' || p.id === 'lighthouse' || p.id === 'fishing-hut' || p.id === 'arcade' ? 9 : p.id === 'cliff' ? 6 : 3;
     if (!p.id.startsWith('tree')) out.push({ x: p.x, z: p.z, r: big });
   }
   return out;

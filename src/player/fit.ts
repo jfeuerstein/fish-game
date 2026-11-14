@@ -3,7 +3,7 @@
 // and how big it is relative to those, with small corrections per character where a head or
 // body is an odd shape. Pure: no three.js.
 
-export type Place = 'crown' | 'face' | 'neck' | 'chest' | 'back' | 'ear';
+export type Place = 'crown' | 'face' | 'snout' | 'neck' | 'chest' | 'back' | 'ear';
 
 export interface Fit {
   bone: 'head' | 'chest';
@@ -40,7 +40,7 @@ export interface Head {
 }
 export const HEADS: Record<string, Head> = {
   'char-otter': { y: 0.8, z: 0.0, rx: 0.32, ry: 0.27, rz: 0.29 },
-  'char-frog': { y: 0.78, z: -0.04, rx: 0.36, ry: 0.22, rz: 0.27 },
+  'char-frog': { y: 0.84, z: -0.1, rx: 0.32, ry: 0.2, rz: 0.22 },
   'char-raccoon': { y: 0.78, z: 0.03, rx: 0.31, ry: 0.25, rz: 0.27 },
 };
 
@@ -69,36 +69,42 @@ export interface HatFit {
   per?: Partial<Record<string, Partial<Omit<HatFit, 'per' | 'how'>>>>;
 }
 
-const on = (depth: number, snug = 1.04, more: Partial<HatFit> = {}): HatFit => ({ how: 'on', depth, snug, ...more });
-const perch = (snug: number, more: Partial<HatFit> = {}): HatFit => ({ how: 'perch', depth: 0, snug, ...more });
+/** Tripo's models face +x; a quarter turn brings their front round to the character's front (+z). */
+const FRONT = -Math.PI / 2;
+/**
+ * A hat pulled on: how deep (see `depth`), and where its band is and how wide its opening there,
+ * read off a cut through the model (tools/scratch/rows2.mjs prints one).
+ */
+const on = (depth: number, band: number, open: number, more: Partial<HatFit> = {}): HatFit => ({ how: 'on', depth, snug: 1.04, band, open, turn: FRONT, ...more });
+const ring = (depth: number, band: number, open: number, more: Partial<HatFit> = {}): HatFit => ({ how: 'ring', depth, snug: 1.0, band, open, turn: FRONT, ...more });
+const perch = (snug: number, more: Partial<HatFit> = {}): HatFit => ({ how: 'perch', depth: 0, snug, turn: FRONT, ...more });
 
 export const HATS: Record<string, HatFit> = {
-  'hat-bucket': on(0.42),
-  'hat-straw': on(0.38),
-  'hat-beanie': on(0.5, 1.03),
-  'hat-captain': on(0.36),
-  'hat-flowers': { how: 'ring', depth: 0.3, snug: 1.0 },
-  'hat-frog': on(0.5, 1.02),
-  'hat-pirate': on(0.36),
-  'hat-top': on(0.3),
-  'hat-propeller': on(0.42, 1.03),
-  'hat-cowboy': on(0.36),
-  'hat-crown': { how: 'ring', depth: 0.22, snug: 1.0 },
-  'hat-mushroom': on(0.4, 1.05),
-  'hat-fish': perch(1.15),
-  'hat-sailor': on(0.34),
-  'hat-viking': on(0.46, 1.03),
-  'hat-chef': on(0.36),
-  'hat-duck': perch(0.8),
-  'hat-cone': on(0.36, 1.02),
-  'hat-cake': perch(0.8),
-  'hat-wizard': on(0.36),
-  'hat-party': perch(0.55, { lift: -0.06 }),
-  'hat-crab': perch(0.8),
-  'hat-bread': perch(0.9),
-  'hat-lampshade': on(0.42, 1.03),
-  'hat-shark': on(0.55, 1.02),
-  'hat-halo': perch(0.75, { lift: 0.05 }),
+  'hat-bucket': on(0.45, 0.28, 0.8),
+  'hat-straw': on(0.38, 0.22, 0.55),
+  'hat-beanie': on(0.52, 0.1, 0.95),
+  'hat-captain': on(0.38, 0.32, 0.84),
+  'hat-flowers': ring(0.28, 0.3, 0.8),
+  'hat-frog': on(0.88, 0.05, 0.92),
+  'hat-pirate': on(0.45, 0.1, 0.7),
+  'hat-top': on(0.32, 0.18, 0.72),
+  'hat-propeller': on(0.45, 0.15, 0.92),
+  'hat-cowboy': on(0.38, 0.3, 0.64),
+  'hat-crown': ring(0.22, 0.05, 0.9),
+  'hat-mushroom': on(0.55, 0.1, 0.62),
+  'hat-fish': perch(0.92),
+  'hat-sailor': on(0.4, 0.02, 0.83),
+  'hat-viking': on(0.55, 0.1, 0.9),
+  'hat-chef': on(0.32, 0.12, 0.57),
+  'hat-duck': perch(0.85),
+  'hat-cone': on(0.25, 0.16, 0.8),
+  'hat-cake': perch(0.85),
+  'hat-wizard': on(0.36, 0.1, 0.53),
+  'hat-party': on(0.18, 0.1, 0.9, { tilt: -0.15 }),
+  'hat-crab': perch(0.85),
+  'hat-bread': perch(0.95, { lift: -0.04 }),
+  'hat-lampshade': on(0.45, 0.02, 0.9),
+  'hat-shark': on(0.88, 0.05, 0.9),
 };
 
 /** A hat's fit on a character, with that character's corrections applied. */
@@ -237,12 +243,13 @@ export const FITS: Record<string, Fit> = {
   'hat-bread': hat(1, 0.5),
   'hat-lampshade': hat(1, 0.5),
   'hat-shark': hat(1, 0.5),
-  'hat-halo': hat(1, 0.5),
   'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
   'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.18, forward: -0.05 } } },
   'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, per: { 'char-frog': { width: 1.06, lift: -0.035 }, 'char-raccoon': { width: 1.2, lift: -0.01 } } },
   'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.02 } } },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
+  'x-mustache': { bone: 'head', place: 'snout', width: 0.42, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { width: 0.5, lift: 0.02 } } },
+  'x-snorkel': { bone: 'head', place: 'face', width: 0.78, sink: 0, lift: 0.04, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.15, forward: -0.05 } } },
   'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0, turn: -Math.PI / 2 },
 };
 
@@ -327,6 +334,15 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
       width = m.headW * f.width;
       y = m.eyeY - (size.y * width) / wide / 2;
       z = m.faceZ + 0.008 - deepOf(width) / 2;
+      break;
+    }
+    case 'snout': {
+      // Under the nose: a little below the eyes, at the front of the face there.
+      y = m.eyeY - h * 0.075;
+      const slice = sliceAt(m, y);
+      width = m.headW * f.width;
+      z = slice.front - deepOf(width) * 0.35;
+      y -= (size.y * width) / wide / 2;
       break;
     }
     case 'neck': {

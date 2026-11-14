@@ -34,7 +34,9 @@ describe('fitting cosmetics', () => {
   it('rests a hat on the skull where the skull is as wide as its opening', () => {
     const head = headOf('char-otter', 1.1)!;
     const shape = { x: 1, y: 0.5, z: 1, band: 0.1, open: 0.5, cx: 0, cz: 0 };
-    const p = placeHat(hatFor('hat-bucket', 'char-otter')!, head, shape);
+    // Measured, not set by hand.
+    const f = { ...hatFor('hat-bucket', 'char-otter')!, band: undefined, open: undefined };
+    const p = placeHat(f, head, shape);
     const bandY = p.y + 0.1 * p.scale;
     // The band is below the top of the skull and above its middle...
     expect(bandY).toBeLessThan(head.y + head.ry);
@@ -43,7 +45,7 @@ describe('fitting cosmetics', () => {
     const across = 2 * head.rx * Math.sqrt(1 - ((bandY - head.y) / head.ry) ** 2);
     expect(0.5 * p.scale).toBeGreaterThanOrEqual(across * 0.99);
     // Pulled down further, a deeper hat is bigger.
-    const deep = placeHat({ ...hatFor('hat-bucket', 'char-otter')!, depth: 0.8 }, head, shape);
+    const deep = placeHat({ ...f, depth: 0.8 }, head, shape);
     expect(deep.scale).toBeGreaterThan(p.scale);
   });
   it('puts glasses on the face, the scarf at the neck and the pack on the back', () => {

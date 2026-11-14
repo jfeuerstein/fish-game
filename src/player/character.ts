@@ -9,7 +9,7 @@ import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headO
 /** Draw each skull's ellipsoid (`socket=1` in the address), to tune HEADS by eye. */
 const SOCKETS = typeof location !== 'undefined' && new URLSearchParams(location.search).get('socket') === '1';
 
-export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep';
+export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep' | 'flop' | 'spin' | 'honk' | 'slap';
 
 /** Turn a long thin model (a rod) so it lies along +y with its heavier end (the reel and handle) at the origin. */
 export function alongY(root: THREE.Object3D, length: number): THREE.Object3D {
@@ -88,6 +88,12 @@ export class Character {
   private phase = 0;
   private t = Math.random() * 10;
   private pose: P.Pose = P.neutral();
+  /** How far tipped over for a flop (0 to 1), and how far turned in a twirl. */
+  private tip = 0;
+  private baseYaw = 0;
+  private twirl = 0;
+  /** Everyone's heads, much bigger (a setting). */
+  static bigHeads = false;
   /** Whether the rod is out. */
   rodOut = true;
   readonly rodTip = new THREE.Vector3();
@@ -118,6 +124,7 @@ export class Character {
     this.group.add(m);
     if (this.rig.ok) this.faceForward();
     m.rotation.y += this.facing;
+    this.baseYaw = m.rotation.y;
   }
 
   /**
@@ -201,6 +208,7 @@ export class Character {
   /** Turn the model by this much so that its front is +z (set when the rig is found to face the other way). */
   setFacing(yaw: number): void {
     this.facing = yaw;
+    this.baseYaw = yaw;
     if (this.body) this.body.rotation.y = yaw;
   }
 
@@ -257,6 +265,7 @@ export class Character {
     if (!rig?.ok || !body) return null;
     if (this.measured) return this.measured;
     rig.apply(P.neutral());
+    rig.headBone?.scale.setScalar(1);
     body.position.y = 0;
     this.group.updateMatrixWorld(true);
     const toWorld = this.group.matrixWorld;
@@ -530,6 +539,14 @@ export class Character {
         return P.dig(t);
       case 'sweep':
         return P.sweep(t);
+      case 'flop':
+        return P.flop(t);
+      case 'spin':
+        return P.spin(t);
+      case 'honk':
+        return P.honk(t);
+      case 'slap':
+        return P.slap(t);
       default:
         return P.idle(t);
     }
@@ -544,7 +561,19 @@ export class Character {
     const quick = this.action === 'walk' || this.action === 'jump' || this.action === 'castThrow' || this.action === 'castBack' ? 18 : 9;
     this.pose = P.blend(this.pose, target, 1 - Math.exp(-dt * quick));
     if (this.rig?.ok) this.rig.apply(this.pose);
-    if (this.body) this.body.position.y = this.pose.bob * this.height;
+    if (this.rig?.headBone) this.rig.headBone.scale.setScalar(Character.bigHeads ? 1.65 : 1);
+    if (this.body) {
+      this.body.position.y = this.pose.bob * this.height;
+      // A flop tips the whole body onto its belly, rocking; a spin turns it round and round.
+      const flopping = this.action === 'flop';
+      this.tip += ((flopping ? 1 : 0) - this.tip) * (1 - Math.exp(-dt * 10));
+      this.twirl = this.action === 'spin' ? this.twirl + dt * 14 : this.twirl * Math.exp(-dt * 12);
+      this.body.rotation.order = 'YXZ';
+      this.body.rotation.x = this.tip * 1.45;
+      this.body.rotation.z = this.tip * Math.sin(this.t * 15) * 0.28;
+      this.body.rotation.y = this.baseYaw + this.twirl;
+      this.body.position.y += this.tip * (0.14 * this.height + Math.abs(Math.sin(this.t * 7.5)) * 0.12);
+    }
     this.group.updateMatrixWorld(true);
     this.placeHeld();
   }
@@ -567,7 +596,7 @@ export class Character {
     else this.handPos.copy(base).addScaledVector(up, h * 0.5).addScaledVector(fwd, 0.25).addScaledVector(right, 0.25);
     // The rod's angle depends on what the character is doing.
     if (this.rod) {
-      this.rod.visible = this.rodOut && this.action !== 'uke' && this.action !== 'show' && this.action !== 'row' && this.action !== 'sit' && !['wave', 'dance', 'clap', 'cheer', 'dig', 'sweep'].includes(this.action);
+      this.rod.visible = this.rodOut && this.action !== 'uke' && this.action !== 'show' && this.action !== 'row' && this.action !== 'sit' && !['wave', 'dance', 'clap', 'cheer', 'dig', 'sweep', 'flop', 'spin', 'honk', 'slap'].includes(this.action);
       let pitch = 0.95; // up from forward
       if (this.action === 'castBack') pitch = 1.3 + this.power * 1.25;
       else if (this.action === 'castThrow') pitch = 2.55 - Math.min(1, this.power * 1.3) * 2.15;

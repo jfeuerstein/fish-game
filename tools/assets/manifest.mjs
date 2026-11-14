@@ -14,6 +14,7 @@ export const TRIPO_LOOK = {
   prop: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, simple forms, muted warm matte colours with gentle shading, no fine detail, the whole thing in view with space round it, seen from the front and a little to one side and above, standing on nothing, on a plain white background, soft even light, no shadow, no text, no lettering',
   hat: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, muted warm matte colours with gentle shading, no fine detail, a single hat on its own with nobody wearing it, upright with its opening underneath, seen from the front and a little above, the whole thing in view with space round it, on a plain white background, soft even light, no shadow, no text',
   extra: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, muted warm matte colours with gentle shading, no fine detail, on its own with nobody wearing it, the whole thing in view with space round it, on a plain white background, soft even light, no shadow, no text',
+  icon: 'as a stylised 3D game item icon in a soft chunky toy style: smooth rounded stout shapes, muted warm matte colours with gentle shading, no fine detail, the whole thing in view with space round it, seen from the front and a little above, on a plain white background, soft even light, no shadow, no text, no lettering',
   fish: 'as a stylised 3D game asset in a soft chunky toy style: smooth rounded stout shapes, thick simple fins, muted matte colours with gentle shading, a goofy friendly face, seen exactly from the side facing left, the whole thing in view with space round it, on a plain white background, soft even light, no shadow, no text, no water',
 };
 
@@ -55,6 +56,9 @@ export const MODELS = {
   'rowboat': { kind: 'prop', what: 'a small wooden rowboat painted white with a red stripe, two oars resting inside, empty', h: 1.0, faces: 6000 },
   'buoy': { kind: 'prop', what: 'a round floating sea buoy, red and white, with a little bell on top', h: 1.6, faces: 3000 },
 
+  'arcade': { kind: 'prop', what: 'a small seaside carnival game booth: a wooden stall painted deep teal and cream with a striped red and cream canopy, a row of round light bulbs along the top edge, a big painted seagull sign on the roof, a counter across the open front with a little slot machine on it and a shelf of plush fish prizes behind', h: 5.4, faces: 12000 },
+  'gull': { kind: 'prop', what: 'a cheeky fat seagull standing upright on orange feet, wearing a green dealer visor and a little red bow tie, smug grin', h: 1.0, faces: 5000 },
+
   // --- Nature ---
   'tree-pine': { kind: 'prop', what: 'a tall chunky pine tree made of three stacked cone shaped tiers of dark green foliage on a short brown trunk', h: 9, faces: 3000 , simplify: 0.45 },
   'tree-round': { kind: 'prop', what: 'a round leafy deciduous tree with a big puffy ball of fresh green foliage on a short sturdy brown trunk', h: 7, faces: 3500 , simplify: 0.45 },
@@ -73,6 +77,9 @@ export const MODELS = {
   'shell': { kind: 'prop', what: 'a big pink and cream spiral seashell lying on its side', h: 0.4, faces: 1500 , simplify: 0.5 },
   'cloud': { kind: 'prop', what: 'a puffy white cartoon cloud made of a few round lumps', h: 6, faces: 1500 , simplify: 0.4 },
   'mushrooms': { kind: 'prop', what: 'a little cluster of three red mushrooms with white spots on a mossy mound', h: 0.6, faces: 2000 , simplify: 0.3 },
+  'bounce-shroom': { kind: 'prop', what: 'a big bouncy purple mushroom with a squashy springy round cap with pale spots, like a trampoline', h: 1.4, faces: 3000 },
+  'seaglass': { kind: 'prop', what: 'a small smooth frosted piece of pale sea green sea glass, a rounded pebble shape', h: 0.12, faces: 1000 },
+  'detector': { kind: 'prop', what: 'a metal detector: a long handle with a grip and a little dial, and a flat round search coil at the bottom, standing upright', h: 1.0, faces: 2500 },
 
   // --- Village and camp things ---
   'bench': { kind: 'prop', what: 'a chunky wooden park bench with a backrest and green painted iron legs', h: 1.0, faces: 3000 },
@@ -191,6 +198,18 @@ export const FISH_ART = {
   'can': 'a crumpled old tin can with no label',
   'seaweed': 'a clump of chunky green seaweed',
   'bottle': 'a green glass bottle with a rolled paper message inside and a cork',
+  'cod': 'a chunky speckled olive-brown cod with a pale belly and a little chin whisker',
+  'grayling': 'a silvery grayling with a huge sail-like purple spotted back fin',
+  'lobster': 'a red lobster with two big claws and long feelers, seen from the side',
+  'shrimp': 'a small curled pink shrimp with long feelers',
+  'snail': 'a little pond snail with a brown spiral shell and soft grey body, seen from the side',
+  'starfish': 'an orange five-armed starfish with little bumps, seen from above',
+  'sunfish': 'a huge round flat grey ocean sunfish, a big disc with tall fins top and bottom and no tail',
+  'tadpole': 'a round dark olive tadpole with a wiggly tail',
+  'manta': 'a big dark blue manta ray with a white belly and wide wing fins, seen from above at an angle',
+  'whale-shark': 'a big blue-grey whale shark covered in white spots with a wide flat mouth',
+  'giant-squid': 'a big red giant squid with huge eyes and long curling tentacles, lying sideways',
+  'treasure': 'a small wooden treasure chest with gold bands and a gold lock, closed',
 };
 
 /** Pictures only (no model): icons for things in the shop and the game's own art. */
@@ -206,6 +225,20 @@ export const ICONS = {
   'journal': 'a chunky green leather notebook with a fish drawn on the cover',
   'boat-ticket': 'a little paper ticket with a picture of a rowboat',
   'upgrade-cooler': 'a big red and white cooler box with a lid',
+  'token': 'a single round lustrous pearl, creamy white with a soft lilac sheen, sitting in a little open clam shell',
+  'chest-tide': 'a small weathered wooden treasure chest with rope handles and a little starfish stuck to it, closed',
+  'chest-gilded': 'an ornate treasure chest of dark wood with heavy gold bands, gold corners and a big gold lock, closed',
+  'ticket-penny': 'a small green scratch card lottery ticket with a wavy edge and a silver scratch panel',
+  'ticket-lucky': 'a blue scratch card lottery ticket with a four leaf clover and a silver scratch panel',
+  'ticket-splash': 'a red and gold scratch card lottery ticket with a splash of water and a silver scratch panel',
+  'lure-none': 'a single plain silver fish hook',
+  'lure-big': 'a big chunky orange fishing plug lure shaped like a fat little fish with two hooks',
+  'lure-small': 'a tiny fly fishing fly made of feathers on a small hook',
+  'lure-sparkle': 'a glittering spinner fishing lure with a shiny star shaped blade',
+  'lure-magnet': 'a red horseshoe magnet with silver tips on a fishing line',
+  'lure-twin': 'a fishing line with two hooks side by side, each with a little red bead',
+  'lure-lucky': 'a green four leaf clover charm on a little fishing hook',
+  'lure-rain': 'a little charm shaped like a blue rain cloud with a raindrop on a fishing hook',
 };
 
 /** Flat pictures: the title, the Home Screen icon. */

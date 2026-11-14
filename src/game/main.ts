@@ -17,6 +17,9 @@ import { bagSheet } from '../ui/bag';
 import { boardSheet } from '../ui/board';
 import { Chalk } from '../ui/chalk';
 import { chestSheet } from '../ui/chests';
+import { arcadeSheet } from '../ui/arcade';
+import { Fanfare } from '../ui/fanfare';
+import { model } from '../assets/models';
 import { funSheet } from '../ui/fun';
 import { Hud } from '../ui/hud';
 import { journalSheet } from '../ui/journal';
@@ -37,9 +40,15 @@ import { buriedToday, digUp, SHROOMS, SEA_GLASS } from '../world/secrets';
 import { Finds } from '../world/finds';
 import { applyCatch } from './progress';
 import { BACKUP_KEY, SAVE_KEY, type Save, parseSave } from './save';
-import type { Session } from './session';
+import type { Emote, Session } from './session';
 
 type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk' | 'dig';
+
+const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
+/** What islanders say when the player honks nearby, or slaps them with a fish. */
+const HONKED = ['Was that you?', 'HONK to you too.', 'Bless you?', 'Who let the goose in?', 'I felt that in my fins.', 'Please never do that again.', 'Beautiful. Truly.'];
+const SLAPPED = ['Ow! Rude.', 'Was that a FISH?', 'I did not deserve that.', 'Smells like mackerel now. Thanks.', 'Fair. I had it coming.', 'Slap me again and I tell Gus.', 'My dignity!'];
+const MISSED = ['You slap the air with a fish. It feels good.', 'Nobody to slap. The fish is relieved.', 'A mighty swing, at nothing.'];
 
 export class Game implements Session {
   readonly cfg = parseConfig(location.search);
@@ -73,7 +82,16 @@ export class Game implements Session {
   private frames = 0;
   private dirty = false;
   private savedAt = 0;
-  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'chests' | 'more' | 'fun', Sheet>;
+  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'chests' | 'more' | 'fun' | 'arcade', Sheet>;
+  fanfare!: Fanfare;
+  /** The arcade's counter, and its gull: what it is feeling, and for how much longer. */
+  private arcadeFront = new THREE.Vector3(-14, 0, 9);
+  private gull: THREE.Object3D | null = null;
+  private gullHome = new THREE.Vector3();
+  private gullYaw = 0;
+  private gullMood: { mood: 'smug' | 'shocked'; t: number } | null = null;
+  /** A honk hanging in the air over the player. */
+  private shouting: { text: string; until: number } | null = null;
   private app!: HTMLElement;
   private shopFront = new THREE.Vector3(0, 0, 9);
   private board = new THREE.Vector3(10, 0, 9);
@@ -162,6 +180,25 @@ export class Game implements Session {
     const shop = PLACED.find((p) => p.id === 'shop')!;
     const depth = this.world.props.sizes.get('shop')?.z ?? 6;
     this.shopFront.set(shop.x, 0, shop.z + depth / 2 + 1.4);
+    const booth = PLACED.find((p) => p.id === 'arcade')!;
+    // Its model faces +x: the way its counter faces is a quarter turn on from its yaw.
+    const boothDepth = this.world.props.sizes.get('arcade')?.x ?? 4;
+    const by = (booth.yaw ?? 0) + Math.PI / 2;
+    this.arcadeFront.set(booth.x + Math.sin(by) * (boothDepth / 2 + 1.4), 0, booth.z + Math.cos(by) * (boothDepth / 2 + 1.4));
+    // The gull stands on the corner of the counter, beside whoever is playing.
+    this.gullYaw = by;
+    const side = new THREE.Vector3(Math.cos(by), 0, -Math.sin(by));
+    this.gullHome.set(booth.x + Math.sin(by) * (boothDepth / 2 + 0.5) + side.x * 2.2, 0, booth.z + Math.cos(by) * (boothDepth / 2 + 0.5) + side.z * 2.2);
+    this.gullHome.y = this.world.field.heightAt(this.gullHome.x, this.gullHome.z);
+    if (models) {
+      void model('gull').then((g) => {
+        if (!g) return;
+        this.gull = g;
+        g.position.copy(this.gullHome);
+        g.rotation.y = by - Math.PI / 2;
+        this.scene.add(g);
+      });
+    }
     const boardAt = PLACED.find((p) => p.id === 'notice-board')!;
     this.board.set(boardAt.x + Math.sin(boardAt.yaw ?? 0) * 1.6, 0, boardAt.z + Math.cos(boardAt.yaw ?? 0) * 1.6);
     if (models) {
@@ -208,12 +245,23 @@ export class Game implements Session {
     window.addEventListener('keydown', (e) => e.key === ' ' && this.jump());
 
     const openChests = (): void => this.sheets.chests.show();
+    this.fanfare = new Fanfare(this.app, this.audio);
     this.sheets = {
-      shop: shopSheet(this.app, this, openChests),
+      arcade: arcadeSheet(this.app, this, {
+        fanfare: this.fanfare,
+        gull: (mood) => {
+          this.gullMood = { mood, t: 0 };
+          if (mood === 'smug') this.audio.squawk();
+        },
+        cheer: () => {
+          if (this.mode === 'walk' && !this.fishing.busy) setTimeout(() => this.emote('cheer'), 300);
+        },
+      }),
+      shop: shopSheet(this.app, this, openChests, this.fanfare),
       journal: journalSheet(this.app, this),
       bag: bagSheet(this.app, this),
       board: boardSheet(this.app, this),
-      chests: chestSheet(this.app, this),
+      chests: chestSheet(this.app, this, this.fanfare),
       more: moreSheet(this.app, this, openChests),
       fun: funSheet(this.app, this, () => Chalk.near(this.player.pos)),
     };
@@ -311,6 +359,9 @@ export class Game implements Session {
     }
     this.hud.showCatch({ icon: `${import.meta.env.BASE_URL}icons/fish-${c.species}.webp`, name: s.name, size: sayLength(c.size) + (c.huge ? ' · huge!' : ''), tier: TIER_LABEL[s.tier], tierColor: TIER_COLOR[s.tier], variant: c.variant, value: r.value, first: r.first, best: r.best, tokens: r.tokens, quip: quip(c), note: [second ? 'Twin catch!' : '', ...notes].filter(Boolean).join(' ') || undefined });
     this.audio.play(c.variant === 'golden' || c.variant === 'prismatic' || c.variant === 'shiny' || s.tier === 'legendary' || s.tier === 'epic' ? 'rare' : 'catch', { volume: 0.8 });
+    // The rarest catches get the arcade's fanfare too.
+    if (s.tier === 'legendary' || c.variant === 'prismatic') this.fanfare.win('jackpot', s.tier === 'legendary' ? 'LEGENDARY!' : 'PRISMATIC!', s.name, TIER_COLOR[s.tier]);
+    else if (c.variant === 'golden' || s.tier === 'epic') this.fanfare.burst(120, 0.5, 0.3, false);
     if (!r.kept) this.hud.toast('Your cooler is full, so you let it go. Sell some at the shop!');
     if (c.variant !== 'normal') this.tip('quality');
     if (r.tokens) setTimeout(() => this.hud.toast(`+${r.tokens} token${r.tokens > 1 ? 's' : ''}! Open a chest at the shop.`, 'gold'), 700);
@@ -467,13 +518,54 @@ export class Game implements Session {
     this.uke.show();
   }
 
-  emote(name: 'wave' | 'dance' | 'cheer' | 'clap' | 'sit'): void {
+  emote(name: Emote): void {
     this.stopActivity();
     this.mode = 'emote';
     this.player.free = false;
     this.body.action = name;
-    this.emoteTimer = name === 'dance' || name === 'sit' ? Infinity : 3;
+    this.emoteTimer = name === 'dance' || name === 'sit' || name === 'flop' ? Infinity : name === 'spin' ? 2.4 : name === 'honk' ? 1.4 : name === 'slap' ? 1.1 : 3;
     if (name === 'wave') this.audio.play('wave', { volume: 0.5 });
+    if (name === 'flop') this.audio.play('splash', { volume: 0.4, rate: 1.4 });
+    if (name === 'spin') this.audio.play('cast', { volume: 0.4, rate: 1.5 });
+    if (name === 'honk') {
+      this.audio.honk();
+      this.shouting = { text: pick(['HONK!', 'HONK!', 'HONK!!', 'HOONK!']), until: performance.now() + 1300 };
+      this.reactNearby(9, HONKED);
+    }
+    if (name === 'slap') {
+      // Whatever was caught last, or a mackerel kept for the purpose.
+      const last = this.save.bag.at(-1)?.species ?? 'mackerel';
+      void this.body.hold(`fish-${last}`, 0.55);
+      setTimeout(() => {
+        this.audio.play('splash', { volume: 0.6, rate: 1.8 });
+        const hit = this.reactNearby(2.8, SLAPPED, true);
+        if (!hit) this.hud.toast(pick(MISSED));
+      }, 420);
+      setTimeout(() => {
+        if (this.body.action !== 'slap') return;
+        void this.body.hold(null);
+      }, 1100);
+    }
+  }
+
+  /** Islanders within reach say something about what the player just did; true if anyone did. */
+  private reactNearby(reach: number, lines: readonly string[], inFront = false): boolean {
+    const now = performance.now();
+    const p = this.player.pos;
+    const fwd = new THREE.Vector2(Math.sin(this.player.yaw), Math.cos(this.player.yaw));
+    let any = false;
+    for (const who of [...this.npcs, this.gus]) {
+      const d = new THREE.Vector2(who.body.group.position.x - p.x, who.body.group.position.z - p.z);
+      if (d.length() > reach) continue;
+      if (inFront && d.normalize().dot(fwd) < 0.3) continue;
+      who.saying = { text: pick(lines), until: now + 2800 };
+      any = true;
+    }
+    return any;
+  }
+
+  setBigHeads(on: boolean): void {
+    Character.bigHeads = on;
   }
 
   teleport(name: string): void {
@@ -486,6 +578,7 @@ export class Game implements Session {
   }
 
   applySettings(): void {
+    Character.bigHeads = this.save.settings.bigHeads;
     this.audio.setVolumes({ sfx: this.save.settings.sfx, ambience: this.save.settings.ambience, music: this.save.settings.music });
   }
 
@@ -499,6 +592,7 @@ export class Game implements Session {
         void this.body.hold(null);
         if (this.uke.open) this.uke.hide();
       }
+      if (this.body.action === 'slap') void this.body.hold(null);
       this.mode = 'walk';
       this.seat = null;
       this.player.free = true;
@@ -648,9 +742,41 @@ export class Game implements Session {
     const flat = new THREE.Vector3(p.x, 0, p.z);
     if (this.mode !== 'boat' && flat.distanceTo(this.shopFront) < 3.2) hud.setAction('Shop', () => this.openSheet('shop'), undefined, 'green');
     else if (this.mode !== 'boat' && flat.distanceTo(this.board) < 2.6) hud.setAction('Errands', () => this.openSheet('board'), undefined, 'green');
+    else if (this.mode !== 'boat' && flat.distanceTo(this.arcadeFront) < 3.4) hud.setAction('Play', () => this.openSheet('arcade'), undefined, 'gold');
     else if (this.detecting && this.mode === 'walk') hud.setAction('Put away', () => this.toggleDetector(), undefined, 'blue');
     else if ((this.mode === 'walk' || this.mode === 'boat' || this.mode === 'emote') && this.waterAhead()) hud.setAction('Cast', cast, () => f.release(rod));
     else hud.setAction(null);
+  }
+
+  /** The arcade's gull: bobs and looks about; smug when the player loses, astonished at a big win. */
+  private animateGull(dt: number): void {
+    const g = this.gull;
+    if (!g) return;
+    const t = performance.now() / 1000;
+    const m = this.gullMood;
+    let hop = 0;
+    let spin = 0;
+    let lean = Math.sin(t * 1.7) * 0.05;
+    if (m) {
+      m.t += dt;
+      if (m.mood === 'smug') {
+        // Puffs up and waggles from side to side.
+        lean = Math.sin(m.t * 14) * 0.25;
+        hop = Math.abs(Math.sin(m.t * 7)) * 0.12;
+      } else {
+        // Leaps and spins round twice.
+        hop = Math.sin(Math.min(1, m.t / 1.1) * Math.PI) * 1.1;
+        spin = Math.min(1, m.t / 1.1) * Math.PI * 4;
+      }
+      if (m.t > (m.mood === 'smug' ? 1.4 : 1.2)) this.gullMood = null;
+    }
+    // Turned a little toward the player when they are near.
+    const p = this.player.pos;
+    const near = Math.hypot(p.x - this.gullHome.x, p.z - this.gullHome.z) < 9;
+    const look = near ? Math.atan2(p.x - this.gullHome.x, p.z - this.gullHome.z) : this.gullYaw + Math.sin(t * 0.4) * 0.6;
+    g.position.set(this.gullHome.x, this.gullHome.y + hop + Math.abs(Math.sin(t * 2.2)) * 0.03, this.gullHome.z);
+    // The gull's model faces +x.
+    g.rotation.set(0, look - Math.PI / 2 + spin, lean);
   }
 
   openSheet(name: keyof Game['sheets']): void {
@@ -718,6 +844,7 @@ export class Game implements Session {
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
     this.world.update(dt, this.hour, this.rain, this.player.pos);
+    this.animateGull(dt);
     this.viewClock -= dt;
     if (this.viewClock <= 0) {
       this.viewClock = 0.15;
@@ -875,6 +1002,10 @@ export class Game implements Session {
     if (!said) this.hud.say(null);
     const head = toScreen(this.player.pos.clone().add(new THREE.Vector3(0, this.save.hat ? 1.75 : 1.5, 0)));
     this.hud.setTag(this.save.title && head.on && this.mode !== 'chalk' ? this.save.title : null, head.x, head.y);
+    if (this.shouting && this.shouting.until > now) {
+      const top = toScreen(this.player.pos.clone().add(new THREE.Vector3(0, 2.1, 0)));
+      this.hud.shout(top.on ? this.shouting.text : null, top.x, top.y);
+    } else this.hud.shout(null);
     if (this.detecting) {
       const top = toScreen(this.player.pos.clone().add(new THREE.Vector3(0, 2.0, 0)));
       this.hud.setBlip(top.on, top.x, top.y, this.beepClock > this.beepGap - 0.12);
@@ -963,6 +1094,7 @@ export class Game implements Session {
         this.landed({ species, size: (s.size[0] + s.size[1]) / 2, variant, huge: false, at: Date.now() }, s.zones[0]);
       },
       emote: (n: Parameters<Game['emote']>[0]) => this.emote(n),
+      bigHeads: (on: boolean) => this.setBigHeads(on),
       game: this,
     };
   }

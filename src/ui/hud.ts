@@ -14,6 +14,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: 
 }
 export { el };
 
+/** Small line drawings for the sky beside the clock (no emoji: they are cartoonish and differ by phone). */
+const SKY_ICON: Record<string, string> = {
+  sun: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>',
+  moon: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M10.8 1.8a6.4 6.4 0 1 0 3.4 10.3A5.4 5.4 0 0 1 10.8 1.8z"/></svg>',
+  rain: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 9.5a3 3 0 1 1 .6-5.9A4 4 0 0 1 12.8 5a2.3 2.3 0 0 1-.3 4.5z"/><path d="M5.5 12l-.7 2M8.5 12l-.7 2M11.5 12l-.7 2"/></svg>',
+};
+
 export interface CatchCard {
   icon: string;
   name: string;
@@ -54,6 +61,7 @@ export class Hud {
   private jumpBtn = el('button', 'act-jump', '⤒');
   private blip = el('div', 'blip');
   private tag = el('div', 'name-tag');
+  private shoutEl = el('div', 'shout');
   onJump: (() => void) | null = null;
   private onAction: (() => void) | null = null;
   private onActionUp: (() => void) | null = null;
@@ -95,6 +103,7 @@ export class Hud {
     this.bang.hidden = true;
     this.blip.hidden = true;
     this.tag.hidden = true;
+    this.shoutEl.hidden = true;
     this.jumpBtn.setAttribute('aria-label', 'Jump');
     this.jumpBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -147,7 +156,7 @@ export class Hud {
       return b;
     };
     this.menu = { bag: make('bag', 'Bag', 'f-cooler'), journal: make('journal', 'Journal', 'fish-bluegill'), fun: make('fun', 'Fun', 'ukulele'), more: make('more', 'More', 'hat-captain') };
-    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.bang, this.blip, this.second, this.jumpBtn, this.action, row);
+    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.shoutEl, this.bang, this.blip, this.second, this.jumpBtn, this.action, row);
   }
 
   /** While a prize is being revealed, the counters wait, so they don't give it away. */
@@ -161,10 +170,13 @@ export class Hud {
     this.xpFill.style.width = `${Math.round(xpFrac * 100)}%`;
   }
 
+  private sky = '';
   setClock(text: string, rain: boolean, night: boolean): void {
-    const sky = rain ? '🌧' : night ? '🌙' : '☀️';
+    const sky = rain ? 'rain' : night ? 'moon' : 'sun';
     const t = `${sky} ${text}`;
-    if (this.clock.textContent !== t) this.clock.textContent = t;
+    if (this.sky === t) return;
+    this.sky = t;
+    this.clock.innerHTML = `${SKY_ICON[sky]}<span>${text}</span>`;
   }
 
   /** What the main button does here. `onUp` makes it a hold-and-release button. */
@@ -288,6 +300,23 @@ export class Hud {
     this.blip.style.left = `${x}px`;
     this.blip.style.top = `${y}px`;
     this.blip.classList.toggle('lit', lit);
+  }
+
+  /** A word shouted by the player (a honk), over their head. */
+  shout(text: string | null, x = 0, y = 0): void {
+    if (!text) {
+      this.shoutEl.hidden = true;
+      return;
+    }
+    if (this.shoutEl.hidden || this.shoutEl.textContent !== text) {
+      this.shoutEl.textContent = text;
+      this.shoutEl.hidden = false;
+      this.shoutEl.classList.remove('pop');
+      void this.shoutEl.offsetWidth;
+      this.shoutEl.classList.add('pop');
+    }
+    this.shoutEl.style.left = `${x}px`;
+    this.shoutEl.style.top = `${y}px`;
   }
 
   /** The player's title, floating over them. */

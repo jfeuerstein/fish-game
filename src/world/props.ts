@@ -29,6 +29,7 @@ const SOLID: Record<string, { circle?: number; box?: number }> = {
   cliff: { circle: 0.4 },
   bush: { circle: 0.3 },
   shop: { box: 0.85 },
+  arcade: { box: 0.8 },
   lighthouse: { circle: 0.42 },
   'fishing-hut': { box: 0.85 },
   'notice-board': { box: 0.8 },
