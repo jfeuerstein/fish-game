@@ -90,6 +90,7 @@ export class Game implements Session {
   private beepGap = 1;
   private nearBuried: { x: number; z: number; key: string } | null = null;
   private titleClock = 0;
+  private viewClock = 0;
 
   constructor() {
     let text: string | null = null;
@@ -172,7 +173,7 @@ export class Game implements Session {
     this.player.place(at.x, at.z, at.yaw);
     this.player.onStep = (surface) => this.audio.play(surface === 'wood' ? 'stepwood' : surface === 'water' ? 'splashstep' : 'step', { volume: 0.18, rate: 0.9 + Math.random() * 0.2 });
     this.rig = new CameraRig(this.camera, this.world.field);
-    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(tree|shop|lighthouse|fishing-hut|cliff|tent|well|lamp-post)/.test(c.name));
+    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|lighthouse|fishing-hut|tent|well)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
     if (this.cfg.zoom) this.rig.zoom = this.cfg.zoom;
     this.controls = new Controls(this.app);
@@ -472,7 +473,6 @@ export class Game implements Session {
     this.player.free = false;
     this.body.action = name;
     this.emoteTimer = name === 'dance' || name === 'sit' ? Infinity : 3;
-    if (name === 'sit') this.body.group.position.y -= 0.32;
     if (name === 'wave') this.audio.play('wave', { volume: 0.5 });
   }
 
@@ -718,6 +718,11 @@ export class Game implements Session {
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
     this.world.update(dt, this.hour, this.rain, this.player.pos);
+    this.viewClock -= dt;
+    if (this.viewClock <= 0) {
+      this.viewClock = 0.15;
+      this.world.props.clearView(this.camera.position, this.rig.override ? this.rig.override.pos : this.player.pos);
+    }
     this.fx.setRain(Math.max(this.rain, cloud ? 0.7 : 0));
     this.finds.update(dt);
     this.finds.setCloud(cloud, this.player.pos);

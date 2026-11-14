@@ -419,3 +419,33 @@ FISH.update({
     'shrimp': wrap(shrimp), 'snail': wrap(snail), 'tadpole': wrap(tadpole), 'sunfish': wrap(sunfish), 'manta': wrap(manta),
     'whale-shark': wrap(whale_shark), 'giant-squid': wrap(giant_squid), 'treasure': wrap(treasure),
 })
+
+
+def lobster(m):
+    sh = '#c8402d'
+    for i in range(6):
+        r = 0.11 - i * 0.012
+        m.sphere(sh, matrix=T(0.22 - i * 0.11, 0, 0) @ S(0.08, r, r * 0.8), seg=8, rings=5)
+    m.fin(sh, [(-0.4, 0), (-0.56, 0.12), (-0.56, -0.12)], thickness=0.025, matrix=R('X', 90))
+    for side in (-1, 1):
+        m.cylinder(sh, matrix=T(0.38, side * 0.13, 0) @ R('Z', side * 25) @ R('Y', 90), seg=5, r=0.03, depth=0.22)
+        m.sphere(sh, matrix=T(0.55, side * 0.2, 0) @ S(0.14, 0.07, 0.05), seg=8, rings=5)
+        for k in range(3):
+            m.cylinder('#a8352a', matrix=T(0.12 - k * 0.09, side * 0.15, -0.06) @ R('X', side * 60), seg=4, r=0.014, depth=0.16)
+        m.cylinder('#8a2a20', matrix=T(0.45, side * 0.04, 0.04) @ R('Z', side * 10) @ R('Y', 80), seg=4, r=0.007, depth=0.4)
+    eyes(m, 0.34, 0.05, 0.06, 0.024, white=False)
+
+
+def starfish(m):
+    for k in range(5):
+        a = k / 5 * math.pi * 2
+        m.cone(lambda c: hexrgb('#f08a5a') if (math.sin(c.x * 40) * math.sin(c.y * 40)) < 0.6 else hexrgb('#ffd0a0'), matrix=R('Z', math.degrees(a)) @ T(0.22, 0, 0) @ R('Y', 90) @ S(1, 0.45, 1), seg=6, r1=0.13, r2=0.02, depth=0.44)
+    m.sphere('#f08a5a', deform=lambda p: (p[0] * 0.16, p[1] * 0.16, p[2] * 0.07), seg=10, rings=6)
+
+
+FISH.update({
+    'cod': fish(dict(back='#8a8a5a', belly='#e8e2cc', h=0.32, w=0.2, pattern=('spots', 0.2, '#5f5f3a'), extra=lambda m, f: m.cylinder('#5f5f3a', matrix=T(0.46, 0, -0.1), seg=4, r=0.008, depth=0.08))),
+    'grayling': fish(dict(back='#6f7a8a', belly='#e4e0dc', h=0.28, dorsal=2.6, fin='#8a5aa8', pattern=('spots', 0.1, '#3a3f4a'))),
+    'lobster': wrap(lobster),
+    'starfish': wrap(starfish),
+})

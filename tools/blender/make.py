@@ -576,6 +576,21 @@ BUILD.update({
 })
 
 
+def pier(m):
+    """A 3 m square of pier: weathered planks on top (at 2.4 m), posts only underneath."""
+    for k in range(6):
+        shade = '#b39472' if k % 2 else '#a5865f'
+        m.box(shade, matrix=T(0, -1.25 + k * 0.5, 2.34), size=(3.02, 0.47, 0.12))
+    for x in (-1.3, 1.3):
+        for y in (-1.3, 1.3):
+            m.cylinder('#6f5640', matrix=T(x, y, 1.14), seg=8, r=0.13, depth=2.28)
+    for y in (-1.3, 1.3):
+        m.box('#7a5f45', matrix=T(0, y, 2.18), size=(3.0, 0.16, 0.2))
+
+
+BUILD['pier'] = (pier, 'prop', 2.4)
+
+
 def main():
     wanted = [a for a in sys.argv[1:] if a in BUILD] or list(BUILD)
     index_file = os.path.join(OUT, 'index.json')

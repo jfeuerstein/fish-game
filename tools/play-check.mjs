@@ -10,7 +10,7 @@ import { launchBrowser } from './browser.mjs';
 const out = process.argv[2] ?? 'play-check';
 mkdirSync(out, { recursive: true });
 const server = await preview({ preview: { port: 0, host: '127.0.0.1' }, logLevel: 'silent' });
-const url = `http://127.0.0.1:${server.httpServer.address().port}/?title=0&fresh=1&mute=1&time=day&weather=clear&at=pier&quality=low&warp=6`;
+const url = `http://127.0.0.1:${server.httpServer.address().port}/?title=0&fresh=1&mute=1&time=day&weather=clear&at=pier&quality=low&warp=3`;
 const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 402, height: 874 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.error(`[page error] ${e.message}`));
@@ -18,7 +18,7 @@ page.on('console', (m) => m.type() === 'error' && console.error(`[page] ${m.text
 await page.goto(url);
 await page.waitForFunction(() => window.__cove?.ready || window.__cove?.error, null, { timeout: 180000 });
 const state = () => page.evaluate(() => window.__cove.state());
-const shot = (name) => page.screenshot({ path: `${out}/${name}.png` });
+const shot = (name) => page.screenshot({ path: `${out}/${name}.png`, timeout: 240000 });
 const waitFor = (fn, ms = 60000) => page.waitForFunction(fn, null, { timeout: ms, polling: 100 });
 await page.evaluate(() => window.__cove.face(Math.PI));
 await page.waitForTimeout(800);

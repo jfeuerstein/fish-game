@@ -200,7 +200,7 @@ export function creekLevel(t: number): number {
 export const PLACES: Record<string, { x: number; z: number; yaw: number }> = {
   plaza: { x: 3, z: 20, yaw: 0 },
   shop: { x: 0, z: 9, yaw: Math.PI },
-  pier: { x: 90, z: 14, yaw: Math.PI / 2 },
+  pier: { x: 90, z: 14, yaw: 0 },
   pierhead: { x: 101, z: 14, yaw: Math.PI / 2 },
   pond: { x: -18, z: -11.5, yaw: -2.6 },
   creek: { x: -45, z: -24, yaw: -2.82 },

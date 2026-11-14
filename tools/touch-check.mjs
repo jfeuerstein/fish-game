@@ -54,6 +54,61 @@ else {
   }
   await page.tap('.sheet-close');
 }
+// The sheets and overlays not reached from the bottom row.
+const step = async (label, fn) => {
+  try {
+    await fn();
+  } catch (e) {
+    problems.push(`${label}: ${String(e.message ?? e).split('\n')[0]}`);
+  }
+};
+await step('board', async () => {
+  await page.evaluate(() => window.__cove.open('board'));
+  await page.waitForSelector('.sheet.up', { timeout: 10000 });
+  await small('board');
+  await page.tap('.sheet-close');
+});
+await step('chest roulette', async () => {
+  await page.evaluate(() => {
+    window.__cove.give(0, 10);
+    window.__cove.open('chests');
+  });
+  await page.waitForSelector('.sheet.up', { timeout: 10000 });
+  await small('chests');
+  await page.tap('.sheet .btn.coral');
+  await page.waitForSelector('.roulette-result.show', { timeout: 30000 });
+  await small('roulette result');
+  await page.tap('.roulette-result .btn.plain');
+  await page.tap('.sheet-close');
+});
+await step('scratch ticket', async () => {
+  await page.evaluate(() => {
+    window.__cove.give(1000, 0);
+    window.__cove.open('shop', 'Tickets');
+  });
+  await page.waitForSelector('.sheet.up', { timeout: 10000 });
+  await page.tap('.sheet .btn.coral');
+  await page.waitForSelector('.scratch', { timeout: 10000 });
+  await small('scratch ticket');
+  await page.tap('.scratch .btn.plain');
+  await page.waitForSelector('.scratch .btn.green:not([hidden])', { timeout: 10000 });
+  await page.tap('.scratch .btn.green');
+  await page.tap('.sheet-close');
+});
+await step('ukulele', async () => {
+  await page.evaluate(() => window.__cove.game.playUke());
+  await page.waitForSelector('.uke', { timeout: 10000 });
+  await small('ukulele');
+  await page.tap('.uke .btn.coral');
+});
+await step('chalk', async () => {
+  await page.evaluate(() => window.__cove.teleport('chalk'));
+  await page.waitForFunction(() => document.querySelector('.act-second')?.textContent === 'Draw', null, { timeout: 30000 });
+  await page.tap('.act-second');
+  await page.waitForSelector('.chalk-ui', { timeout: 10000 });
+  await small('chalk');
+  await page.tap('.chalk-tools .btn.green');
+});
 await browser.close();
 await server.close();
 for (const e of errors) console.error(`page error: ${e}`);

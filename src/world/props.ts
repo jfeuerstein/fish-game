@@ -55,7 +55,44 @@ export class Props {
   /** The size of each kind, as loaded. */
   readonly sizes = new Map<string, THREE.Vector3>();
 
+  /** Trees (and cliffs) that step out of the camera's way, with where each one stands. */
+  private thinnable: { inst: THREE.InstancedMesh; list: Placed[]; kept: THREE.Matrix4[]; size: THREE.Vector3; hidden: Uint8Array }[] = [];
+  private zero = new THREE.Matrix4().makeScale(0, 0, 0);
+
   constructor(private field: Heightfield, private solid: Colliders) {}
+
+  /**
+   * Hide any tree that would stand between the camera and the player, or crowd the camera
+   * itself, so the view is never a wall of leaves. Trees beyond the player are left alone.
+   */
+  clearView(camera: THREE.Vector3, target: THREE.Vector3): void {
+    const ax = target.x;
+    const az = target.z;
+    const bx = camera.x;
+    const bz = camera.z;
+    const dx = bx - ax;
+    const dz = bz - az;
+    const len2 = dx * dx + dz * dz || 1;
+    for (const t of this.thinnable) {
+      let changed = false;
+      t.list.forEach((p, i) => {
+        const s = p.scale ?? 1;
+        const crown = Math.max(t.size.x, t.size.z) * 0.5 * s;
+        const u = Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.z - az) * dz) / len2));
+        const d = Math.hypot(p.x - (ax + dx * u), p.z - (az + dz * u));
+        const nearCam = Math.hypot(p.x - bx, p.z - bz) < crown + 2.5;
+        // Between the two (not right by the player), within its crown's reach of the line of sight.
+        const between = u > 0.12 && d < crown + 0.8;
+        const hide = nearCam || between ? 1 : 0;
+        if (hide !== t.hidden[i]) {
+          t.hidden[i] = hide;
+          t.inst.setMatrixAt(i, hide ? this.zero : t.kept[i]);
+          changed = true;
+        }
+      });
+      if (changed) t.inst.instanceMatrix.needsUpdate = true;
+    }
+  }
 
   /** Stand a thing's feet on the ground: the lowest point under its footprint, so nothing floats on a slope. */
   groundUnder(x: number, z: number, r: number): number {
@@ -100,6 +137,11 @@ export class Props {
           inst.computeBoundingSphere();
           inst.name = id;
           this.group.add(inst);
+          if (id.startsWith('tree-') || id === 'cliff') {
+            const kept: THREE.Matrix4[] = [];
+            for (let i = 0; i < list.length; i++) kept.push(inst.instanceMatrix ? new THREE.Matrix4().fromArray(inst.instanceMatrix.array as Float32Array, i * 16) : new THREE.Matrix4());
+            this.thinnable.push({ inst, list, kept, size, hidden: new Uint8Array(list.length) });
+          }
         }
         for (const p of list) this.record(id, p, size);
       }),

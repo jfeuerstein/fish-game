@@ -176,7 +176,7 @@ export class Water {
       pos.push(p.x + nx * w, y, p.z + nz * w, p.x - nx * w, y, p.z - nz * w);
       if (k > 0) {
         const o = (k - 1) * 2;
-        idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
+        idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3);
       }
     }
     // Widen the mouth into the pond.

@@ -134,6 +134,8 @@ export function waterAt(field: Heightfield, x: number, z: number): { level: numb
 
 /** The kind of water a bobber has landed in, if it is deep enough to fish. */
 export function fishingZone(field: Heightfield, x: number, z: number): Zone | null {
+  // Not through the boards of the pier.
+  if (floorAt(x, z) !== null) return null;
   const w = waterAt(field, x, z);
   return w && w.depth > 0.35 ? w.zone : null;
 }

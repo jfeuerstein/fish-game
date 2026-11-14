@@ -35,6 +35,9 @@ export const SPECIES: readonly Species[] = [
   { id: 'squid', name: 'Squid', zones: ['ocean', 'deep'], tier: 'uncommon', size: [20, 60], value: 28, watch: 'night', fight: 0.4, note: 'Comes up to the lamps on the pier after dark.' },
   { id: 'seahorse', name: 'Seahorse', zones: ['ocean'], tier: 'rare', size: [8, 20], value: 70, watch: 'day', fight: 0.2, note: 'Tiny, upright and very polite.' },
   { id: 'jellyfish', name: 'Moon Jelly', zones: ['ocean'], tier: 'rare', size: [15, 40], value: 60, watch: 'night', rain: true, fight: 0.15, note: 'Drifts in on rainy nights like a little lamp.' },
+  { id: 'cod', name: 'Atlantic Cod', zones: ['ocean', 'deep'], tier: 'common', size: [30, 90], value: 14, watch: 'any', fight: 0.35, note: 'Has a little chin whisker. Very distinguished.' },
+  { id: 'starfish', name: 'Sea Star', zones: ['ocean'], tier: 'uncommon', size: [10, 30], value: 30, watch: 'twilight', fight: 0.1, note: 'Five arms and no hurry. It clung to the hook out of politeness.' },
+  { id: 'lobster', name: 'Lobster', zones: ['ocean', 'deep'], tier: 'rare', size: [25, 60], value: 90, watch: 'night', fight: 0.55, note: 'Snaps first, asks questions never.' },
   { id: 'shrimp', name: 'Shrimp', zones: ['ocean'], tier: 'common', size: [3, 9], value: 4, watch: 'any', fight: 0.05, note: 'Small enough to fit in a thimble. Proud anyway.' },
   // Deep (the pier's head, and from the boat)
   { id: 'sunfish', name: 'Ocean Sunfish', zones: ['deep'], tier: 'rare', size: [100, 300], value: 140, watch: 'day', fight: 0.5, note: 'A whole fish that forgot to grow a back half. Sunbathes at the surface.' },
@@ -62,6 +65,7 @@ export const SPECIES: readonly Species[] = [
   { id: 'minnow', name: 'Minnow', zones: ['creek', 'pond'], tier: 'common', size: [4, 10], value: 3, watch: 'any', fight: 0.05, note: 'Small, quick, and everywhere.' },
   { id: 'trout', name: 'Rainbow Trout', zones: ['creek'], tier: 'common', size: [20, 60], value: 14, watch: 'day', fight: 0.35, note: 'A little rainbow down its side.' },
   { id: 'crayfish', name: 'Crayfish', zones: ['creek'], tier: 'common', size: [6, 15], value: 8, watch: 'night', fight: 0.15, note: 'A lobster that lives in the woods.' },
+  { id: 'grayling', name: 'Grayling', zones: ['creek'], tier: 'uncommon', size: [25, 50], value: 34, watch: 'twilight', fight: 0.4, note: 'Raises a great sail of a fin, like a flag, at first light.' },
   { id: 'salmon', name: 'Salmon', zones: ['creek', 'ocean'], tier: 'uncommon', size: [40, 110], value: 40, watch: 'twilight', fight: 0.7, note: 'Always on its way somewhere upstream.' },
   { id: 'eel', name: 'River Eel', zones: ['creek'], tier: 'rare', size: [40, 120], value: 75, watch: 'night', fight: 0.6, note: 'Slippery in every sense.' },
   { id: 'pike', name: 'Pike', zones: ['creek', 'pond'], tier: 'rare', size: [50, 130], value: 85, watch: 'any', fight: 0.75, note: 'Waits in the reeds with a grin.' },

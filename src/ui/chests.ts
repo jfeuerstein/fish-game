@@ -5,20 +5,20 @@ import type { Session } from '../game/session';
 import { el, icon } from './hud';
 import { Sheet } from './sheet';
 
-/** Give a prize. Returns tokens refunded if it was already owned. */
-export function award(s: Session, p: Prize): number {
+/** Give a prize: whether it was already owned, and the tokens given back if so. */
+export function award(s: Session, p: Prize): { owned: boolean; refund: number } {
   const save = s.save;
   if (p.kind === 'furniture') {
     save.furniture[p.id] = (save.furniture[p.id] ?? 0) + 1;
-    return 0;
+    return { owned: false, refund: 0 };
   }
   const list = p.kind === 'hat' ? save.hats : save.characters;
   if (list.includes(p.id)) {
     save.tokens += REFUND[p.rarity];
-    return REFUND[p.rarity];
+    return { owned: true, refund: REFUND[p.rarity] };
   }
   list.push(p.id);
-  return 0;
+  return { owned: false, refund: 0 };
 }
 
 const TILE = 104;
@@ -56,6 +56,8 @@ export function chestSheet(app: HTMLElement, s: Session): Sheet {
     const seed = Date.now() % 1e9;
     const prize = openChest(chest, rng(seed));
     const strip = makeStrip(chest, prize, seed + 1);
+    // Given now, so closing the game mid-spin loses nothing; the strip only shows it.
+    const got = award(s, prize);
     s.changed();
     sheet.refresh();
     s.audio.play('open');
@@ -100,15 +102,14 @@ export function chestSheet(app: HTMLElement, s: Session): Sheet {
     requestAnimationFrame(step);
 
     function reveal(): void {
-      const refund = award(s, prize);
-      s.changed();
+      const { owned, refund } = got;
       const tiles = track.children;
       tiles[WIN_AT]?.classList.add('win');
       s.audio.play(prize.rarity === 'legendary' || prize.rarity === 'epic' ? 'rare' : 'catch');
       result.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
-      result.innerHTML = `<img src="${icon(prize.id)}" alt=""><div class="rr-rar">${RARITY_LABEL[prize.rarity]}</div><div class="rr-name">${prize.name}</div><div class="rr-sub">${refund ? `Already yours, so +${refund} token${refund > 1 ? 's' : ''} back.` : prize.kind === 'character' ? 'A new friend to play as! Change in More › Wardrobe.' : prize.kind === 'hat' ? 'A new hat!' : 'In your bag, ready to set down.'}</div>`;
+      result.innerHTML = `<img src="${icon(prize.id)}" alt=""><div class="rr-rar">${RARITY_LABEL[prize.rarity]}</div><div class="rr-name">${prize.name}</div><div class="rr-sub">${owned ? (refund ? `Already yours, so +${refund} token${refund > 1 ? 's' : ''} back.` : 'Already yours. Better luck next spin!') : prize.kind === 'character' ? 'A new friend to play as! Change in More › Wardrobe.' : prize.kind === 'hat' ? 'A new hat!' : 'In your bag, ready to set down.'}</div>`;
       const actions = el('div', 'rr-actions');
-      if (prize.kind === 'hat' && !refund) {
+      if (prize.kind === 'hat' && !owned) {
         const wear = el('button', 'btn green', 'Wear it');
         wear.onclick = () => {
           s.wear(prize.id);
@@ -116,7 +117,7 @@ export function chestSheet(app: HTMLElement, s: Session): Sheet {
         };
         actions.append(wear);
       }
-      if (prize.kind === 'character' && !refund) {
+      if (prize.kind === 'character' && !owned) {
         const be = el('button', 'btn green', 'Play as');
         be.onclick = () => {
           s.become(prize.id);

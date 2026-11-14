@@ -51,7 +51,7 @@ deploys to GitHub Pages.
   reel, sit, wave, dance, cheer, clap, uke, row) and `rig.ts` (turns them into bone rotations about
   the character's own axes, worked out from the skeleton). Hats sit on the head bone; the rod is
   placed from the hand each frame.
-- **Fishing** (`src/fishing/`): `fish.ts` (36 species and odds and ends, data), `roll.ts` (what bites,
+- **Fishing** (`src/fishing/`): `fish.ts` (43 kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
   size, shiny/golden), `reel.ts` (the reeling minigame, fixed-step), `fishing.ts` (cast, bobber,
   line, bite, hook, reel, land). Tune feel with `REEL` and the tests in `fishing.test.ts`.
 - **Progress** (`src/game/`): `economy.ts` (rods, bait, coolers, hats, furniture, levels),

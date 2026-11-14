@@ -568,7 +568,7 @@ button {
   position: absolute;
   left: 22px;
   right: 22px;
-  top: 56%;
+  top: calc(var(--top-clear) + 70px);
   padding: 12px 14px 10px;
   border-radius: 20px;
   background: rgba(255, 248, 236, 0.93);
@@ -1190,8 +1190,8 @@ button {
   margin-bottom: 10px;
 }
 .chalk-colour {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 3px solid #fff;
   box-shadow: 0 0 0 1px var(--line);
@@ -1310,4 +1310,27 @@ button {
 }
 .qdots i.on {
   color: #e0a020;
+}
+
+/* A coin inside a price stays small, wherever the price is. */
+.price img,
+.row .price img,
+.btn .price img {
+  width: 16px !important;
+  height: 16px !important;
+  flex: none;
+}
+.btn .price {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roulette-result,
+  .catch-card,
+  .toast {
+    transition: none !important;
+    animation: none !important;
+  }
 }
