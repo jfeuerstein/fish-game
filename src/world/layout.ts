@@ -114,8 +114,8 @@ export interface Placed {
 /** The buildings, landmarks and village things, placed by hand. Trees, rocks and flowers are scattered (see scatter.ts). */
 export const PLACED: readonly Placed[] = [
   { id: 'shop', x: 0, z: 2.5, yaw: 0 },
-  /** The Lucky Gull arcade, on the west side of the plaza, facing into it (its model faces +x, so turned a quarter less). */
-  { id: 'arcade', x: -17, z: 8, yaw: 1.2 - Math.PI / 2 },
+  /** The Lucky Gull arcade, on the west side of the plaza, facing into it. */
+  { id: 'arcade', x: -17, z: 8, yaw: 1.2 },
   { id: 'notice-board', x: 10, z: 9, yaw: -0.5 },
   { id: 'lighthouse', x: 31, z: -37, yaw: 0.6 },
   { id: 'fishing-hut', x: 50, z: 5, yaw: -1.2 },

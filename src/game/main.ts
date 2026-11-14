@@ -181,9 +181,8 @@ export class Game implements Session {
     const depth = this.world.props.sizes.get('shop')?.z ?? 6;
     this.shopFront.set(shop.x, 0, shop.z + depth / 2 + 1.4);
     const booth = PLACED.find((p) => p.id === 'arcade')!;
-    // Its model faces +x: the way its counter faces is a quarter turn on from its yaw.
-    const boothDepth = this.world.props.sizes.get('arcade')?.x ?? 4;
-    const by = (booth.yaw ?? 0) + Math.PI / 2;
+    const boothDepth = this.world.props.sizes.get('arcade')?.z ?? 4;
+    const by = booth.yaw ?? 0;
     this.arcadeFront.set(booth.x + Math.sin(by) * (boothDepth / 2 + 1.4), 0, booth.z + Math.cos(by) * (boothDepth / 2 + 1.4));
     // The gull stands on the corner of the counter, beside whoever is playing.
     this.gullYaw = by;
@@ -195,7 +194,7 @@ export class Game implements Session {
         if (!g) return;
         this.gull = g;
         g.position.copy(this.gullHome);
-        g.rotation.y = by - Math.PI / 2;
+        g.rotation.y = by;
         this.scene.add(g);
       });
     }
@@ -775,8 +774,7 @@ export class Game implements Session {
     const near = Math.hypot(p.x - this.gullHome.x, p.z - this.gullHome.z) < 9;
     const look = near ? Math.atan2(p.x - this.gullHome.x, p.z - this.gullHome.z) : this.gullYaw + Math.sin(t * 0.4) * 0.6;
     g.position.set(this.gullHome.x, this.gullHome.y + hop + Math.abs(Math.sin(t * 2.2)) * 0.03, this.gullHome.z);
-    // The gull's model faces +x.
-    g.rotation.set(0, look - Math.PI / 2 + spin, lean);
+    g.rotation.set(0, look + spin, lean);
   }
 
   openSheet(name: keyof Game['sheets']): void {

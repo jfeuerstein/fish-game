@@ -446,7 +446,9 @@ export class Character {
     const bone = fit.bone === 'head' ? rig.headBone : rig.chestBone;
     if (!bone) return null;
     const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
-    const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z });
+    // Turned a quarter, its width and depth trade places.
+    const quarter = Math.abs(Math.sin(fit.turn ?? 0)) > 0.7;
+    const p = placeFor(fit, m, quarter ? { x: size.z, y: size.y, z: size.x } : { x: size.x, y: size.y, z: size.z });
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -p.tilt);
     if (p.turn) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.turn));
     if (p.backwards) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));

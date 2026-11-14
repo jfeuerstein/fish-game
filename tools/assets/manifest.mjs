@@ -147,7 +147,7 @@ export const MODELS = {
   // --- Worn things besides hats ---
   'x-glasses': { kind: 'extra', what: 'a pair of round tortoiseshell reading glasses, folded open, seen from the front', h: 0.12, faces: 2500, item: true },
   'x-shades': { kind: 'extra', what: 'a pair of chunky black sunglasses with dark lenses, folded open, seen from the front', h: 0.12, faces: 2500, item: true },
-  'x-scarf': { kind: 'extra', what: 'a chunky knitted red and cream striped scarf wrapped once round in a ring with one end hanging down the front', h: 0.3, faces: 3000, item: true },
+  'x-scarf': { kind: 'extra', what: 'a chunky knitted red and cream striped scarf wound round into a thick closed ring like a doughnut, as if worn round a neck with nobody in it, one short end tucked in at the front, lying flat, seen from the front and above', h: 0.18, faces: 3000, item: true },
   'x-bowtie': { kind: 'extra', what: 'a big red polka dot bow tie', h: 0.12, faces: 2000, item: true },
   'x-backpack': { kind: 'extra', what: 'a small tan canvas hiking backpack with a rolled up green blanket on top and two side pockets, seen from behind', h: 0.4, faces: 3000, item: true },
   'x-flower': { kind: 'extra', what: 'a single big pink hibiscus flower with green leaves', h: 0.14, faces: 2000, item: true },

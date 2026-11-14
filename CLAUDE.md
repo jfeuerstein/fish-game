@@ -18,6 +18,9 @@ node tools/shot.mjs out.png "at=shop" 402 874 1 "window.__cove.open('shop')"   #
 node tools/play-check.mjs outdir                             # three scripted casts from the pier, with pictures
 node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons
 node tools/icons.mjs [prefix]                                # render menu icons from the models
+NODE_USE_ENV_PROXY=1 node tools/assets/make-tripo.mjs id ... # Tripo direct: picture -> model -> slimmed GLB + icon (--kinds hat,extra,prop,fish)
+NODE_USE_ENV_PROXY=1 node tools/assets/make-ground.mjs       # Tripo: the ground's painted textures, made to repeat
+node tools/fit-check.mjs outdir [items] [--chars ...] [--socket]   # every hat/accessory on every character, front and side
 NODE_USE_ENV_PROXY=1 node tools/assets/make-models.mjs       # fal: picture -> Tripo 3D -> slimmed GLB (+ rigging)
 NODE_USE_ENV_PROXY=1 node tools/assets/make-media.mjs        # fal: textures, title art, icon, sounds, music
 tools/blender/run.sh [id ...]                                # Blender (bpy): models fal did not make
@@ -47,6 +50,12 @@ deploys to GitHub Pages.
 - **Sky** (`sky.ts`): hand-tuned palettes for moments of the day, blended by the hour, greyed by rain.
   A day on the island is 24 minutes (`clock.ts`); Settings can follow the real clock. Rain comes in
   spells chosen from the clock alone.
+- **Hats** sit on each character's skull, an ellipsoid in `HEADS` (`src/player/fit.ts`) that
+  leaves out ears and the frog's eyes; `socket=1` draws it. Each hat in `HATS` says how it is worn
+  (`on`, `ring` or `perch`), how deep, and where its band and opening are, read off a cut through
+  the model (`node tools/hat-cut.mjs hat-id ...` prints one). Tripo's models face +x, so hats are turned a
+  quarter. Check every change with `tools/fit-check.mjs`.
+- **Emotes** include flop, twirl, honk and fish slap (islanders react); Settings › Silly has big heads.
 - **Characters** are Tripo-rigged models posed in code: `poses.ts` (pure joint angles: walk, cast,
   reel, sit, wave, dance, cheer, clap, uke, row) and `rig.ts` (turns them into bone rotations about
   the character's own axes, worked out from the skeleton). Hats sit on the head bone; the rod is
@@ -54,6 +63,14 @@ deploys to GitHub Pages.
 - **Fishing** (`src/fishing/`): `fish.ts` (43 kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
   size, shiny/golden), `reel.ts` (the reeling minigame, fixed-step), `fishing.ts` (cast, bobber,
   line, bite, hook, reel, land). Tune feel with `REEL` and the tests in `fishing.test.ts`.
+- **The Lucky Gull** (`src/game/arcade.ts`, pure and tested; `src/ui/arcade.ts`): the arcade
+  booth on the plaza, with a gull dealer who gloats and leaps. The Gull Wheel (a CS-style strip of
+  crabs and shells at ×2 and one gull at ×14 plus tokens), the Bait Bandit slots, Flying Fish (a
+  crash game: cash out before the gull snatches the fish), and the chests and tickets. Each game
+  pays back a little under the stake (the tests hold it there); stakes are paid and wins paid out
+  at once, so nothing is lost by closing the game mid-spin. `src/ui/fanfare.ts` celebrates wins
+  by how grand they are (confetti, coin rain, flash, shake, rays, a stamped headline and a synth
+  band from `Audio.band`); legendary and prismatic catches get it too.
 - **Progress** (`src/game/`): `economy.ts` (rods, bait, coolers, hats, furniture, levels),
   `quests.ts` (the board), `crates.ts` (chests, odds, the strip), `progress.ts` (what a catch, a
   sale or an errand does), `save.ts` (read defensively; add a field with a default, never change
@@ -92,6 +109,15 @@ at the head from both ways (the snout or beak sticks out) and turns the model to
 
 Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
 
+- **Tripo, asked directly** (`TRIPO`, `TRIPO_LOOK`; `tools/assets/tripo.mjs`, `make-tripo.mjs`) is
+  how models are made now: its image model paints a picture in one soft chunky toy style, its
+  shape model makes a model of that picture. About 40 credits a model, 10 a picture. The account
+  runs only a couple of tasks at once; the client waits and retries when told it is busy. Its
+  models face +x. Hats, accessories, the arcade, the gull, props and fish are made this way.
+- **The ground** is painted by Tripo's `chat_image_2.5_sunburst` model (`GROUND`, `make-ground.mjs`),
+  made to repeat, and blended in `terrain.ts` with two turned reads (no visible grid), patches of
+  colour and painted, noise-pushed edges between grass, sand, earth, rock and paving.
+
 - Models: a picture through fal (`gpt-image-1.5`), a shape from it (`tripo3d/h3.1/image-to-3d`),
   slimmed with glTF-Transform (WebP textures, meshopt) into `public/models/<id>.glb`. Characters
   are rigged through fal (`fal-ai/tripo3d/rig`); the game poses them. `public/models/index.json`
@@ -105,6 +131,13 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
 - Textures, the title picture, the Home Screen icon, sounds and music: `make-media.mjs`.
 - Keys are never in the repo: the fal key is a network secret on the environment
   (`queue.fal.run`); run the asset tools with `NODE_USE_ENV_PROXY=1`.
+
+## The look
+
+The interface (`src/style.css`, top): a harbour chart room. Fraunces for headings and numbers,
+Manrope for the rest; smoked glass over the game, bone paper sheets, brass for what is precious
+and a red-orange enamel for the button to press; line drawings, never emoji. The arcade is the
+same family in a dark, brass-trimmed room. Use the variables; keep it grown-up, not bubbly.
 
 ## Conventions
 

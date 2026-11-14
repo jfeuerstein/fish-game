@@ -69,8 +69,8 @@ export interface HatFit {
   per?: Partial<Record<string, Partial<Omit<HatFit, 'per' | 'how'>>>>;
 }
 
-/** Tripo's models face +x; a quarter turn brings their front round to the character's front (+z). */
-const FRONT = -Math.PI / 2;
+/** Which way a hat is turned on the head: models are loaded facing +z, the character's front. */
+const FRONT = 0;
 /**
  * A hat pulled on: how deep (see `depth`), and where its band is and how wide its opening there,
  * read off a cut through the model (tools/scratch/rows2.mjs prints one).
@@ -82,7 +82,7 @@ const perch = (snug: number, more: Partial<HatFit> = {}): HatFit => ({ how: 'per
 export const HATS: Record<string, HatFit> = {
   'hat-bucket': on(0.45, 0.28, 0.8),
   'hat-straw': on(0.38, 0.22, 0.55),
-  'hat-beanie': on(0.52, 0.1, 0.95),
+  'hat-beanie': on(0.52, 0.1, 0.95, { per: { 'char-frog': { depth: 0.3 } } }),
   'hat-captain': on(0.38, 0.32, 0.84),
   'hat-flowers': ring(0.28, 0.3, 0.8),
   'hat-frog': on(0.88, 0.05, 0.92),
@@ -91,7 +91,7 @@ export const HATS: Record<string, HatFit> = {
   'hat-propeller': on(0.45, 0.15, 0.92),
   'hat-cowboy': on(0.38, 0.3, 0.64),
   'hat-crown': ring(0.22, 0.05, 0.9),
-  'hat-mushroom': on(0.55, 0.1, 0.62),
+  'hat-mushroom': on(0.55, 0.1, 0.62, { per: { 'char-frog': { depth: 0.35 } } }),
   'hat-fish': perch(0.92),
   'hat-sailor': on(0.4, 0.02, 0.83),
   'hat-viking': on(0.55, 0.1, 0.9),
@@ -243,14 +243,14 @@ export const FITS: Record<string, Fit> = {
   'hat-bread': hat(1, 0.5),
   'hat-lampshade': hat(1, 0.5),
   'hat-shark': hat(1, 0.5),
-  'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
-  'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.18, forward: -0.05 } } },
-  'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, per: { 'char-frog': { width: 1.06, lift: -0.035 }, 'char-raccoon': { width: 1.2, lift: -0.01 } } },
-  'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.02 } } },
-  'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
-  'x-mustache': { bone: 'head', place: 'snout', width: 0.42, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { width: 0.5, lift: 0.02 } } },
-  'x-snorkel': { bone: 'head', place: 'face', width: 0.78, sink: 0, lift: 0.04, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.15, forward: -0.05 } } },
-  'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0, turn: -Math.PI / 2 },
+  'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.055, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
+  'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.18, forward: -0.05 } } },
+  'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { width: 1.06, lift: -0.035 }, 'char-raccoon': { width: 1.2, lift: -0.01 } } },
+  'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: -0.02 } } },
+  'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT },
+  'x-mustache': { bone: 'head', place: 'snout', width: 0.42, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { width: 0.5, lift: 0.02 } } },
+  'x-snorkel': { bone: 'head', place: 'face', width: 0.78, sink: 0, lift: 0.04, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.15, forward: -0.05 } } },
+  'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0 },
 };
 
 /** The fit for an item on a character, with that character's corrections applied. */

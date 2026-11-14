@@ -9,6 +9,8 @@ export interface ModelInfo {
   kind: string;
   h: number | null;
   rig?: boolean;
+  /** Who made it: Tripo's own models face +x, and are turned to face +z like the rest. */
+  source?: string;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -73,6 +75,7 @@ export async function model(id: string, height?: number): Promise<THREE.Object3D
   const proto = await loaded.get(id)!;
   if (!proto) return null;
   const copy = index[id]?.rig ? (SkeletonUtils.clone(proto) as THREE.Object3D) : proto.clone(true);
+  if (index[id]?.source === 'tripo') copy.rotation.y -= Math.PI / 2;
   return fit(copy, height ?? index[id]?.h ?? 1);
 }
 
