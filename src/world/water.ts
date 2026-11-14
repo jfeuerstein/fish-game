@@ -83,15 +83,18 @@ void main() {
   float fres = pow(1.0 - max(dot(view, calm), 0.0), 4.0);
   col = mix(col, uSky, clamp(fres, 0.0, 1.0) * 0.32);
   vec3 h = normalize(view + normalize(uSunDir));
-  float spec = pow(max(dot(normal, h), 0.0), 260.0) * step(0.0, uSunDir.y);
-  col += uSun * smoothstep(0.25, 0.6, spec) * 0.8;
+  // The glint off the calm surface too: a soft path of light toward the sun, which the sparkles below break up.
+  float spec = pow(max(dot(calm, h), 0.0), 320.0) * step(0.0, uSunDir.y);
+  col += uSun * spec * 0.55;
   float sparkle = smoothstep(0.9, 0.97, vnoise(q * 6.0 + vec2(t * 1.1, -t * 0.7))) * smoothstep(0.75, 0.95, vnoise(q * 1.3 - t * 0.3)) * step(0.0, uSunDir.y) * (1.0 - uRain);
   col += uSun * sparkle * 0.3;
   // Foam where the water meets the shore, pulsing gently in and out.
-  float edge = depth - 0.12 - 0.08 * sin(t * 1.4 + vWorld.x * 0.3 + vWorld.z * 0.2);
-  float foam = 1.0 - smoothstep(0.0, 0.32, edge);
+  // Measured from the waterline itself: a shallow sandy flat a hand's depth down is not surf.
+  float edge = depth - 0.03 - 0.03 * sin(t * 1.4 + vWorld.x * 0.3 + vWorld.z * 0.2);
+  // A thin line of surf, broken up, rather than a white puddle wherever it is shallow.
+  float foam = (1.0 - smoothstep(0.0, 0.1, edge)) * mix(1.0, smoothstep(0.3, 0.6, vnoise(q * 1.6 + vec2(t * 0.3, -t * 0.2))), smoothstep(0.01, 0.08, edge));
   // A second, fainter line a little way out, broken up.
-  foam = max(foam, (1.0 - smoothstep(0.0, 0.06, abs(edge - 0.45))) * 0.35 * step(0.45, vnoise(q * 1.2 + t * 0.2)));
+  foam = max(foam, (1.0 - smoothstep(0.0, 0.04, abs(edge - 0.3))) * 0.3 * step(0.5, vnoise(q * 1.2 + t * 0.2)));
   col = mix(col, uFoam, clamp(foam, 0.0, 1.0) * 0.9);
   float alpha = mix(0.55, 0.95, smoothstep(0.0, 2.5, depth));
   alpha = max(alpha, foam * 0.9);

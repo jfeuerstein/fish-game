@@ -113,7 +113,7 @@ vec3 grass = untiled(tGrass, wuv / 4.2, big);
 grass *= mix(vec3(0.86, 0.94, 0.80), vec3(1.08, 1.06, 0.88), smoothstep(0.3, 0.75, fbm(wuv / 14.0 + 3.0)));
 vec3 sand = untiled(tSand, wuv / 6.5, big) * mix(0.94, 1.04, mid);
 vec3 dirt = desat(untiled(tDirt, wuv / 4.0, big), 0.42) * vec3(1.04, 0.97, 0.88);
-vec3 rock = untiled(tRock, wuv / 6.0, big);
+vec3 rock = mix(desat(untiled(tRock, wuv / 6.0, big), 0.25), vec3(0.62, 0.6, 0.55), 0.22) * vec3(1.06, 1.03, 0.98);
 vec3 cob = texture2D(tPlaza, wuv / 3.4).rgb * 0.9;
 // Warmer stone, with broad patches of lighter and darker paving so the square is not one grey disc.
 cob *= mix(vec3(0.9, 0.86, 0.8), vec3(1.06, 1.0, 0.92), smoothstep(0.25, 0.75, big));
