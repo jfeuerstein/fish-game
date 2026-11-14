@@ -1,7 +1,7 @@
 // The island's ground: a height for every point, the water over it, and what kind of water a
 // bobber lands in. Pure, no three.js, so it runs under Vitest.
 import { clamp, fbm, smoothstep } from '../core/rng';
-import { BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, STEP, WORLD_SIZE, creekLevel, floorAt, nearestOnLine } from './layout';
+import { BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, STEP, WORLD_SIZE, bridgeBank, creekLevel, floorAt, nearestOnLine } from './layout';
 
 /** Distance from the centre to the shore at an angle (radians, atan2(z, x)). */
 export function shoreRadius(angle: number): number {
@@ -65,6 +65,9 @@ export function rawHeight(x: number, z: number): number {
     const target = c.d < CREEK_WIDTH ? bed + 0.4 * (c.d / CREEK_WIDTH) : bed + 0.4 + (bank - bed - 0.4) * smoothstep(CREEK_WIDTH, CREEK_WIDTH * 2.6, c.d);
     h = Math.min(h, target);
   }
+  // Earth banks up to each end of the bridge, so its deck meets dry ground.
+  const bank = bridgeBank(x, z);
+  if (bank !== null) h = Math.max(h, bank);
   return h;
 }
 

@@ -56,7 +56,7 @@ export const PATHS: readonly (readonly V2[])[] = [
   // Square to camp
   [[-9, 17], [-22, 19], [-33, 18]],
   // Camp north over the creek to the north-west shore
-  [[-40, 13], [-45, 0], [-49, -18], [-51.2, -28.6], [-50.2, -31], [-49.2, -33.4], [-55, -46]],
+  [[-40, 13], [-45, 0], [-49, -18], [-52.9, -25.6], [-47.5, -36.4], [-46, -40], [-44, -44]],
   // Square up to the lighthouse
   [[6, 3], [13, -9], [21, -22], [27, -31]],
   // Square down to the beach
@@ -78,11 +78,19 @@ export const BRIDGE = {
   /** Turned so its walkway runs across the creek. */
   yaw: -CREEK_DIR,
   base: creekLevelAt(BRIDGE_AT.x, BRIDGE_AT.z) - 0.05,
-  /** The model is about 4.7 m long at scale 1: this reaches from bank to bank. */
+  /** The model is about 4.7 m long at scale 1. */
   scale: 1.7,
-  halfLen: 4.0,
-  halfWidth: 1.4,
-  rise: 0.85,
+  /**
+   * Its deck, measured on the model at this scale (by casting rays down onto it): it spans
+   * 3.25 m either side of the middle, 1.18 m above the base at the ends and 1.54 m in the middle.
+   */
+  halfLen: 3.25,
+  halfWidth: 1.1,
+  endHeight: 1.18,
+  rise: 0.36,
+  /** Earth banks are raised up to each end of the deck, falling away this steeply (rise per metre). */
+  bankSlope: 0.32,
+  bankWidth: 2.2,
 } as const;
 
 function creekLevelAt(x: number, z: number): number {
@@ -179,17 +187,32 @@ export const FLOORS: readonly Floor[] = [
 ];
 
 /** The bridge's deck at a point, or null off it: low at each end, highest in the middle. */
-export function bridgeAt(x: number, z: number): number | null {
-  // Across the creek is perpendicular to its line.
+/** Where a point is relative to the bridge: along its walkway (positive is north) and across it. */
+export function bridgeLocal(x: number, z: number): { along: number; across: number } {
   const ax = -Math.sin(CREEK_DIR);
   const az = Math.cos(CREEK_DIR);
   const dx = x - BRIDGE.x;
   const dz = z - BRIDGE.z;
-  const along = dx * ax + dz * az;
-  const across = dx * az - dz * ax;
+  return { along: dx * ax + dz * az, across: dx * az - dz * ax };
+}
+
+/** The bridge's deck at a point, or null off it: it follows the model's arched planks. */
+export function bridgeAt(x: number, z: number): number | null {
+  const { along, across } = bridgeLocal(x, z);
   if (Math.abs(along) > BRIDGE.halfLen || Math.abs(across) > BRIDGE.halfWidth) return null;
   const k = along / BRIDGE.halfLen;
-  return BRIDGE.base + 0.25 + BRIDGE.rise * (1 - k * k);
+  return BRIDGE.base + BRIDGE.endHeight + BRIDGE.rise * (1 - k * k);
+}
+
+/** The raised earth bank leading up to an end of the bridge, or null away from it. */
+export function bridgeBank(x: number, z: number): number | null {
+  const { along, across } = bridgeLocal(x, z);
+  // A flat abutment from a metre under the deck's end to just past it, then the bank falls away.
+  if (Math.abs(along) < BRIDGE.halfLen - 1 || Math.abs(across) > BRIDGE.bankWidth) return null;
+  const past = Math.max(0, Math.abs(along) - BRIDGE.halfLen - 0.3);
+  // Rounded off at the sides, so it is a mound and not a wall.
+  const side = Math.max(0, (Math.abs(across) - BRIDGE.halfWidth) / (BRIDGE.bankWidth - BRIDGE.halfWidth));
+  return BRIDGE.base + BRIDGE.endHeight - 0.03 - past * BRIDGE.bankSlope - side * side * 0.6;
 }
 
 export function floorAt(x: number, z: number): number | null {

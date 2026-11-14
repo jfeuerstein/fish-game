@@ -62,21 +62,28 @@ describe('pier', () => {
 });
 
 describe('bridge', () => {
-  it('can be walked across the creek, on a deck above the water', async () => {
-    const { BRIDGE, bridgeAt, creekLevel } = await import('./layout');
-    void creekLevel;
+  it('can be walked across the creek, anywhere along its width, with no step too high', async () => {
+    const { BRIDGE } = await import('./layout');
     const dir = Math.atan2(-3, -6);
     const ax = -Math.sin(dir);
     const az = Math.cos(dir);
-    let prev = standHeight(field, BRIDGE.x - ax * 5, BRIDGE.z - az * 5);
-    for (let s = -5; s <= 5; s += 0.25) {
-      const x = BRIDGE.x + ax * s;
-      const z = BRIDGE.z + az * s;
-      expect(walkable(field, x, z), `at ${s}`).toBe(true);
-      const h = standHeight(field, x, z);
-      expect(h - prev, `step up at ${s}`).toBeLessThan(0.6);
-      prev = h;
+    for (const off of [-0.9, -0.5, 0, 0.5, 0.9]) {
+      const at = (s: number): [number, number] => [BRIDGE.x + ax * s + az * off, BRIDGE.z + az * s - ax * off];
+      for (const way of [1, -1]) {
+        let prev = standHeight(field, ...at(-6 * way));
+        for (let s = -6; s <= 6; s += 0.25) {
+          const [x, z] = at(s * way);
+          expect(walkable(field, x, z), `at ${s * way}, ${off}`).toBe(true);
+          const h = standHeight(field, x, z);
+          expect(h - prev, `step up at ${s * way}, ${off}`).toBeLessThan(0.6);
+          prev = h;
+        }
+      }
     }
-    expect(bridgeAt(BRIDGE.x, BRIDGE.z)!).toBeGreaterThan(BRIDGE.base + 0.4);
+  });
+  it('puts the deck where the planks of the model are', async () => {
+    const { BRIDGE, bridgeAt } = await import('./layout');
+    // Measured by casting rays onto the model: 3.39 in the middle, about 3.1 three metres out.
+    expect(bridgeAt(BRIDGE.x, BRIDGE.z)! - BRIDGE.base).toBeCloseTo(1.54, 1);
   });
 });
