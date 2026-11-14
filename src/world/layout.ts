@@ -85,12 +85,13 @@ export const BRIDGE = {
    * 3.25 m either side of the middle, 1.18 m above the base at the ends and 1.54 m in the middle.
    */
   halfLen: 3.25,
-  halfWidth: 1.1,
+  /** Planks run out to 2.8 m either side, with the rails at 2.9: those are solid (see railPosts). */
+  halfWidth: 2.75,
   endHeight: 1.18,
   rise: 0.36,
   /** Earth banks are raised up to each end of the deck, falling away this steeply (rise per metre). */
   bankSlope: 0.32,
-  bankWidth: 2.2,
+  bankWidth: 3.6,
 } as const;
 
 function creekLevelAt(x: number, z: number): number {
@@ -202,6 +203,19 @@ export function bridgeAt(x: number, z: number): number | null {
   if (Math.abs(along) > BRIDGE.halfLen || Math.abs(across) > BRIDGE.halfWidth) return null;
   const k = along / BRIDGE.halfLen;
   return BRIDGE.base + BRIDGE.endHeight + BRIDGE.rise * (1 - k * k);
+}
+
+/** Points along the bridge's two rails, to make them solid. */
+export function railPosts(): { x: number; z: number }[] {
+  const ax = -Math.sin(CREEK_DIR);
+  const az = Math.cos(CREEK_DIR);
+  const out: { x: number; z: number }[] = [];
+  for (const side of [-1, 1])
+    for (let s = -BRIDGE.halfLen; s <= BRIDGE.halfLen + 0.01; s += 0.4) {
+      const across = side * 2.95;
+      out.push({ x: BRIDGE.x + ax * s + az * across, z: BRIDGE.z + az * s - ax * across });
+    }
+  return out;
 }
 
 /** The raised earth bank leading up to an end of the bridge, or null away from it. */

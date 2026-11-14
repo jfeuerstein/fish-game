@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { rng } from '../core/rng';
 import { Colliders } from './colliders';
 import { Heightfield } from './island';
-import { PLACED, pierSections } from './layout';
+import { PLACED, pierSections, railPosts } from './layout';
 import { Props } from './props';
 import { FLOWER_RULES, RULES, lilypads, scatter } from './scatter';
 import { Sky } from './sky';
@@ -27,6 +27,8 @@ export class World {
     this.props = new Props(this.field, this.solid);
     this.group.add(buildTerrain(this.field), this.water.group, this.props.group, this.sky.group);
     scene.add(this.group);
+    // The bridge's rails are solid, so nobody walks off the side of it into the creek.
+    for (const p of railPosts()) this.solid.addCircle({ x: p.x, z: p.z, r: 0.22 });
     this.glowMat = new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffd48a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: true });
   }
 

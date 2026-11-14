@@ -67,7 +67,7 @@ describe('bridge', () => {
     const dir = Math.atan2(-3, -6);
     const ax = -Math.sin(dir);
     const az = Math.cos(dir);
-    for (const off of [-0.9, -0.5, 0, 0.5, 0.9]) {
+    for (const off of [-2.5, -1.6, -0.9, 0, 0.9, 1.6, 2.5]) {
       const at = (s: number): [number, number] => [BRIDGE.x + ax * s + az * off, BRIDGE.z + az * s - ax * off];
       for (const way of [1, -1]) {
         let prev = standHeight(field, ...at(-6 * way));
@@ -85,5 +85,13 @@ describe('bridge', () => {
     const { BRIDGE, bridgeAt } = await import('./layout');
     // Measured by casting rays onto the model: 3.39 in the middle, about 3.1 three metres out.
     expect(bridgeAt(BRIDGE.x, BRIDGE.z)! - BRIDGE.base).toBeCloseTo(1.54, 1);
+    // The planks reach almost to the rails.
+    expect(BRIDGE.halfWidth).toBeGreaterThan(2.6);
+  });
+});
+
+describe('creek mouth', () => {
+  it('is the sea where the creek opens into deep water', () => {
+    expect(fishingZone(field, -80, -44)).not.toBe('creek');
   });
 });

@@ -130,7 +130,8 @@ export function waterAt(field: Heightfield, x: number, z: number): { level: numb
   if (c.d < CREEK_WIDTH * 1.6) {
     const level = creekLevel(c.t);
     // Where the creek meets the sea, the sea's level wins.
-    if (level > 0.15 && ground < level) return { level, zone: 'creek', depth: level - ground };
+    // Only the creek's own channel: where it opens into deep sea, it is the sea.
+    if (level > 0.15 && ground < level && ground > -0.6) return { level, zone: 'creek', depth: level - ground };
   }
   if (ground < 0) return { level: 0, zone: ground < -5.5 ? 'deep' : 'ocean', depth: -ground };
   return null;
