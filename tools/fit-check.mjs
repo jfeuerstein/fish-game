@@ -35,6 +35,10 @@ for (const ch of CHARS) {
   await page.evaluate(async (c) => {
     const g = window.__cove.game;
     for (const n of g.npcs) n.body.group.visible = false;
+    // Only the character matters here: the island's props and water make software rendering crawl.
+    g.world.props.group.visible = false;
+    g.world.water.group.visible = false;
+    g.gus.body.group.visible = false;
     g.save.characters.push(c);
     g.become(c);
     while (g.body.id !== c || !g.body.rigged) await new Promise((r) => setTimeout(r, 100));

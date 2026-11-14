@@ -385,6 +385,7 @@ export class Character {
     const size = (obj.userData.size as THREE.Vector3) ?? new THREE.Vector3(1, 1, 1);
     const p = placeFor(fit, m, { x: size.x, y: size.y, z: size.z, crown: fit.place === 'crown' ? Character.crownWidth(obj) : undefined });
     const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -p.tilt);
+    if (p.turn) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.turn));
     if (p.backwards) q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI));
     const local = new THREE.Matrix4().compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.scale, p.scale, p.scale));
     return { bone, local };

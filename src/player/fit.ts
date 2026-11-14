@@ -17,6 +17,8 @@ export interface Fit {
   forward: number;
   /** Tipped back (positive) or forward, radians. */
   tilt: number;
+  /** Turned about upright, radians: models built facing +x are turned to face forward (+z). */
+  turn?: number;
   /** Corrections for particular characters. */
   per?: Partial<Record<string, Partial<Omit<Fit, 'per' | 'bone' | 'place'>>>>;
 }
@@ -28,20 +30,20 @@ export const FITS: Record<string, Fit> = {
   // width where the hat sits; `sink` says where that is, from the eyes (0) to the top of the head
   // (1). The frog's eyes are on top of its head, so hats sit further back on it.
   'hat-bucket': hat(0.94, 0.52, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-straw': hat(0.94, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-straw': hat(0.86, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-beanie': hat(0.96, 0.44, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-captain': hat(0.94, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
-  'hat-flowers': hat(1.0, 0.66, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-frog': hat(0.96, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-pirate': hat(0.95, 0.55, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-captain': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
+  'hat-flowers': hat(1.06, 0.58, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-frog': hat(0.96, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-pirate': hat(0.95, 0.55, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-top': hat(0.84, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-propeller': hat(0.96, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
-  'hat-cowboy': hat(0.94, 0.56, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-propeller': hat(0.96, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
+  'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-crown': hat(0.8, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-fish': hat(0.92, 0.86, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-fish': hat(0.92, 0.86, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-sailor': hat(0.94, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-viking': hat(0.96, 0.5, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-viking': hat(0.96, 0.5, { turn: Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-chef': hat(0.92, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'x-glasses': { bone: 'head', place: 'face', width: 0.82, sink: 0, lift: 0, forward: 0.005, tilt: 0 },
   'x-shades': { bone: 'head', place: 'face', width: 0.84, sink: 0, lift: 0, forward: 0.005, tilt: 0 },
@@ -107,7 +109,7 @@ export function sliceAt(m: Measure, y: number): { w: number; front: number; back
  * (its lowest point, centred, which is how models are made to stand), the scale for a model of
  * the given size, and whether it faces backwards.
  */
-export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: number; crown?: number }): { x: number; y: number; z: number; scale: number; tilt: number; backwards: boolean } {
+export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: number; crown?: number }): { x: number; y: number; z: number; scale: number; tilt: number; turn: number; backwards: boolean } {
   const wide = Math.max(size.x, size.z, 0.001);
   const h = m.height;
   let width: number;
@@ -162,5 +164,5 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
   else if (f.place === 'back') y -= tall * 0.55;
   else if (f.place === 'neck') y -= tall * f.sink;
   else if (f.place === 'crown') y -= tall * 0.04;
-  return { x, y: y + f.lift * h, z: z + f.forward * h * (backwards ? -1 : 1), scale, tilt: f.tilt, backwards };
+  return { x, y: y + f.lift * h, z: z + f.forward * h * (backwards ? -1 : 1), scale, tilt: f.tilt, turn: f.turn ?? 0, backwards };
 }
