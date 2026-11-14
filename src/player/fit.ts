@@ -39,11 +39,11 @@ export const FITS: Record<string, Fit> = {
   'hat-frog': hat(0.88, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-pirate': hat(0.95, 0.55, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-top': hat(0.64, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-propeller': hat(0.8, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
+  'hat-propeller': hat(0.7, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
   'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-fish': hat(1.15, 0.86, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-fish': hat(1.05, 0.86, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-viking': hat(0.85, 0.5, { turn: Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
@@ -125,7 +125,8 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
       // Where the hat's bottom sits, between the eyes and the top of the head, and how wide the head is there.
       y = m.eyeY + (m.top - m.eyeY) * f.sink;
       const slice = sliceAt(m, y);
-      width = slice.w * f.width * (size.crown ? wide / size.crown : 1);
+      // A hat sized whole (a fish lying on top) is measured against the whole head, not the narrow top of it.
+      width = (f.whole ? m.headW : slice.w) * f.width * (size.crown ? wide / size.crown : 1);
       z = (slice.front + slice.back) / 2;
       y -= size.y * (width / wide) * 0.04;
       break;
