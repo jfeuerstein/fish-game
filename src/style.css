@@ -2323,3 +2323,93 @@ button {
   mask-image: linear-gradient(90deg, #000 82%, transparent);
   padding-right: 28px;
 }
+
+/* ---------- The one roll: odds, and the pictures over each game's button ---------- */
+.odds-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: 0 0 12px;
+}
+.odds-row span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 2px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--rar) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 45%, transparent);
+  color: var(--rar);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.odds-row b {
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--on-glass) !important;
+}
+.wheel-art,
+.scratch-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  margin: 4px 0 12px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 60%, rgba(236, 199, 125, 0.18), transparent 65%), rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  overflow: hidden;
+}
+.wheel-art > img {
+  position: absolute;
+  top: 6px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  z-index: 1;
+}
+.wheel-art-strip {
+  position: absolute;
+  bottom: 14px;
+  display: flex;
+  gap: 8px;
+}
+.wheel-art-strip img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  padding: 4px;
+  border-radius: 9px;
+  background: rgba(244, 238, 227, 0.08);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+.wheel-art-strip img:nth-child(3) {
+  box-shadow: inset 0 0 0 2px var(--brass-hi), 0 0 14px rgba(236, 199, 125, 0.6);
+}
+.scratch-art img {
+  width: 130px;
+  height: 130px;
+  object-fit: contain;
+  transform: rotate(-6deg);
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+}
+.flight-ladder span {
+  transition: transform 0.15s, background 0.15s;
+  padding: 7px 2px;
+}
+.flight-ladder span.on {
+  background: color-mix(in srgb, var(--rar) 45%, transparent);
+  color: #fff;
+  transform: scale(1.08);
+}
+.slots.lit {
+  box-shadow: inset 0 0 0 2px var(--rar, var(--brass)), inset 0 0 0 5px #2a1d0b, 0 0 40px color-mix(in srgb, var(--rar, #ecc77d) 70%, transparent);
+}
+.reel-cell img {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}

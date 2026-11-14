@@ -27,7 +27,7 @@ export function bagSheet(app: HTMLElement, s: Session): Sheet {
       });
     } else {
       const have = FURNITURE.filter((f) => (save.furniture[f.id] ?? 0) > 0);
-      body.append(el('p', '', have.length ? 'Set something down in front of you. Walk up to it later to pick it back up.' : 'Nothing here yet. Gus sells things to set down, and chests hold some too.'));
+      body.append(el('p', '', have.length ? 'Set something down in front of you. Walk up to it later to pick it back up.' : 'Nothing here yet. Gus sells things to set down, and the Lucky Gull gives some too.'));
       for (const f of have) {
         const row = el('div', 'row');
         row.innerHTML = `<img src="${icon(f.id)}" alt=""><div class="grow"><div class="title">${f.name}</div><div class="sub">×${save.furniture[f.id]}</div></div>`;

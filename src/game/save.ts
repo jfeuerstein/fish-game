@@ -32,7 +32,7 @@ export interface Settings {
 export interface Save {
   v: 1;
   coins: number;
-  /** Tokens from shiny and golden fish, for opening chests. */
+  /** Pearls (called tokens here): the premium currency from the rarest catches, spent at the Lucky Gull. */
   tokens: number;
   xp: number;
   /** Characters unlocked (from chests). */

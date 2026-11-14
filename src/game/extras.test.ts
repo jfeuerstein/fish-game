@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { rng } from '../core/rng';
 import { BAITS, LURES, RODS } from './economy';
-import { PRIZES, TICKETS, makeTicket, payout } from './tickets';
 import { TITLES, newTitles } from './titles';
 import { newSave } from './save';
 import { rollCatch, rollQuality, type Conditions } from '../fishing/roll';
@@ -10,32 +9,6 @@ import { Heightfield, walkable, waterAt } from '../world/island';
 import { SEA_GLASS, SHROOMS, buriedToday, digUp } from '../world/secrets';
 
 const field = new Heightfield();
-
-describe('scratch tickets', () => {
-  it('shows exactly three of the winning symbol and no other three', () => {
-    for (let seed = 1; seed < 400; seed++) {
-      const t = makeTicket(TICKETS[seed % 3], seed);
-      expect(t.cells.length).toBe(9);
-      const counts = new Map<string, number>();
-      for (const c of t.cells) counts.set(c, (counts.get(c) ?? 0) + 1);
-      for (const [sym, n] of counts) {
-        if (sym === t.win) expect(n).toBe(3);
-        else expect(n).toBeLessThan(3);
-      }
-    }
-  });
-  it('wins a cosmetic or pearls back on about half the tickets, a dearer ticket a rarer prize', () => {
-    let wins = 0;
-    const n = 20000;
-    for (let i = 0; i < n; i++) if (makeTicket(TICKETS[0], i + 1).win) wins++;
-    expect(wins / n).toBeGreaterThan(0.45);
-    expect(wins / n).toBeLessThan(0.65);
-    expect(payout(TICKETS[0], 'crab').prize).toBe('rare');
-    expect(payout(TICKETS[2], 'crab').prize).toBe('legendary');
-    expect(payout(TICKETS[1], 'pearl').pearls).toBe(3);
-    expect(PRIZES.crown.chance).toBeLessThan(0.01);
-  });
-});
 
 describe('quality and lures', () => {
   const base: Conditions = { zone: 'ocean', hour: 12, raining: false, rod: RODS[0], bait: BAITS[0] };

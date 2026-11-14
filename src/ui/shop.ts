@@ -192,8 +192,8 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       }
       body.append(grid);
     } else if (tab === 'Pearls') {
-      body.append(el('p', '', '"Pearls? The rarest fish carry them: golden ones, prismatic ones, and the legends. The gull at the Lucky Gull takes them for chests and games. Prizes only, mind: no coins."'));
-      const b = el('button', 'big-btn', 'Open chests');
+      body.append(el('p', '', '"Pearls? The rarest fish carry them: golden ones, prismatic ones, and the legends. The gull at the Lucky Gull takes them, a pearl a go, and every go wins something nobody sells. No coins, mind."'));
+      const b = el('button', 'big-btn', 'Spin the Gull Wheel');
       b.onclick = () => openChests();
       body.append(b);
     } else {

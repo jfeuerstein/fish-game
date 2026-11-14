@@ -66,19 +66,18 @@ deploys to GitHub Pages.
 - **Pearls and the Lucky Gull.** Pearls (the save's `tokens`) are the premium currency: only the
   rarest catches give them (`tokensFor` in `crates.ts`: golden 1, prismatic 3, any legendary 2,
   more the first time), plus a few from errands, treasure and digging. They are spent only at the
-  Lucky Gull arcade booth on the plaza (`src/game/arcade.ts`, pure and tested; `src/ui/arcade.ts`),
-  and every game there pays out a cosmetic, never coins: a game decides only how rare the prize is,
-  and `pickPrize` chooses it (what is not owned yet is three times as likely; a duplicate gives
-  pearls back). The Gull Wheel (a CS-style strip: bet on shell, crab or the one gull for an
-  uncommon, rare or legendary prize), the Bait Bandit slots (two alike win that symbol's rarity,
-  three alike one rarer), Flying Fish (a crash game: the prize tier climbs with the multiplier; cash
-  out before the gull snatches it), the chests and the scratch tickets (`tickets.ts`). The prize
-  pool (`PRIZES`) holds only things never sold for coins (`prize` in `economy.ts`), and a test
-  holds every way of playing to a similar worth per pearl and no cheap road to a legendary. Prizes
-  are won the moment a game is paid for (Flying Fish: the moment it is cashed out), so closing the
-  game mid-spin loses nothing. `showPrize` in
-  `src/ui/chests.ts` is the card every game shows; `src/ui/fanfare.ts` celebrates by rarity.
-  Coins are only for Gus's shop.
+  Lucky Gull arcade booth on the plaza, and every game there is the same thing: one pearl in, one
+  cosmetic out (`pull` in `src/ui/chests.ts`; `rollPrize` and `ODDS` in `crates.ts`: common 46%,
+  uncommon 30%, rare 15%, epic 7%, legendary 2%; what is not owned yet is three times as likely; a
+  duplicate gives pearls back). The prize is given the moment the pearl goes in. The games are only
+  ways of watching it (`src/game/arcade.ts`, pure and tested; `src/ui/arcade.ts`): the Gull Wheel
+  (a CS-style strip of prizes slowing onto yours; `stripReveal`), the Bait Bandit (three reels of
+  prizes landing on yours, the last one teasing for an epic or legendary), Flying Fish (a fish
+  leaping through bands of rarity and peaking in your prize's), and a scratch card of nine with
+  yours three times (`src/ui/scratch.ts`). No bets, no choices, no coins. The prize pool
+  (`PRIZES`) holds only things never sold for coins (`prize` in `economy.ts`); a test holds it.
+  `showPrize` is the card every game ends on; `src/ui/fanfare.ts` celebrates by rarity. Coins are
+  only for Gus's shop.
 - **Sounds from patch.gg**: `tools/assets/get-patch-sounds.mjs` fetches Kenney's CC0 casino
   sounds, steel-drum jingles and ticks from Patch's open asset library (public API, no sign-in),
   makes them MP3s in `public/audio/` and writes their credits to `public/audio/credits.json`.

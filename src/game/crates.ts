@@ -1,6 +1,6 @@
 // Pearls (the save calls them tokens) are the premium currency: only the rarest catches give
 // them, and they are spent at the Lucky Gull on chests and games that pay out cosmetics, never
-// coins. A chest: a strip of prizes spins past and slows to a stop on one. Pure.
+// coins. Pure.
 import { rng } from '../core/rng';
 import type { Variant } from '../fishing/fish';
 
@@ -47,19 +47,12 @@ export const PRIZES: readonly Prize[] = [
 export const RARITY_COLOR: Record<Rarity, string> = { common: '#8d9aa6', uncommon: '#4aa85e', rare: '#3b82d6', epic: '#9b4fd0', legendary: '#e0a020' };
 export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
 
-export interface Chest {
-  id: string;
-  name: string;
-  cost: number;
-  /** Chance of each rarity, summing to 1. */
-  odds: Record<Rarity, number>;
-  blurb: string;
-}
-
-export const CHESTS: readonly Chest[] = [
-  { id: 'tide', name: 'Tide Chest', cost: 2, odds: { common: 0.45, uncommon: 0.3, rare: 0.16, epic: 0.07, legendary: 0.02 }, blurb: 'Washed up on the beach. Mostly hats.' },
-  { id: 'gilded', name: 'Gilded Chest', cost: 4, odds: { common: 0, uncommon: 0.28, rare: 0.38, epic: 0.22, legendary: 0.12 }, blurb: 'Heavier. Something rattles inside.' },
-];
+/**
+ * The one roll every game at the Lucky Gull makes: a pearl in, a cosmetic out, of a rarity drawn
+ * from these odds. The games (a strip, reels, a leaping fish, a scratch card) only show it.
+ */
+export const PULL_COST = 1;
+export const ODDS: Record<Rarity, number> = { common: 0.46, uncommon: 0.3, rare: 0.15, epic: 0.07, legendary: 0.02 };
 
 /**
  * How many pearls a catch is worth: only the rarest. A golden fish 1, a prismatic one 3, any
@@ -98,20 +91,20 @@ export function pickPrize(rarity: Rarity, owned: (p: Prize) => boolean, rand: ()
   return pool[pool.length - 1];
 }
 
-/** Open a chest: which prize it gives. */
-export function openChest(chest: Chest, rand: () => number, owned: (p: Prize) => boolean = () => false): Prize {
-  return pickPrize(pickRarity(chest.odds, rand()), owned, rand);
+/** The roll: a prize, by the odds, favouring what is not owned yet. */
+export function rollPrize(rand: () => number, owned: (p: Prize) => boolean = () => false): Prize {
+  return pickPrize(pickRarity(ODDS, rand()), owned, rand);
 }
 
 /** How many tiles the strip has, and where the winner sits on it. */
 export const STRIP_LENGTH = 56;
 export const WIN_AT = 48;
 
-/** The strip that spins past: random prizes (by the chest's odds), with the winner at WIN_AT. */
-export function makeStrip(chest: Chest, winner: Prize, seed: number): Prize[] {
+/** The strip that spins past: random prizes (by the odds), with the winner at WIN_AT. */
+export function makeStrip(winner: Prize, seed: number): Prize[] {
   const r = rng(seed);
   const strip: Prize[] = [];
-  for (let i = 0; i < STRIP_LENGTH; i++) strip.push(i === WIN_AT ? winner : openChest(chest, r));
+  for (let i = 0; i < STRIP_LENGTH; i++) strip.push(i === WIN_AT ? winner : rollPrize(r));
   // A near miss just after the winner makes the stop more exciting.
   if (winner.rarity !== 'legendary' && r() < 0.5) {
     const shiny = PRIZES.filter((p) => p.rarity === 'legendary');

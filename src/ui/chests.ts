@@ -1,11 +1,9 @@
-// Chests: spend pearls, watch a strip of prizes spin past a marker and slow to a stop. Also the
-// prize card every game at the Lucky Gull shows: what was won, how rare, and to wear it.
-import { rng } from '../core/rng';
-import { CHESTS, type Chest, PRIZES, type Prize, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, openChest, pickPrize } from '../game/crates';
+// The Lucky Gull's prizes: the one roll every game makes (`pull`), the card that shows what was
+// won, and the Gull Wheel's show, a strip of prizes slowing past a marker.
+import { ODDS, PRIZES, PULL_COST, type Prize, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, pickPrize, rollPrize } from '../game/crates';
 import type { Session } from '../game/session';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
-import { Sheet } from './sheet';
 
 import { GRAND } from '../game/arcade';
 
@@ -90,52 +88,54 @@ export function showPrize(app: HTMLElement, s: Session, fanfare: Fanfare, won: {
 }
 
 const TILE = 104;
+const pearlGlyph = '<b class="pearl"></b>';
 
-/** The chests on offer, each with its button, and what can turn up: into `body`. */
-export function chestList(body: HTMLElement, s: Session, busy: () => boolean, open: (c: Chest) => void): void {
-  body.append(el('p', '', `Pearls come from the rarest catches: golden and prismatic fish, and legends. You have <b>${s.save.tokens}</b>.`));
-  for (const c of CHESTS) {
-    const row = el('div', 'row');
-    const odds = (Object.entries(c.odds) as [keyof typeof RARITY_COLOR, number][]).map(([r, p]) => `<span style="color:${RARITY_COLOR[r]}">${Math.round(p * 1000) / 10}%</span>`).join(' · ');
-    row.innerHTML = `<img src="${icon(`chest-${c.id}`)}" alt=""><div class="grow"><div class="title">${c.name}</div><div class="sub">${c.blurb}</div><div class="sub" style="font-size:11px">${odds}</div></div>`;
-    const b = el('button', 'btn coral', `<span class="price"><b class="pearl"></b>${c.cost}</span>`);
-    b.disabled = s.save.tokens < c.cost || busy();
-    b.onclick = () => open(c);
-    row.append(b);
-    body.append(row);
+/** Pay a pearl and roll: the prize is given at once (nothing is lost if the game closes mid-show). Null if there are not enough pearls. */
+export function pull(s: Session): { prize: Prize; owned: boolean; refund: number } | null {
+  if (s.save.tokens < PULL_COST) {
+    s.hud.toast('Not enough pearls. Golden, prismatic and legendary fish bring them.');
+    return null;
   }
+  s.save.tokens -= PULL_COST;
+  s.save.arcade.played++;
+  s.audio.play('chip', { volume: 0.8 });
+  const prize = rollPrize(Math.random, (p) => owns(s, p));
+  const got = { prize, ...award(s, prize) };
+  s.hud.hold = true;
+  s.changed();
+  return got;
+}
+
+/** The odds, as a row of rarities. */
+export function oddsRow(): HTMLElement {
+  const row = el('div', 'odds-row');
+  row.innerHTML = (Object.entries(ODDS) as [Rarity, number][]).map(([r, p]) => `<span style="--rar:${RARITY_COLOR[r]}"><b>${Math.round(p * 100)}%</b>${RARITY_LABEL[r]}</span>`).join('');
+  return row;
+}
+
+/** Everything that can turn up, owned or not. */
+export function prizeGrid(body: HTMLElement, s: Session): void {
   body.append(el('div', 'section', 'What can turn up'));
   const grid = el('div', 'grid');
   for (const p of PRIZES) {
-    const owned = p.kind === 'hat' ? s.save.hats.includes(p.id) : p.kind === 'character' ? s.save.characters.includes(p.id) : false;
     const t = el('div', 'tile');
     t.style.boxShadow = `inset 0 -3px 0 ${RARITY_COLOR[p.rarity]}`;
-    t.innerHTML = `<img src="${icon(p.id)}" alt="">${p.name}<small style="color:${RARITY_COLOR[p.rarity]}">${RARITY_LABEL[p.rarity]}${owned ? ' · owned' : ''}</small>`;
+    t.innerHTML = `<img src="${icon(p.id)}" alt="">${p.name}<small style="color:${RARITY_COLOR[p.rarity]}">${RARITY_LABEL[p.rarity]}${owns(s, p) ? ' · owned' : ''}</small>`;
     grid.append(t);
   }
   body.append(grid);
 }
 
-let spinning = false;
-export const chestBusy = (): boolean => spinning;
-
-/** Open a chest: the strip spins and slows, the prize is revealed with a fanfare. `after` runs when it is put away. */
-export function spinChest(app: HTMLElement, s: Session, fanfare: Fanfare, chest: Chest, after: () => void): void {
-  if (spinning || s.save.tokens < chest.cost) return;
-  spinning = true;
-  s.save.tokens -= chest.cost;
-  s.audio.play('chip', { volume: 0.8 });
-  const seed = Date.now() % 1e9;
-  const prize = openChest(chest, rng(seed), (p) => owns(s, p));
-  const strip = makeStrip(chest, prize, seed + 1);
-  // Given now, so closing the game mid-spin loses nothing; the strip only shows it.
-  s.hud.hold = true;
-  const got = award(s, prize);
-  s.changed();
+/**
+ * The Gull Wheel's show: a strip of prizes slides past the marker and slows onto the prize
+ * already won. `again` (if given) plays another from the card; `after` runs when it is put away.
+ */
+export function stripReveal(app: HTMLElement, s: Session, fanfare: Fanfare, got: { prize: Prize; owned: boolean; refund: number }, again: (() => void) | null, after: () => void): void {
+  const { prize, owned, refund } = got;
+  const strip = makeStrip(prize, (Date.now() % 1e9) + 1);
   s.audio.play('open');
-
   const overlay = el('div', 'roulette');
-  const lid = el('div', 'roulette-title', `<span class="eyebrow">Opening</span>${chest.name}`);
+  const lid = el('div', 'roulette-title', `<span class="eyebrow">The Gull Wheel</span>Spinning…`);
   const window_ = el('div', 'roulette-window');
   const track = el('div', 'roulette-track');
   for (const p of strip) {
@@ -174,31 +174,28 @@ export function spinChest(app: HTMLElement, s: Session, fanfare: Fanfare, chest:
   requestAnimationFrame(step);
 
   function reveal(): void {
-    const { owned, refund } = got;
     s.hud.hold = false;
-    const tiles = track.children;
-    tiles[WIN_AT]?.classList.add('win');
+    track.children[WIN_AT]?.classList.add('win');
+    lid.innerHTML = `<span class="eyebrow">The Gull Wheel</span>${RARITY_LABEL[prize.rarity]}!`;
     overlay.classList.add(`won-${prize.rarity}`);
     overlay.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
-    fanfare.win(owned ? 'small' : GRAND[prize.rarity], RARITY_LABEL[prize.rarity].toUpperCase() + '!', prize.name, RARITY_COLOR[prize.rarity]);
-    const again = el('button', 'btn coral', `Again · ${chest.cost}`);
-    again.disabled = s.save.tokens < chest.cost;
-    again.onclick = () => {
-      close();
-      spinChest(app, s, fanfare, chest, after);
-    };
-    prizeCard(result, s, prize, owned, refund, close, [again]);
+    fanfare.win(owned ? 'small' : GRAND[prize.rarity], `${RARITY_LABEL[prize.rarity].toUpperCase()}!`, prize.name, RARITY_COLOR[prize.rarity]);
+    const more: HTMLElement[] = [];
+    if (again) {
+      const b = el('button', 'btn coral', `Again · ${pearlGlyph}${PULL_COST}`);
+      b.disabled = s.save.tokens < PULL_COST;
+      b.onclick = () => {
+        close();
+        again();
+      };
+      more.push(b);
+    }
+    prizeCard(result, s, prize, owned, refund, close, more);
     result.classList.add('show');
   }
 
   function close(): void {
     overlay.remove();
-    spinning = false;
     after();
   }
-}
-
-export function chestSheet(app: HTMLElement, s: Session, fanfare: Fanfare): Sheet {
-  const sheet: Sheet = new Sheet(app, 'Chests', (body) => chestList(body, s, chestBusy, (c) => spinChest(app, s, fanfare, c, () => sheet.refresh())));
-  return sheet;
 }

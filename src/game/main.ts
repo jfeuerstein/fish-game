@@ -16,7 +16,6 @@ import { Player } from '../player/player';
 import { bagSheet } from '../ui/bag';
 import { boardSheet } from '../ui/board';
 import { Chalk } from '../ui/chalk';
-import { chestSheet } from '../ui/chests';
 import { arcadeSheet } from '../ui/arcade';
 import { Fanfare } from '../ui/fanfare';
 import { model } from '../assets/models';
@@ -82,7 +81,7 @@ export class Game implements Session {
   private frames = 0;
   private dirty = false;
   private savedAt = 0;
-  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'chests' | 'more' | 'fun' | 'arcade', Sheet>;
+  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade', Sheet>;
   fanfare!: Fanfare;
   /** The arcade's counter, and its gull: what it is feeling, and for how much longer. */
   private arcadeFront = new THREE.Vector3(-14, 0, 9);
@@ -243,7 +242,8 @@ export class Game implements Session {
     this.hud.onJump = () => this.jump();
     window.addEventListener('keydown', (e) => e.key === ' ' && this.jump());
 
-    const openChests = (): void => this.sheets.chests.show();
+    // The chests are the Lucky Gull's wheel now: anything that offered them opens it there.
+    const openChests = (): void => this.sheets.arcade.show('Wheel');
     this.fanfare = new Fanfare(this.app, this.audio);
     this.sheets = {
       arcade: arcadeSheet(this.app, this, {
@@ -260,7 +260,6 @@ export class Game implements Session {
       journal: journalSheet(this.app, this),
       bag: bagSheet(this.app, this),
       board: boardSheet(this.app, this),
-      chests: chestSheet(this.app, this, this.fanfare),
       more: moreSheet(this.app, this, openChests),
       fun: funSheet(this.app, this, () => Chalk.near(this.player.pos)),
     };

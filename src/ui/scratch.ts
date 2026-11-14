@@ -1,49 +1,36 @@
-// A scratch ticket: nine squares under a silver coat, scratched off with a finger. Three of a
-// kind wins. The prize is decided when the ticket is bought (tickets.ts); scratching only shows it.
+// A scratch card at the Lucky Gull: nine squares of prizes under a silver coat, scratched off
+// with a finger. The prize is rolled when the card is bought (`pull`); it is printed there three
+// times, and scratching only finds it.
 import type { Audio } from '../audio/audio';
+import { scratchCard } from '../game/arcade';
+import { type Prize, RARITY_COLOR, RARITY_LABEL } from '../game/crates';
 import type { Session } from '../game/session';
-import { RARITY_LABEL } from '../game/crates';
-import { showPrize, winPrize } from './chests';
-import { type Symbol, type Ticket, type TicketKind, makeTicket } from '../game/tickets';
+import { pull, showPrize } from './chests';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
 
-/** Each symbol as one of the game's own pictures. */
-const PICTURE: Record<Symbol, string> = { shell: 'shell', fish: 'fish-mackerel', crab: 'fish-crab', star: 'fish-starfish', pearl: 'token', crown: 'hat-crown' };
-
-/** Buy a ticket with pearls: the prize is decided and given at once (nothing is lost if the game closes), then scratched. */
-export function buyTicket(app: HTMLElement, s: Session, fanfare: Fanfare, k: TicketKind, after: () => void): void {
-  const save = s.save;
-  if (save.tokens < k.price) {
-    s.hud.toast('Not enough pearls. Golden, prismatic and legendary fish bring them.');
-    return;
-  }
-  save.tokens -= k.price;
+/** Buy a card for a pearl and scratch it; the prize card follows. */
+export function buyCard(app: HTMLElement, s: Session, fanfare: Fanfare, after: () => void): void {
+  const got = pull(s);
+  if (!got) return;
   s.audio.play('shuffle', { volume: 0.5 });
-  const t = makeTicket(k, (Date.now() ^ (save.tickets.played * 2654435761)) >>> 0);
-  save.tickets.played++;
-  s.hud.hold = true;
-  save.tokens += t.pearls;
-  const won = t.prize ? winPrize(s, t.prize) : null;
-  s.changed();
-  scratchTicket(app, s.audio, t, () => {
+  s.save.tickets.played++;
+  scratchTicket(app, s.audio, got.prize, () => {
     s.hud.hold = false;
-    if (won) showPrize(app, s, fanfare, won, after);
-    else {
-      if (t.pearls) fanfare.win('small', 'PEARLS!', `+${t.pearls} pearls`);
-      after();
-    }
+    showPrize(app, s, fanfare, got, after);
   });
 }
 
-export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket, done: () => void): void {
+export function scratchTicket(parent: HTMLElement, audio: Audio, prize: Prize, done: () => void): void {
+  const cells = scratchCard(prize, (Date.now() % 1e9) + 7);
   const overlay = el('div', 'scratch');
   overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
-  const card = el('div', `scratch-card ${ticket.kind.id}`);
-  const title = el('div', 'scratch-title', ticket.kind.name);
-  const hint = el('div', 'scratch-hint', 'Scratch with your finger. Three alike wins!');
+  const card = el('div', 'scratch-card');
+  card.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
+  const title = el('div', 'scratch-title', 'Lucky Scratch');
+  const hint = el('div', 'scratch-hint', 'Scratch with your finger. Find the three that match.');
   const board = el('div', 'scratch-board');
-  for (const s of ticket.cells) board.append(el('div', `scratch-cell${s === ticket.win ? ' win' : ''}`, `<img src="${icon(PICTURE[s])}" alt="">`));
+  for (const c of cells) board.append(el('div', `scratch-cell${c.id === prize.id ? ' win' : ''}`, `<img src="${icon(c.id)}" alt="">`));
   const coat = document.createElement('canvas');
   coat.className = 'scratch-coat';
   board.append(coat);
@@ -136,14 +123,8 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, ticket: Ticket,
     coat.style.opacity = '0';
     setTimeout(() => coat.remove(), 450);
     board.classList.add('done');
-    if (ticket.win) {
-      result.innerHTML = ticket.prize ? `<b>Three alike!</b> ${/^[aeiou]/i.test(RARITY_LABEL[ticket.prize]) ? 'An' : 'A'} ${RARITY_LABEL[ticket.prize].toLowerCase()} prize.` : `<b>Three pearls!</b> ${ticket.pearls} pearls back.`;
-      result.className = `scratch-result win ${ticket.win}`;
-    } else {
-      audio.play('click', { rate: 0.6 });
-      result.textContent = 'No luck this time.';
-      result.className = 'scratch-result';
-    }
+    result.innerHTML = `<b>Three alike!</b> ${/^[aeiou]/i.test(RARITY_LABEL[prize.rarity]) ? 'An' : 'A'} ${RARITY_LABEL[prize.rarity].toLowerCase()}: ${prize.name}.`;
+    result.className = 'scratch-result win';
     reveal.hidden = true;
     ok.hidden = false;
     done();
