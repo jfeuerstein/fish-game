@@ -243,12 +243,12 @@ export const FITS: Record<string, Fit> = {
   'hat-bread': hat(1, 0.5),
   'hat-lampshade': hat(1, 0.5),
   'hat-shark': hat(1, 0.5),
-  'x-glasses': { bone: 'head', place: 'face', width: 0.62, sink: 0, lift: 0.055, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
+  'x-glasses': { bone: 'head', place: 'face', width: 0.7, sink: 0, lift: 0.055, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.17, forward: -0.05 } } },
   'x-shades': { bone: 'head', place: 'face', width: 0.64, sink: 0, lift: 0.055, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.18, forward: -0.05 } } },
-  'x-scarf': { bone: 'chest', place: 'neck', width: 1.02, sink: 0.45, lift: -0.04, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { width: 1.06, lift: -0.035 }, 'char-raccoon': { width: 1.2, lift: -0.01 } } },
+  'x-scarf': { bone: 'chest', place: 'neck', width: 1.28, sink: 0.45, lift: 0.005, forward: 0, tilt: 0, turn: FRONT },
   'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: -0.02 } } },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT },
-  'x-mustache': { bone: 'head', place: 'snout', width: 0.42, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { width: 0.5, lift: 0.02 } } },
+  'x-mustache': { bone: 'head', place: 'snout', width: 0.56, sink: 0, lift: 0, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { width: 0.5, lift: 0.02 } } },
   'x-snorkel': { bone: 'head', place: 'face', width: 0.78, sink: 0, lift: 0.04, forward: 0, tilt: 0, turn: FRONT, per: { 'char-frog': { lift: 0.15, forward: -0.05 } } },
   'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0 },
 };
@@ -341,7 +341,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
       y = m.eyeY - h * 0.075;
       const slice = sliceAt(m, y);
       width = m.headW * f.width;
-      z = slice.front - deepOf(width) * 0.35;
+      z = slice.front + deepOf(width) * 0.1;
       y -= (size.y * width) / wide / 2;
       break;
     }
