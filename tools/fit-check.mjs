@@ -2,15 +2,22 @@
 // Try every hat and accessory on every character and photograph each from the front and the
 // side, one sheet per item: <outdir>/<item>.png (three characters across, two views down).
 //
-//   npm run build && node tools/fit-check.mjs outdir [item ...]
-import { mkdirSync } from 'node:fs';
+//   npm run build && node tools/fit-check.mjs outdir [item ...] [--chars char-otter,char-frog]
+//
+// Each picture is saved as it is taken (<item>__<character>__<view>.png), so several runs (one
+// per character, say) can share the work; every run joins whatever sheets are complete.
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 import { preview } from 'vite';
 import { launchBrowser } from './browser.mjs';
 
-const [out = 'fit-check', ...only] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const charsArg = args.find((a, i) => args[i - 1] === '--chars');
+const [out = 'fit-check', ...rest] = args.filter((a, i) => a !== '--chars' && args[i - 1] !== '--chars');
+const only = rest;
 mkdirSync(out, { recursive: true });
-const CHARS = ['char-otter', 'char-frog', 'char-raccoon'];
+const ALL = ['char-otter', 'char-frog', 'char-raccoon'];
+const CHARS = charsArg ? charsArg.split(',') : ALL;
 const server = await preview({ preview: { port: 0, host: '127.0.0.1' }, logLevel: 'silent' });
 const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 260, height: 300 } });
@@ -19,6 +26,7 @@ await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?title=0&f
 await page.waitForFunction(() => window.__cove?.ready, null, { timeout: 180000 });
 const items = only.length ? only : await page.evaluate(async () => Object.keys(await (await fetch('models/index.json')).json()).filter((k) => k.startsWith('hat-') || k.startsWith('x-')));
 const shots = {};
+void shots;
 const frames = async (n) => {
   const f = await page.evaluate(() => window.__cove.state().frames);
   await page.waitForFunction((x) => window.__cove.state().frames > x, f + n, { timeout: 120000 });
@@ -60,13 +68,17 @@ for (const ch of CHARS) {
         g.rig.smoothed.copy(head);
       }, [yaw]);
       await frames(2);
-      shots[`${item}|${ch}|${view}`] = await page.screenshot();
+      const png = await page.screenshot();
+      shots[`${item}|${ch}|${view}`] = png;
+      writeFileSync(`${out}/${item}__${ch}__${view}.png`, png);
     }
   }
 }
 for (const item of items) {
   const tiles = [];
-  CHARS.forEach((ch, c) => ['front', 'side'].forEach((v, r) => tiles.push({ input: shots[`${item}|${ch}|${v}`], left: c * 260, top: r * 300 })));
+  const file = (ch, v) => `${out}/${item}__${ch}__${v}.png`;
+  if (!ALL.every((ch) => ['front', 'side'].every((v) => existsSync(file(ch, v))))) continue;
+  ALL.forEach((ch, c) => ['front', 'side'].forEach((v, r) => tiles.push({ input: file(ch, v), left: c * 260, top: r * 300 })));
   await sharp({ create: { width: 780, height: 600, channels: 3, background: '#ffffff' } }).composite(tiles).png().toFile(`${out}/${item}.png`);
 }
 console.log(`fit sheets for ${items.length} items in ${out}/`);
