@@ -41,7 +41,7 @@ export const FITS: Record<string, Fit> = {
   'hat-top': hat(0.64, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-propeller': hat(0.7, 0.5, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } }, forward: 0.012 }),
   'hat-cowboy': hat(0.94, 0.56, { turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
-  'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
+  'hat-crown': hat(0.72, 0.74, { per: { 'char-frog': { forward: -0.08, sink: 0.95 } } }),
   'hat-mushroom': hat(0.96, 0.54, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-fish': hat(1.05, 0.86, { whole: true, turn: -Math.PI / 2, per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'hat-sailor': hat(0.84, 0.64, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
