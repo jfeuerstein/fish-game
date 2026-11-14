@@ -50,7 +50,8 @@ export function rawHeight(x: number, z: number): number {
   // The pond's hollow.
   const pondD = Math.hypot(x - POND.x, z - POND.z);
   if (pondD < POND.r + 3) {
-    const bed = POND.level - 2.4 * (1 - Math.pow(Math.min(1, pondD / POND.r), 2)) - 0.3;
+    // Deep enough to fish, but never below the sea: the sea's surface would show through the pond.
+    const bed = Math.max(0.5, POND.level - 2.2 * (1 - Math.pow(Math.min(1, pondD / POND.r), 2)) - 0.2);
     const bank = POND.level + 0.5;
     const target = pondD < POND.r ? bed : bed + (bank - bed) * smoothstep(POND.r, POND.r + 3, pondD);
     h = Math.min(h, target);

@@ -80,9 +80,11 @@ export class Props {
         const crown = Math.max(t.size.x, t.size.z) * 0.5 * s;
         const u = Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.z - az) * dz) / len2));
         const d = Math.hypot(p.x - (ax + dx * u), p.z - (az + dz * u));
-        const nearCam = Math.hypot(p.x - bx, p.z - bz) < crown + 2.5;
-        // Between the two (not right by the player), within its crown's reach of the line of sight.
-        const between = u > 0.12 && d < crown + 0.8;
+        const nearCam = Math.hypot(p.x - bx, p.z - bz) < crown + 4;
+        // Between the two (not right by the player), anywhere in the camera's view there: the view
+        // widens away from the camera, about a third of the distance either side on an upright screen.
+        const fromCam = (1 - u) * Math.sqrt(len2);
+        const between = u > 0.1 && d < crown + 0.8 + fromCam * 0.34;
         const hide = nearCam || between ? 1 : 0;
         if (hide !== t.hidden[i]) {
           t.hidden[i] = hide;

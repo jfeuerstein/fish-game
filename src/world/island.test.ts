@@ -43,3 +43,10 @@ describe('island', () => {
     expect(walkable(field, POND.x, POND.z)).toBe(false);
   });
 });
+
+describe('water', () => {
+  it('keeps the pond and creek beds above the sea, so the sea never shows through them', () => {
+    for (let a = 0; a < Math.PI * 2; a += 0.2)
+      for (let r = 0; r < POND.r; r += 1) expect(field.heightAt(POND.x + Math.cos(a) * r, POND.z + Math.sin(a) * r)).toBeGreaterThan(0.2);
+  });
+});
