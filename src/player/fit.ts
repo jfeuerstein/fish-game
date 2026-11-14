@@ -170,7 +170,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
       y = m.eyeY + (m.top - m.eyeY) * 0.55;
       const slice = sliceAt(m, y);
       width = m.headW * f.width;
-      x = -(slice.w / 2) * 0.92;
+      x = (slice.w / 2) * 0.92;
       z = (slice.front + slice.back) / 2 + (slice.front - slice.back) * 0.15;
       y -= (size.y * width) / wide / 2;
       break;
