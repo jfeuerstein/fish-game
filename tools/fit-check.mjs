@@ -68,7 +68,7 @@ for (const ch of CHARS) {
         g.rig.smoothed.copy(head);
       }, [yaw]);
       await frames(2);
-      const png = await page.screenshot();
+      const png = await page.screenshot({ timeout: 240000 });
       shots[`${item}|${ch}|${view}`] = png;
       writeFileSync(`${out}/${item}__${ch}__${view}.png`, png);
     }
