@@ -52,7 +52,7 @@ export const FITS: Record<string, Fit> = {
   'x-scarf': { bone: 'chest', place: 'neck', width: 1.25, sink: 0.45, lift: 0, forward: 0, tilt: 0 },
   'x-bowtie': { bone: 'chest', place: 'chest', width: 0.38, sink: 0, lift: 0, forward: 0, tilt: 0 },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
-  'x-flower': { bone: 'head', place: 'ear', width: 0.26, sink: 0, lift: 0, forward: 0, tilt: 0 },
+  'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0 },
 };
 
 /** The fit for an item on a character, with that character's corrections applied. */
@@ -167,7 +167,7 @@ export function placeFor(f: Fit, m: Measure, size: { x: number; y: number; z: nu
     }
     case 'ear': {
       // A flower pinned on the side of the head, high up.
-      y = m.eyeY + (m.top - m.eyeY) * 0.7;
+      y = m.eyeY + (m.top - m.eyeY) * 0.55;
       const slice = sliceAt(m, y);
       width = m.headW * f.width;
       x = -(slice.w / 2) * 0.92;

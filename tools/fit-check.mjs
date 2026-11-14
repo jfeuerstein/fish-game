@@ -62,7 +62,7 @@ for (const ch of CHARS) {
     }, item);
     await frames(2);
     const back = item === 'x-backpack';
-    for (const [view, yaw] of [['front', back ? Math.PI - 0.6 : 0.6], ['side', Math.PI / 2]]) {
+    for (const [view, yaw] of [['front', back ? Math.PI - 0.25 : 0.6], ['side', Math.PI / 2]]) {
       await page.evaluate(([y]) => {
         const g = window.__cove.game;
         const head = g.player.pos.clone();
