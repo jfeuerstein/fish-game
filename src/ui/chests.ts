@@ -60,7 +60,6 @@ export function chestSheet(app: HTMLElement, s: Session): Sheet {
     s.hud.hold = true;
     const got = award(s, prize);
     s.changed();
-    sheet.refresh();
     s.audio.play('open');
 
     const overlay = el('div', 'roulette');

@@ -92,6 +92,9 @@ void main() {
   float alpha = mix(0.55, 0.95, smoothstep(0.0, 2.5, depth));
   alpha = max(alpha, foam * 0.9);
   if (depth < -0.05) discard;
+  #ifdef CREEK
+  if (ground < 0.02) discard;
+  #endif
   gl_FragColor = vec4(col, alpha);
   #include <colorspace_fragment>
   #include <fog_fragment>
@@ -157,11 +160,10 @@ export class Water {
       const u = (s - lens[i - 1]) / (lens[i] - lens[i - 1]);
       const x = CREEK[i - 1][0] + (CREEK[i][0] - CREEK[i - 1][0]) * u;
       const z = CREEK[i - 1][1] + (CREEK[i][1] - CREEK[i - 1][1]) * u;
-      // Where the creek reaches the sea, the sea's own surface takes over: stop before the two overlap.
-      if (creekLevel(s / total) < 0.25 || field.heightAt(x, z) < -0.2) break;
       pts.push(new THREE.Vector3(x, creekLevel(s / total), z));
     }
-    const w = CREEK_WIDTH * 1.7;
+    // Wider toward the mouth, where the channel opens onto the beach; the banks clip it anyway.
+    const widthAt = (k: number): number => CREEK_WIDTH * (1.7 + 2.6 * Math.max(0, (k - 0.6) / 0.4) ** 2);
     const pos: number[] = [];
     const idx: number[] = [];
     for (let k = 0; k < pts.length; k++) {
@@ -175,6 +177,7 @@ export class Water {
       const p = pts[k];
       // Past the end the creek is the sea, so the ribbon stops above the sea's level.
       const y = Math.max(p.y, 0.02);
+      const w = widthAt(k / Math.max(1, pts.length - 1));
       pos.push(p.x + nx * w, y, p.z + nz * w, p.x - nx * w, y, p.z - nz * w);
       if (k > 0) {
         const o = (k - 1) * 2;
@@ -185,8 +188,12 @@ export class Water {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setIndex(idx);
-    const mesh = new THREE.Mesh(geo, this.material);
+    // The creek's own material shares every uniform with the sea's, but gives way wherever the sea
+    // already has water (ground below sea level): no second layer of water at the mouth, no edge.
+    const creekMat = new THREE.ShaderMaterial({ vertexShader: this.material.vertexShader, fragmentShader: this.material.fragmentShader, uniforms: this.material.uniforms, defines: { CREEK: 1 }, transparent: true, depthWrite: false, fog: true });
+    const mesh = new THREE.Mesh(geo, creekMat);
     mesh.renderOrder = 1;
+    void field;
     return mesh;
   }
 

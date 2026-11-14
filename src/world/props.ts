@@ -86,7 +86,9 @@ export class Props {
         const fromCam = (1 - u) * Math.sqrt(len2);
         // A tree standing just past the player but tall enough to cover them counts too.
         const between = u > 0.04 && d < crown + 0.8 + fromCam * 0.34;
-        const hide = nearCam || between ? 1 : 0;
+        // Or standing so close that its crown is over the player.
+        const over = Math.hypot(p.x - ax, p.z - az) < crown + 0.4;
+        const hide = nearCam || between || over ? 1 : 0;
         if (hide !== t.hidden[i]) {
           t.hidden[i] = hide;
           t.inst.setMatrixAt(i, hide ? this.zero : t.kept[i]);
