@@ -9,7 +9,7 @@ import type { Character } from '../player/character';
 import type { Effects } from '../fx/particles';
 import { type Zone, waterAt } from '../world/island';
 import type { Heightfield } from '../world/island';
-import { BY_ID, type Catch } from './fish';
+import { BY_ID, type Catch, VARIANT_STARS } from './fish';
 import { type Conditions, biteDelay, nibbles, rollCatch } from './roll';
 import { type ReelState, fighterFor, startReel, stepReel } from './reel';
 
@@ -29,6 +29,8 @@ export interface FishingHooks {
   room(): boolean;
   /** Show or hide the "!" over the player's head. */
   exclaim?(on: boolean): void;
+  /** Something happened for the first time that is worth a word of help. */
+  tip?(id: 'bite' | 'reel' | 'thrash' | 'snap'): void;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -96,7 +98,8 @@ export class Fishing {
 
   /** The main button went down. */
   press(aimYaw: number, rod: Rod): void {
-    this.hookWindow = rod.hook;
+    // Generous: this is not a test of reflexes.
+    this.hookWindow = rod.hook * 1.35;
     switch (this.state) {
       case 'ready':
         if (!this.hooks.room()) {
@@ -174,7 +177,11 @@ export class Fishing {
     this.hooks.play('splash', { volume: 0.5 });
     this.hooks.bump(0.12);
     this.fx.splash(this.bobber.position, 0.6);
-    (this.reel as ReelState & { fighter?: ReturnType<typeof fighterFor> }).fighter = fighterFor(s.fight, frac);
+    // A finer fish fights a little harder.
+    const f = fighterFor(s.fight, frac);
+    f.fight *= 1 + VARIANT_STARS[this.fish.variant] * 0.07;
+    (this.reel as ReelState & { fighter?: ReturnType<typeof fighterFor> }).fighter = f;
+    this.hooks.tip?.('reel');
   }
 
   update(dt: number, held: boolean, rod: Rod, bait: Bait): void {
@@ -217,6 +224,7 @@ export class Fishing {
           this.timer = this.hookWindow;
           this.dip = 1;
           this.hooks.play('bite', { volume: 0.9 });
+          this.hooks.tip?.('bite');
           this.fx.splash(this.bobber.position, 0.5);
           this.hooks.bump(0.06);
         }
@@ -245,6 +253,7 @@ export class Fishing {
         const start = this.flight.to;
         const p = start.clone().lerp(home, n.progress * 0.82);
         if (n.thrashing) {
+          if (!r.thrashing) this.hooks.tip?.('thrash');
           p.x += Math.sin(this.t * 17) * 0.35;
           p.z += Math.cos(this.t * 13) * 0.35;
           if (Math.floor(this.t * 6) !== Math.floor((this.t - dt) * 6)) this.fx.splash(p, 0.35);
@@ -340,6 +349,11 @@ export class Fishing {
     void this.body.hold(`fish-${c.species}`, s.tier === 'junk' ? 0.45 : length);
     if (c.variant !== 'normal') this.fx.sparkle(this.body.group.position.clone().add(new THREE.Vector3(0, 1.6, 0)), c.variant === 'golden');
     this.hooks.landed(c, this.zone!);
+  }
+
+  /** The conditions the last fish was hooked in, for the game's extras (a second fish on a twin hook). */
+  get lastConditions(): Conditions | null {
+    return this.conditionsNow;
   }
 
   private finish(): void {

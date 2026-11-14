@@ -250,3 +250,47 @@ export function row(t: number, effort: number): Pose {
   p.lean = 0.1 + a * 0.25;
   return p;
 }
+
+/** In the air: knees up, arms out for balance. */
+export function jump(t: number): Pose {
+  const p = neutral();
+  p.armL = limb(0.6, 1.0);
+  p.armR = limb(0.6, 1.0);
+  p.elbowL = 0.4;
+  p.elbowR = 0.4;
+  p.legL = 0.6;
+  p.legR = 0.2;
+  p.kneeL = 0.9;
+  p.kneeR = 0.5;
+  p.lean = 0.08;
+  p.nod = -0.1 + Math.sin(t * 3) * 0.02;
+  return p;
+}
+
+/** Digging: bent over, both hands at the ground. */
+export function dig(t: number): Pose {
+  const p = neutral();
+  const a = Math.sin(t * 9);
+  p.lean = 0.55 + a * 0.08;
+  p.armL = limb(1.1 + a * 0.25, 0.15);
+  p.armR = limb(1.1 - a * 0.25, 0.15);
+  p.elbowL = 0.3;
+  p.elbowR = 0.3;
+  p.kneeL = 0.5;
+  p.kneeR = 0.5;
+  p.legL = 0.35;
+  p.legR = 0.35;
+  return p;
+}
+
+/** Sweeping a metal detector from side to side. */
+export function sweep(t: number): Pose {
+  const p = idle(t);
+  const a = Math.sin(t * 2.2);
+  p.armR = limb(0.7, 0.15 + a * 0.25, -0.2);
+  p.elbowR = 0.2;
+  p.armL = limb(0.5, 0.1);
+  p.turn = a * 0.15;
+  p.nod = 0.25;
+  return p;
+}

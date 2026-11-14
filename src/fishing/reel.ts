@@ -28,7 +28,7 @@ export function startReel(rand: () => number): ReelState {
 /** The numbers the reel runs on. */
 export const REEL = {
   /** Progress a second when winding against a calm fish, before rod and fish. */
-  wind: 0.2,
+  wind: 0.24,
   /** Progress lost a second when not winding. */
   drift: 0.035,
   /** Strain a second when winding against a calm fish. */

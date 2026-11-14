@@ -1,5 +1,5 @@
 // The save: everything the player has, read defensively. Pure.
-import { type Catch, type Variant, BY_ID } from '../fishing/fish';
+import { type Catch, type Variant, BY_ID, VARIANTS } from '../fishing/fish';
 import { type Quest, makeQuest } from './quests';
 
 export interface JournalEntry {
@@ -23,6 +23,8 @@ export interface Settings {
   ambience: number;
   clock: 'island' | 'real';
   quality: 'high' | 'low';
+  /** Draw in big soft pixels, for a lo-fi look. */
+  pixels: boolean;
 }
 
 export interface Save {
@@ -52,10 +54,39 @@ export interface Save {
   stats: { caught: number; earned: number; snapped: number; played: number };
   settings: Settings;
   hints: string[];
+  /** The lure on the line, and the lures owned. */
+  lure: string;
+  lures: string[];
+  /** Owns the metal detector. */
+  detector: boolean;
+  /** Sea glass found (by index), buried things dug up (by day and spot). */
+  glass: number[];
+  dug: string[];
+  /** Titles earned, and the one shown. */
+  titles: string[];
+  title: string | null;
+  /** Accessories owned, and the one worn. */
+  extras: string[];
+  extra: string | null;
+  /** The ukulele's six chord slots, as root and kind. */
+  chords: { root: number; kind: 'maj' | 'min' | '7' }[];
+  /** Scratch tickets: how many, and the biggest win. */
+  tickets: { played: number; best: number };
 }
 
 export const SAVE_KEY = 'cove.save';
 export const CHALK_KEY = 'cove.chalk';
+/** A copy of the save from an earlier day, in case the main one is ever lost. */
+export const BACKUP_KEY = 'cove.save.backup';
+
+export const DEFAULT_CHORDS: Save['chords'] = [
+  { root: 0, kind: 'maj' },
+  { root: 7, kind: 'maj' },
+  { root: 9, kind: 'min' },
+  { root: 5, kind: 'maj' },
+  { root: 2, kind: 'min' },
+  { root: 4, kind: '7' },
+];
 
 export function newSave(): Save {
   return {
@@ -81,8 +112,19 @@ export function newSave(): Save {
     questsDone: 0,
     boat: false,
     stats: { caught: 0, earned: 0, snapped: 0, played: 0 },
-    settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high' },
+    settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high', pixels: false },
     hints: [],
+    lure: 'lure-none',
+    lures: ['lure-none'],
+    detector: false,
+    glass: [],
+    dug: [],
+    titles: ['Newcomer'],
+    title: null,
+    extras: [],
+    extra: null,
+    chords: DEFAULT_CHORDS.map((c) => ({ ...c })),
+    tickets: { played: 0, best: 0 },
   };
 }
 
@@ -94,7 +136,7 @@ const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object'
 function readCatch(v: unknown): Catch | null {
   const o = rec(v);
   if (typeof o.species !== 'string' || !BY_ID[o.species]) return null;
-  const variant = o.variant === 'shiny' || o.variant === 'golden' ? o.variant : 'normal';
+  const variant = VARIANTS.includes(o.variant as Variant) ? (o.variant as Variant) : 'normal';
   return { species: o.species, size: num(o.size, 10, 0), variant, huge: o.huge === true, at: num(o.at, 0) };
 }
 
@@ -112,7 +154,7 @@ export function parseSave(text: string | null): Save {
   for (const [id, e] of Object.entries(rec(o.journal))) {
     if (!BY_ID[id]) continue;
     const j = rec(e);
-    journal[id] = { count: num(j.count, 1, 0), best: num(j.best, 0, 0), variants: strs(j.variants).filter((x): x is Variant => x === 'normal' || x === 'shiny' || x === 'golden'), first: num(j.first, 0) };
+    journal[id] = { count: num(j.count, 1, 0), best: num(j.best, 0, 0), variants: strs(j.variants).filter((x): x is Variant => VARIANTS.includes(x as Variant)), first: num(j.first, 0) };
   }
   const baits: Record<string, number> = {};
   for (const [id, n] of Object.entries(rec(o.baits))) baits[id] = Math.floor(num(n, 0, 0));
@@ -155,8 +197,22 @@ export function parseSave(text: string | null): Save {
       ambience: num(s.ambience, fresh.settings.ambience, 0, 1),
       clock: s.clock === 'real' ? 'real' : 'island',
       quality: s.quality === 'low' ? 'low' : 'high',
+      pixels: s.pixels === true,
     },
     hints: strs(o.hints),
+    lure: str(o.lure, 'lure-none'),
+    lures: [...new Set(['lure-none', ...strs(o.lures)])],
+    detector: o.detector === true,
+    glass: (Array.isArray(o.glass) ? o.glass : []).filter((n): n is number => typeof n === 'number'),
+    dug: strs(o.dug).slice(-200),
+    titles: [...new Set(['Newcomer', ...strs(o.titles)])],
+    title: typeof o.title === 'string' ? o.title : null,
+    extras: strs(o.extras),
+    extra: typeof o.extra === 'string' ? o.extra : null,
+    chords: Array.isArray(o.chords) && o.chords.length === 6
+      ? o.chords.map((c) => rec(c)).map((c) => ({ root: Math.floor(num(c.root, 0, 0, 11)), kind: c.kind === 'min' || c.kind === '7' ? c.kind : 'maj' }))
+      : DEFAULT_CHORDS.map((c) => ({ ...c })),
+    tickets: { played: num(rec(o.tickets).played, 0, 0), best: num(rec(o.tickets).best, 0, 0) },
   };
 }
 

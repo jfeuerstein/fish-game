@@ -395,6 +395,87 @@ button {
 .vb.golden {
   background: #d79a1c;
 }
+.vb.fine {
+  background: #7aa36a;
+}
+.vb.prismatic {
+  background: linear-gradient(90deg, #ff6b9a, #ffb84a, #6be07a, #4ab8ff, #b07aff);
+}
+.cc-quip {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-top: 3px;
+}
+.cc-quip b {
+  font-style: normal;
+  color: var(--leaf);
+}
+.catch-card.prismatic {
+  background: linear-gradient(135deg, #fff0f6, #fff6e0 30%, #eaffef 55%, #e6f4ff 80%, #f6ecff);
+  box-shadow: 0 0 0 3px #ff9bd0, 0 8px 24px rgba(10, 30, 50, 0.3);
+}
+.catch-card > img.prismatic {
+  animation: prism 2s linear infinite;
+}
+.catch-card > img.fine {
+  filter: brightness(1.08) saturate(1.15);
+}
+@keyframes prism {
+  from {
+    filter: hue-rotate(0deg) saturate(1.6) drop-shadow(0 0 6px #fff);
+  }
+  to {
+    filter: hue-rotate(360deg) saturate(1.6) drop-shadow(0 0 6px #fff);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catch-card > img.prismatic {
+    animation: none;
+    filter: saturate(1.6) drop-shadow(0 0 6px #fff);
+  }
+}
+.act-jump {
+  position: absolute;
+  right: 118px;
+  bottom: calc(var(--bottom-clear) + 78px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(255, 248, 236, 0.94);
+  color: var(--sea-deep);
+  font-size: 26px;
+  font-weight: 600;
+  box-shadow: var(--press);
+  touch-action: none;
+}
+.blip {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: #6a2020;
+  box-shadow: 0 0 0 2px #fff;
+  pointer-events: none !important;
+}
+.blip.lit {
+  background: #ff4a3a;
+  box-shadow: 0 0 0 2px #fff, 0 0 14px #ff4a3a;
+}
+.name-tag {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: rgba(35, 64, 90, 0.7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none !important;
+}
 
 .act-main {
   position: absolute;
@@ -565,8 +646,8 @@ button {
 
 .power {
   position: absolute;
-  right: 120px;
-  bottom: calc(var(--bottom-clear) + 80px);
+  right: 54px;
+  bottom: calc(var(--bottom-clear) + 236px);
   width: 16px;
   height: 120px;
   border-radius: 10px;
@@ -990,7 +1071,7 @@ button {
   width: 100%;
 }
 .uke-pad {
-  height: 62px;
+  height: 50px;
   border-radius: 16px;
   border: 0;
   background: hsl(var(--h), 70%, 72%);
@@ -1005,12 +1086,78 @@ button {
   box-shadow: 0 1px 0 hsl(var(--h), 50%, 52%);
 }
 .uke-chords {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
   width: 100%;
 }
-.uke-chord {
+.uke-chord.on {
+  background: var(--sea);
+  color: #fff;
+}
+.uke-chord.edit {
+  outline: 2px dashed var(--ink-soft);
+}
+.uke-roots {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.uke-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.uke-root {
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+.uke-root.on {
+  background: var(--leaf);
+  color: #fff;
+}
+.uke-strings {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+  height: 74px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #d9a25a, #b98243);
+  touch-action: none;
+}
+.uke-strings i {
+  justify-self: center;
+  width: 3px;
+  height: 100%;
+  background: #f6efe0;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+.uke-strings i.hit {
+  width: 5px;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+.uke-pads.all {
+  grid-template-columns: repeat(6, 1fr);
+}
+.uke-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.uke-row .btn {
   flex: 1;
+  min-width: 0;
+  padding: 0 6px;
+}
+.uke-chord {
   height: 48px;
   border-radius: 14px;
   border: 0;
@@ -1060,4 +1207,107 @@ button {
 .chalk-tools .btn {
   min-width: 0;
   flex: 1;
+}
+
+/* ---------- Scratch tickets ---------- */
+.scratch {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 22, 36, 0.75);
+  pointer-events: auto;
+}
+.scratch-card {
+  width: calc(100% - 40px);
+  padding: 16px 16px 18px;
+  border-radius: 24px;
+  background: #fff8ec;
+  box-shadow: 0 0 0 6px #4f9e5b, 0 14px 40px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+.scratch-card.lucky {
+  box-shadow: 0 0 0 6px #3a78c9, 0 14px 40px rgba(0, 0, 0, 0.4);
+}
+.scratch-card.splash {
+  box-shadow: 0 0 0 6px #d9453c, 0 14px 40px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(160deg, #fff8ec, #ffe6ea);
+}
+.scratch-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--sea-deep);
+}
+.scratch-hint {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 2px 0 10px;
+}
+.scratch-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 8px;
+  border-radius: 16px;
+  background: #e9dfcb;
+  touch-action: none;
+}
+.scratch-cell {
+  height: 74px;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 40px;
+  line-height: 74px;
+}
+.scratch-board.done .scratch-cell.win {
+  background: #fff1b8;
+  box-shadow: 0 0 0 3px var(--sun);
+}
+.scratch-coat {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  touch-action: none;
+}
+.scratch-result {
+  min-height: 28px;
+  margin: 12px 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.scratch-result.win {
+  color: var(--leaf);
+}
+.scratch-result.win.crown {
+  color: #d79a1c;
+  font-size: 22px;
+}
+
+.row img.q-golden {
+  filter: sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.15);
+}
+.row img.q-shiny {
+  filter: drop-shadow(0 0 5px #9fd3ff);
+}
+.row img.q-prismatic {
+  filter: saturate(1.8) hue-rotate(40deg) drop-shadow(0 0 5px #ffb0e0);
+}
+.qdots {
+  display: inline-flex;
+  gap: 2px;
+  font-size: 10px;
+  letter-spacing: -1px;
+}
+.qdots i {
+  font-style: normal;
+  color: #d8cdb8;
+}
+.qdots i.on {
+  color: #e0a020;
 }

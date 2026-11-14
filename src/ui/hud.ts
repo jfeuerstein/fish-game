@@ -1,6 +1,8 @@
 // What sits over the game: money and level at the top, announcements, the catch card, the reel
 // and casting meters, the action buttons by the right thumb and the menu row along the bottom.
 
+import { type Variant, VARIANT_LABEL, stars } from '../fishing/fish';
+
 const base = import.meta.env.BASE_URL;
 export const icon = (id: string): string => `${base}icons/${id}.webp`;
 
@@ -18,8 +20,12 @@ export interface CatchCard {
   size: string;
   tier: string;
   tierColor: string;
-  variant: 'normal' | 'shiny' | 'golden';
+  variant: Variant;
   value: number;
+  /** A line of nonsense about it. */
+  quip: string;
+  /** More to say: a coin bag, a second fish. */
+  note?: string;
   first: boolean;
   best: boolean;
   tokens: number;
@@ -45,6 +51,10 @@ export class Hud {
   private powerFill = el('i');
   private bubble = el('div', 'bubble');
   private bang = el('div', 'bang', '!');
+  private jumpBtn = el('button', 'act-jump', '⤒');
+  private blip = el('div', 'blip');
+  private tag = el('div', 'name-tag');
+  onJump: (() => void) | null = null;
   private onAction: (() => void) | null = null;
   private onActionUp: (() => void) | null = null;
   private onSecond: (() => void) | null = null;
@@ -83,6 +93,15 @@ export class Hud {
     this.power.hidden = true;
     this.bubble.hidden = true;
     this.bang.hidden = true;
+    this.blip.hidden = true;
+    this.tag.hidden = true;
+    this.jumpBtn.setAttribute('aria-label', 'Jump');
+    this.jumpBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onAnyTouch();
+      this.onJump?.();
+    });
 
     this.action.hidden = true;
     this.second.hidden = true;
@@ -128,7 +147,7 @@ export class Hud {
       return b;
     };
     this.menu = { bag: make('bag', 'Bag', 'f-cooler'), journal: make('journal', 'Journal', 'fish-bluegill'), fun: make('fun', 'Fun', 'ukulele'), more: make('more', 'More', 'hat-captain') };
-    parent.append(top, this.toasts, this.card, this.meter, this.power, this.bubble, this.bang, this.second, this.action, row);
+    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.bang, this.blip, this.second, this.jumpBtn, this.action, row);
   }
 
   setStats(coins: number, tokens: number, level: number, xpFrac: number): void {
@@ -179,17 +198,18 @@ export class Hud {
   }
 
   showCatch(c: CatchCard): void {
-    const badge = c.variant === 'golden' ? '<b class="vb golden">Golden!</b>' : c.variant === 'shiny' ? '<b class="vb shiny">Shiny!</b>' : '';
+    const badge = c.variant !== 'normal' ? `<b class="vb ${c.variant}">${stars(c.variant)} ${VARIANT_LABEL[c.variant]}</b>` : '';
     this.card.innerHTML = `
       <img src="${c.icon}" alt="" class="${c.variant}">
       <div class="cc-text">
         <div class="cc-name">${c.name} ${c.first ? '<b class="new">NEW</b>' : ''}</div>
         <div class="cc-meta"><span style="color:${c.tierColor}">${c.tier}</span> · ${c.size}${c.best && !c.first ? ' · <b class="best">Best!</b>' : ''}</div>
         <div class="cc-row">${badge}<span class="cc-value"><img src="${icon('coin')}" alt="">${c.value}</span>${c.tokens ? `<span class="cc-tokens"><b class="pearl"></b>+${c.tokens}</span>` : ''}</div>
+        <div class="cc-quip">${c.quip}${c.note ? ` <b>${c.note}</b>` : ''}</div>
       </div>`;
     this.card.className = `catch-card show ${c.variant}`;
     clearTimeout(this.cardTimer);
-    this.cardTimer = window.setTimeout(() => this.hideCard(), 4200);
+    this.cardTimer = window.setTimeout(() => this.hideCard(), 5200);
   }
 
   hideCard(): void {
@@ -249,6 +269,32 @@ export class Hud {
       this.bang.style.left = `${x}px`;
       this.bang.style.top = `${y}px`;
     }
+  }
+
+  /** Show or hide the jump button. */
+  setJump(on: boolean): void {
+    this.jumpBtn.hidden = !on;
+  }
+
+  /** The metal detector's light over the player's head: on, and how fast it blinks. */
+  setBlip(on: boolean, x = 0, y = 0, lit = false): void {
+    this.blip.hidden = !on;
+    if (!on) return;
+    this.blip.style.left = `${x}px`;
+    this.blip.style.top = `${y}px`;
+    this.blip.classList.toggle('lit', lit);
+  }
+
+  /** The player's title, floating over them. */
+  setTag(text: string | null, x = 0, y = 0): void {
+    if (!text) {
+      this.tag.hidden = true;
+      return;
+    }
+    this.tag.hidden = false;
+    if (this.tag.textContent !== text) this.tag.textContent = text;
+    this.tag.style.left = `${x}px`;
+    this.tag.style.top = `${y}px`;
   }
 
   show(on: boolean): void {

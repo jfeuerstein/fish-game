@@ -40,10 +40,24 @@ export class Rig {
   /** The rotation that brings each A-posed arm down to the side. */
   private hangL = new THREE.Quaternion();
   private hangR = new THREE.Quaternion();
+  /** The character's forward, in world space, given which of the two ways it really faces. */
+  forwardWorld(sign: 1 | -1): THREE.Vector3 {
+    const space = this.order[0]?.parent;
+    if (!space) return new THREE.Vector3(0, 0, 1);
+    space.updateMatrixWorld(true);
+    return this.fwd.clone().multiplyScalar(sign).applyQuaternion(space.getWorldQuaternion(new THREE.Quaternion()));
+  }
+
+  /** The rig faces the other way from what its bone names suggest: turn its idea of forward round. */
+  flip(): void {
+    this.fwd.negate();
+  }
+
   /** Bones the hands are, for holding things. */
   handR: THREE.Bone | null = null;
   handL: THREE.Bone | null = null;
   headBone: THREE.Bone | null = null;
+  chestBone: THREE.Bone | null = null;
 
   constructor(root: THREE.Object3D) {
     let skinned: THREE.SkinnedMesh | null = null;
@@ -64,6 +78,7 @@ export class Rig {
     this.handR = byName.get('R_Hand') ?? byName.get('RightHand') ?? null;
     this.handL = byName.get('L_Hand') ?? byName.get('LeftHand') ?? null;
     this.headBone = this.named.head ?? null;
+    this.chestBone = this.named.chest ?? this.named.spine ?? null;
     this.ok = !!(this.named.upperL && this.named.upperR && this.named.thighL && this.named.thighR);
     // The top of the bone tree, and everything under it in order.
     const top = bones.find((b) => !(b.parent as THREE.Bone)?.isBone) ?? bones[0];

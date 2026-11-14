@@ -1,6 +1,6 @@
 // What a catch, a sale or a purchase does to the save. Pure: takes the save, changes it, and
 // says what happened so it can be announced.
-import { BY_ID, type Catch, valueOf } from '../fishing/fish';
+import { BY_ID, type Catch, VARIANT_XP, valueOf } from '../fishing/fish';
 import type { Zone } from '../world/island';
 import { tokensFor } from './crates';
 import { COOLERS, TIER_XP, levelFor } from './economy';
@@ -30,7 +30,7 @@ export function addXp(save: Save, xp: number): number | null {
 export function applyCatch(save: Save, c: Catch, zone: Zone, night: boolean, raining: boolean): CatchResult {
   const s = BY_ID[c.species];
   const rec = record(save, c);
-  const xp = Math.round(TIER_XP[s.tier] * (c.variant === 'golden' ? 3 : c.variant === 'shiny' ? 1.8 : 1) * (rec.first ? 2 : 1));
+  const xp = Math.round(TIER_XP[s.tier] * VARIANT_XP[c.variant] * (rec.first ? 2 : 1) * (1 + Math.min(1, c.size / 400) * 0.5));
   const levelUp = addXp(save, xp);
   const tokens = tokensFor(c.variant, rec.first && s.tier === 'legendary');
   save.tokens += tokens;

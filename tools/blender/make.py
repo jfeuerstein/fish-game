@@ -439,6 +439,142 @@ BUILD.update({
 })
 
 
+# --- Lures, finds and things to wear --------------------------------------------------
+
+def lure_plain(m):
+    m.torus('#9aa3ad', matrix=R('X', 90), R=0.25, r=0.04, seg=14, tube=5, )
+    m.cylinder('#9aa3ad', matrix=T(0.25, 0, 0.35), seg=6, r=0.04, depth=0.7)
+    m.cone('#9aa3ad', matrix=T(-0.18, 0, 0.12) @ R('Y', -30), seg=4, r1=0.05, r2=0, depth=0.16)
+
+
+def lure_big(m):
+    from fish import fish_body
+    fish_body(m, dict(back='#3a78c9', belly='#f3f0ea', h=0.5, w=0.3, fin='#e8453c', blunt=0.8), L=1.0)
+    m.torus('#9aa3ad', matrix=T(-0.1, 0, -0.32), R=0.1, r=0.02, seg=10, tube=4)
+
+
+def lure_small(m):
+    m.cylinder('#5a3f2c', matrix=R('Y', 90), seg=6, r=0.06, depth=0.5)
+    for s in (-1, 1):
+        m.fin('#d9dde2', [(0.0, 0.0), (-0.3, 0.32), (-0.05, 0.3)], thickness=0.01, matrix=T(0, s * 0.03, 0.04) @ R('X', s * 30))
+    m.torus('#9aa3ad', matrix=T(-0.32, 0, -0.08), R=0.08, r=0.015, seg=8, tube=4)
+
+
+def lure_sparkle(m):
+    for k in range(5):
+        a = k / 5 * math.pi * 2
+        m.cone('#f6d04a', matrix=R('Y', math.degrees(a)) @ T(0, 0, 0.25) , seg=4, r1=0.12, r2=0, depth=0.35)
+    m.sphere('#fff3a0', r=0.18, seg=10, rings=6)
+
+
+def magnet(m):
+    m.torus(lambda c: hexrgb('#d9453c') if c.x > -0.05 else hexrgb('#d9453c'), matrix=R('X', 90), R=0.3, r=0.09, seg=16, tube=6)
+    for s in (-1, 1):
+        m.box('#d9dde2', matrix=T(s * 0.3, 0, -0.35), size=(0.18, 0.18, 0.2))
+    m.box('#ffffff', matrix=T(0, 0, -0.1), size=(0.42, 0.25, 0.5))
+
+
+def twin_hook(m):
+    for s in (-1, 1):
+        m.torus('#9aa3ad', matrix=T(s * 0.18, 0, 0) @ R('X', 90), R=0.17, r=0.035, seg=12, tube=4)
+    m.cylinder('#9aa3ad', matrix=T(0, 0, 0.35), seg=6, r=0.035, depth=0.5)
+
+
+def clover(m):
+    for k in range(4):
+        a = k / 4 * math.pi * 2 + 0.78
+        m.sphere('#4f9e5b', matrix=T(math.cos(a) * 0.17, 0, math.sin(a) * 0.17 + 0.25) @ S(0.17, 0.05, 0.17), seg=10, rings=6)
+    m.cylinder('#3f7a3f', matrix=T(0.05, 0, -0.1) @ R('Y', 10), seg=5, r=0.025, depth=0.45)
+
+
+def rain_charm(m):
+    for x, z, r in ((0, 0.25, 0.25), (-0.25, 0.2, 0.18), (0.25, 0.2, 0.2), (0.1, 0.38, 0.18)):
+        m.sphere('#e8eef4', matrix=T(x, 0, z), r=r, seg=10, rings=7)
+    for k in range(4):
+        m.cone('#5fb8e8', matrix=T(-0.24 + k * 0.16, 0, -0.12) @ R('X', 180), seg=6, r1=0.05, r2=0, depth=0.16)
+        m.sphere('#5fb8e8', matrix=T(-0.24 + k * 0.16, 0, -0.05), r=0.05, seg=6, rings=4)
+
+
+def detector(m):
+    m.cylinder('#5f6870', matrix=T(0, 0, 0.6), seg=6, r=0.025, depth=1.1)
+    m.cylinder('#3a3f44', matrix=T(0, 0, 0.02) @ S(1, 1.4, 1), seg=14, r=0.18, depth=0.04)
+    m.box('#f2c23a', matrix=T(0, 0.04, 0.95), size=(0.1, 0.08, 0.14))
+    m.sphere('#d9453c', matrix=T(0, 0.09, 1.0), r=0.025, seg=6, rings=4)
+    m.box('#2b2b2b', matrix=T(0, -0.03, 1.12), size=(0.06, 0.06, 0.18))
+
+
+def seaglass(m):
+    m.sphere('#7fd3c3', deform=lambda p: (p[0] * 0.5, p[1] * 0.35, p[2] * 0.22), seg=7, rings=4)
+
+
+def bounce_shroom(m):
+    m.sphere(lambda c: hexrgb('#ffffff') if (math.sin(c.x * 9) * math.sin(c.y * 9) > 0.55 and c.z > 0.85) else hexrgb('#e8553c'), matrix=T(0, 0, 0.7), deform=lambda p: (p[0] * 1.1, p[1] * 1.1, max(p[2], -0.15) * 0.55), seg=16, rings=8)
+    m.cylinder('#f3ead6', matrix=T(0, 0, 0.62), seg=16, r=1.0, depth=0.1)
+    m.cone('#f6efe0', matrix=T(0, 0, 0.32), seg=12, r1=0.42, r2=0.32, depth=0.64)
+
+
+def glasses_round(m):
+    for s in (-1, 1):
+        m.torus('#3a2a1c', matrix=T(s * 0.22, 0, 0) @ R('X', 90), R=0.16, r=0.025, seg=14, tube=4)
+        m.cylinder('#d9eef6', matrix=T(s * 0.22, 0, 0) @ R('X', 90), seg=12, r=0.14, depth=0.01)
+        m.box('#3a2a1c', matrix=T(s * 0.4, 0.2, 0.02), size=(0.03, 0.4, 0.03))
+    m.box('#3a2a1c', matrix=T(0, 0, 0.03), size=(0.14, 0.03, 0.03))
+
+
+def sunglasses(m):
+    for s in (-1, 1):
+        m.box('#1b1d22', matrix=T(s * 0.22, 0, 0), size=(0.34, 0.04, 0.2), deform=lambda p: (p[0], p[1], p[2] - (0.03 if p[2] < 0 and abs(p[0]) > 0.1 else 0)))
+        m.box('#1b1d22', matrix=T(s * 0.4, 0.2, 0.05), size=(0.03, 0.4, 0.03))
+    m.box('#1b1d22', matrix=T(0, 0, 0.06), size=(0.14, 0.04, 0.04))
+
+
+def scarf(m):
+    m.torus(lambda c: hexrgb('#d9453c') if int((math.atan2(c.y, c.x) + 3.2) * 3) % 2 else hexrgb('#f3ead6'), R=0.45, r=0.1, seg=18, tube=6)
+    m.box('#d9453c', matrix=T(0.25, -0.38, -0.28) @ R('X', 10), size=(0.16, 0.06, 0.5))
+
+
+def bowtie(m):
+    for s in (-1, 1):
+        m.cone('#d9453c', matrix=T(s * 0.16, 0, 0) @ R('Y', s * 90) @ S(1, 0.6, 1), seg=4, r1=0.16, r2=0.04, depth=0.3)
+    m.box('#b5352a', size=(0.1, 0.08, 0.12))
+
+
+def backpack(m):
+    m.box('#4f9e5b', matrix=T(0, 0, 0.3), size=(0.7, 0.35, 0.8), deform=lambda p: (p[0] * (1 - max(0, p[2]) * 0.15), p[1], p[2]))
+    m.box('#3f8a4a', matrix=T(0, -0.2, 0.18), size=(0.5, 0.1, 0.35))
+    m.box('#f2c23a', matrix=T(0, -0.26, 0.24), size=(0.12, 0.02, 0.06))
+    m.cylinder('#e8eef4', matrix=T(0, 0.02, 0.75) @ R('Y', 90), seg=10, r=0.12, depth=0.62)
+
+
+def flower_pin(m):
+    for k in range(6):
+        a = k / 6 * math.pi * 2
+        m.sphere('#f08aa8', matrix=T(math.cos(a) * 0.16, 0, math.sin(a) * 0.16) @ S(0.12, 0.05, 0.12), seg=8, rings=5)
+    m.sphere('#f6d04a', r=0.1, seg=8, rings=5)
+    m.sphere('#5f9a4a', matrix=T(0.2, 0.02, -0.18) @ S(0.16, 0.04, 0.07), seg=8, rings=4)
+
+
+def ticket(colour, band):
+    def build(m):
+        m.box(colour, size=(0.9, 0.04, 0.55))
+        m.box('#c9ced2', matrix=T(0, -0.03, -0.06), size=(0.7, 0.02, 0.28))
+        m.box(band, matrix=T(0, -0.03, 0.19), size=(0.7, 0.02, 0.08))
+        m.sphere('#f2c23a', matrix=T(0.32, -0.04, 0.19), r=0.05, seg=8, rings=5)
+    return build
+
+
+BUILD.update({
+    'lure-none': (lure_plain, 'icon', 0.5), 'lure-big': (lure_big, 'icon', 0.5), 'lure-small': (lure_small, 'icon', 0.5),
+    'lure-sparkle': (lure_sparkle, 'icon', 0.5), 'lure-magnet': (magnet, 'icon', 0.5), 'lure-twin': (twin_hook, 'icon', 0.5),
+    'lure-lucky': (clover, 'icon', 0.5), 'lure-rain': (rain_charm, 'icon', 0.5),
+    'detector': (detector, 'prop', 1.0), 'seaglass': (seaglass, 'prop', 0.12), 'bounce-shroom': (bounce_shroom, 'prop', 1.4),
+    'x-glasses': (glasses_round, 'extra', 0.2), 'x-shades': (sunglasses, 'extra', 0.2), 'x-scarf': (scarf, 'extra', 0.25),
+    'x-bowtie': (bowtie, 'extra', 0.12), 'x-backpack': (backpack, 'extra', 0.5), 'x-flower': (flower_pin, 'extra', 0.14),
+    'ticket-penny': (ticket('#f6e6c2', '#4f9e5b'), 'icon', 0.5), 'ticket-lucky': (ticket('#e6f2ff', '#3a78c9'), 'icon', 0.5),
+    'ticket-splash': (ticket('#ffe8f0', '#d9453c'), 'icon', 0.5),
+})
+
+
 def main():
     wanted = [a for a in sys.argv[1:] if a in BUILD] or list(BUILD)
     index_file = os.path.join(OUT, 'index.json')

@@ -1,6 +1,9 @@
 // The bait shop: sell fish, buy rods, bait, hats, things for around the island, upgrades.
-import { valueOf, BY_ID, sayLength } from '../fishing/fish';
-import { BAITS, BOAT_LICENCE, COOLERS, FURNITURE, HATS, RODS, levelFor } from '../game/economy';
+import { valueOf, BY_ID, sayLength, stars } from '../fishing/fish';
+import { BAITS, BOAT_LICENCE, COOLERS, DETECTOR, EXTRAS, FURNITURE, HATS, LURES, RODS, levelFor } from '../game/economy';
+import { TICKETS, makeTicket } from '../game/tickets';
+import { newTitles } from '../game/titles';
+import { scratchTicket } from './scratch';
 import { sell, spend } from '../game/progress';
 import type { Session } from '../game/session';
 import { el, icon } from './hud';
@@ -41,7 +44,7 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       save.bag.forEach((c, i) => {
         const sp = BY_ID[c.species];
         const row = el('div', 'row');
-        row.innerHTML = `<img src="${icon(`fish-${c.species}`)}" alt="" style="${c.variant === 'golden' ? 'filter:sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.15)' : c.variant === 'shiny' ? 'filter:drop-shadow(0 0 5px #9fd3ff)' : ''}"><div class="grow"><div class="title">${sp.name}${c.variant !== 'normal' ? ` <b class="vb ${c.variant}">${c.variant}</b>` : ''}</div><div class="sub">${sayLength(c.size)}${c.huge ? ' · huge!' : ''}</div></div>`;
+        row.innerHTML = `<img src="${icon(`fish-${c.species}`)}" alt="" class="q-${c.variant}"><div class="grow"><div class="title">${sp.name}${c.variant !== 'normal' ? ` <b class="vb ${c.variant}">${stars(c.variant)}</b>` : ''}</div><div class="sub">${sayLength(c.size)}${c.huge ? ' · huge!' : ''}</div></div>`;
         const b = el('button', 'btn', `${valueOf(c)}`);
         b.onclick = () => {
           const r = sell(save, [i]);
@@ -81,11 +84,12 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         body.append(row);
       }
     } else if (tab === 'Bait') {
-      body.append(el('p', '', 'Better bait brings fussier fish. One is used up with each catch; worms never run out.'));
+      body.append(el('p', '', 'Bait decides how fine your fish are (★ fine, ★★ shiny, ★★★ golden, ★★★★ prismatic) and which fussy fish bite. One is used up with each catch; worms never run out.'));
       for (const b of BAITS) {
         const have = b.id === 'bait-worm' ? '∞' : String(save.baits[b.id] ?? 0);
         const row = el('div', 'row');
-        row.innerHTML = `<img src="${icon(b.id)}" alt=""><div class="grow"><div class="title">${b.name} <small>(${have})</small></div><div class="sub">${b.blurb}</div></div>`;
+        const finer = Math.round(b.quality.reduce((a, q) => a + q, 0) * 1000) / 10;
+        row.innerHTML = `<img src="${icon(b.id)}" alt=""><div class="grow"><div class="title">${b.name} <small>(${have})</small></div><div class="sub">${b.blurb}</div><div class="sub">★ finer fish: ${finer}% · ★★★ golden or better: ${Math.round((b.quality[2] + b.quality[3]) * 1000) / 10}%</div></div>`;
         const col = el('div', '');
         col.style.cssText = 'display:flex;flex-direction:column;gap:6px';
         const use = el('button', `btn ${save.bait === b.id ? 'plain' : 'green'}`, save.bait === b.id ? 'Using' : 'Use');
@@ -113,6 +117,79 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         row.append(col);
         body.append(row);
       }
+    } else if (tab === 'Lures') {
+      body.append(el('p', '', 'A lure changes which fish takes the bait. One at a time, never used up.'));
+      for (const l of LURES) {
+        const owned = save.lures.includes(l.id);
+        const row = el('div', 'row');
+        row.innerHTML = `<img src="${icon(l.id)}" alt=""><div class="grow"><div class="title">${l.name}</div><div class="sub">${l.blurb}</div></div>`;
+        const b = el('button', `btn ${owned ? (save.lure === l.id ? 'plain' : 'green') : ''}`);
+        if (owned) {
+          b.textContent = save.lure === l.id ? 'Using' : 'Use';
+          b.onclick = () => {
+            save.lure = l.id;
+            s.changed();
+            sheet.refresh();
+          };
+        } else if (level < l.level) {
+          b.textContent = `Lv ${l.level}`;
+          b.disabled = true;
+        } else {
+          b.innerHTML = coin(l.price);
+          b.onclick = () => buy(l.price, () => {
+            save.lures.push(l.id);
+            save.lure = l.id;
+            s.hud.toast(`${l.name} on the line!`, 'good');
+          });
+        }
+        row.append(b);
+        body.append(row);
+      }
+    } else if (tab === 'Tickets') {
+      body.append(el('p', '', `"Feeling lucky? Scratch off three of a kind and you win." Played ${save.tickets.played}, best win ${save.tickets.best.toLocaleString()}.`));
+      for (const k of TICKETS) {
+        const row = el('div', 'row');
+        row.innerHTML = `<img src="${icon(`ticket-${k.id}`)}" alt=""><div class="grow"><div class="title">${k.name}</div><div class="sub">${k.blurb}</div><div class="sub">👑 pays ${(2500 * k.price / 25).toLocaleString()}</div></div>`;
+        const b = el('button', 'btn coral');
+        b.innerHTML = coin(k.price);
+        b.onclick = () => {
+          if (!spend(save, k.price)) {
+            s.hud.toast("You can't afford that yet.");
+            return;
+          }
+          const t = makeTicket(k, (Date.now() ^ (save.tickets.played * 2654435761)) >>> 0);
+          save.tickets.played++;
+          s.changed();
+          sheet.refresh();
+          scratchTicket(app, s.audio, t, () => {
+            save.coins += t.coins;
+            save.tokens += t.tokens;
+            save.tickets.best = Math.max(save.tickets.best, t.coins);
+            for (const n of newTitles(save)) s.hud.toast(`New title: ${n}!`, 'gold');
+            s.changed();
+            sheet.refresh();
+          });
+        };
+        row.append(b);
+        body.append(row);
+      }
+    } else if (tab === 'Wear') {
+      const grid = el('div', 'grid');
+      for (const x of EXTRAS) {
+        const owned = save.extras.includes(x.id);
+        const t = el('button', `tile${save.extra === x.id ? ' on' : ''}`);
+        t.innerHTML = `<img src="${icon(x.id)}" alt="">${x.name}${owned ? '<small>Owned</small>' : coin(x.price)}`;
+        t.onclick = () => {
+          if (owned) s.wearExtra(save.extra === x.id ? null : x.id);
+          else buy(x.price, () => {
+            save.extras.push(x.id);
+            s.wearExtra(x.id);
+          });
+          sheet.refresh();
+        };
+        grid.append(t);
+      }
+      body.append(el('p', '', 'Something to wear with your hat.'), grid);
     } else if (tab === 'Hats') {
       const grid = el('div', 'grid');
       for (const h of HATS.filter((x) => !x.gift)) {
@@ -182,7 +259,25 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       }
       boat.append(b);
       body.append(boat);
+      const det = el('div', 'row');
+      det.innerHTML = `<img src="${icon('detector')}" alt=""><div class="grow"><div class="title">Metal detector</div><div class="sub">Beeps faster near buried things. New ones every day. Turn it on from Fun.</div></div>`;
+      const d = el('button', 'btn');
+      if (save.detector) {
+        d.textContent = 'Yours';
+        d.disabled = true;
+      } else if (level < DETECTOR.level) {
+        d.textContent = `Lv ${DETECTOR.level}`;
+        d.disabled = true;
+      } else {
+        d.innerHTML = coin(DETECTOR.price);
+        d.onclick = () => buy(DETECTOR.price, () => {
+          save.detector = true;
+          s.hud.toast('A metal detector! Switch it on from Fun.', 'good');
+        });
+      }
+      det.append(d);
+      body.append(det);
     }
-  }, ['Sell', 'Rods', 'Bait', 'Hats', 'Things', 'Chests', 'Upgrades']);
+  }, ['Sell', 'Rods', 'Lures', 'Bait', 'Tickets', 'Chests', 'Hats', 'Wear', 'Things', 'Upgrades']);
   return sheet;
 }

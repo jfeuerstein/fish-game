@@ -18,10 +18,36 @@ export class Player {
   onStep: ((surface: 'grass' | 'wood' | 'water') => void) | null = null;
   /** Whether the player is free to walk (not sitting, fishing, rowing...). */
   free = true;
+  /** Up and down speed while in the air. */
+  private vy = 0;
+  /** A push carried through the air (from a bounce mushroom). */
+  private fling = new THREE.Vector2();
+  airborne = false;
+  /** Where the player last stood on firm ground, to go back to after a jump into deep water. */
+  private lastFirm = new THREE.Vector3();
+  /** Called on landing, with how hard. */
+  onLand: ((speed: number) => void) | null = null;
 
   constructor(readonly body: Character, private field: Heightfield, private solid: Colliders) {}
 
+  /** Hop. */
+  jump(): void {
+    if (this.airborne || !this.free) return;
+    this.vy = 5.6;
+    this.airborne = true;
+  }
+
+  /** Thrown into the air by a bounce mushroom. */
+  launch(up: number, yaw: number, forward: number): void {
+    this.vy = up;
+    this.fling.set(Math.sin(yaw) * forward, Math.cos(yaw) * forward);
+    this.airborne = true;
+  }
+
   place(x: number, z: number, yaw: number): void {
+    this.vy = 0;
+    this.airborne = false;
+    this.fling.set(0, 0);
     this.pos.set(x, standHeight(this.field, x, z), z);
     this.yaw = yaw;
     this.speed = 0;
@@ -56,31 +82,52 @@ export class Player {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * (1 - Math.exp(-dt * 12));
     }
-    if (this.speed > 0.02) {
+    if (this.speed > 0.02 || this.airborne) {
       const step = this.speed * dt;
-      let nx = this.pos.x + Math.sin(this.yaw) * step;
-      let nz = this.pos.z + Math.cos(this.yaw) * step;
+      let nx = this.pos.x + Math.sin(this.yaw) * step + this.fling.x * dt;
+      let nz = this.pos.z + Math.cos(this.yaw) * step + this.fling.y * dt;
       [nx, nz] = this.solid.resolve(nx, nz, 0.32);
-      if (walkable(this.field, nx, nz) && this.climbable(nx, nz)) {
+      // In the air anything goes, short of the edge of the world; on foot, only where it may be walked.
+      const ok = (x: number, z: number): boolean => (this.airborne ? Math.abs(x) < this.field.half - 3 && Math.abs(z) < this.field.half - 3 && standHeight(this.field, x, z) < this.pos.y + 0.5 : walkable(this.field, x, z) && this.climbable(x, z));
+      if (ok(nx, nz)) {
         this.pos.x = nx;
         this.pos.z = nz;
-      } else if (walkable(this.field, nx, this.pos.z) && this.climbable(nx, this.pos.z)) {
+      } else if (ok(nx, this.pos.z)) {
         this.pos.x = nx;
-      } else if (walkable(this.field, this.pos.x, nz) && this.climbable(this.pos.x, nz)) {
+      } else if (ok(this.pos.x, nz)) {
         this.pos.z = nz;
-      } else this.speed *= 0.5;
+      } else {
+        this.speed *= 0.5;
+        this.fling.multiplyScalar(0.3);
+      }
       this.stepClock += step;
       const stride = 0.55 + this.pace * 0.3;
-      if (this.stepClock > stride) {
+      if (this.stepClock > stride && !this.airborne) {
         this.stepClock = 0;
         const floor = floorAt(this.pos.x, this.pos.z);
         this.onStep?.(floor !== null ? 'wood' : wading ? 'water' : 'grass');
       }
     }
     const ground = standHeight(this.field, this.pos.x, this.pos.z);
-    this.pos.y += (ground - this.pos.y) * (1 - Math.exp(-dt * 20));
+    if (this.airborne) {
+      this.vy -= 15 * dt;
+      this.pos.y += this.vy * dt;
+      if (this.pos.y <= ground && this.vy < 0) {
+        const hit = -this.vy;
+        this.airborne = false;
+        this.vy = 0;
+        this.fling.set(0, 0);
+        this.pos.y = ground;
+        // Landed in water too deep to stand in: back to where the jump began.
+        if (!walkable(this.field, this.pos.x, this.pos.z)) this.pos.copy(this.lastFirm);
+        this.onLand?.(hit);
+      }
+    } else {
+      this.pos.y += (ground - this.pos.y) * (1 - Math.exp(-dt * 20));
+      if (walkable(this.field, this.pos.x, this.pos.z) && !waterAt(this.field, this.pos.x, this.pos.z)) this.lastFirm.copy(this.pos);
+    }
     this.sync();
-    this.body.action = this.speed > 0.25 ? 'walk' : this.body.action === 'walk' ? 'idle' : this.body.action;
+    this.body.action = this.airborne ? 'jump' : this.speed > 0.25 ? 'walk' : this.body.action === 'walk' || this.body.action === 'jump' ? 'idle' : this.body.action;
     this.body.speed = Math.min(1, Math.max(0, (this.speed - WALK_SPEED * 0.6) / (RUN_SPEED - WALK_SPEED * 0.6)));
   }
 

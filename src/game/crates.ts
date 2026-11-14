@@ -1,5 +1,6 @@
 // Chests opened with tokens: a strip of prizes spins past and slows to a stop on one. Pure.
 import { rng } from '../core/rng';
+import type { Variant } from '../fishing/fish';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -58,8 +59,8 @@ export const CHESTS: readonly Chest[] = [
 ];
 
 /** How many tokens a catch is worth: shiny and golden fish, and a first-ever legend. */
-export function tokensFor(variant: 'normal' | 'shiny' | 'golden', firstLegend: boolean): number {
-  return (variant === 'golden' ? 3 : variant === 'shiny' ? 1 : 0) + (firstLegend ? 1 : 0);
+export function tokensFor(variant: Variant, firstLegend: boolean): number {
+  return ({ normal: 0, fine: 0, shiny: 1, golden: 3, prismatic: 8 } as const)[variant] + (firstLegend ? 1 : 0);
 }
 
 /** What a prize already owned is worth instead, in tokens. */

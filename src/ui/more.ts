@@ -1,5 +1,6 @@
 // More: the wardrobe, settings, the save code, and how to play.
-import { CHARACTERS, HATS } from '../game/economy';
+import { CHARACTERS, EXTRAS, HATS } from '../game/economy';
+import { TITLES } from '../game/titles';
 import { SAVE_KEY, fromCode, newSave, toCode } from '../game/save';
 import type { Session } from '../game/session';
 import { PLACES } from '../world/layout';
@@ -41,6 +42,39 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         hats.append(t);
       }
       body.append(hats);
+      body.append(el('div', 'section', 'Wearing'));
+      const extras = el('div', 'grid');
+      const bare = el('button', `tile${save.extra === null ? ' on' : ''}`, '<div style="height:64px;font-size:40px;line-height:64px">∅</div>Nothing');
+      bare.onclick = () => {
+        s.wearExtra(null);
+        sheet.refresh();
+      };
+      extras.append(bare);
+      for (const x of EXTRAS.filter((e) => save.extras.includes(e.id))) {
+        const t = el('button', `tile${save.extra === x.id ? ' on' : ''}`);
+        t.innerHTML = `<img src="${icon(x.id)}" alt="">${x.name}`;
+        t.onclick = () => {
+          s.wearExtra(x.id);
+          sheet.refresh();
+        };
+        extras.append(t);
+      }
+      body.append(extras);
+      body.append(el('div', 'section', 'Title'));
+      for (const t of TITLES) {
+        const got = save.titles.includes(t.name);
+        const row = el('div', 'row');
+        row.innerHTML = `<div class="grow"><div class="title" style="${got ? '' : 'opacity:.45'}">${t.name}</div><div class="sub">${t.how}</div></div>`;
+        if (got) {
+          const b = el('button', `btn ${save.title === t.name ? 'plain' : 'green'}`, save.title === t.name ? 'Shown' : 'Show');
+          b.onclick = () => {
+            s.showTitle(save.title === t.name ? null : t.name);
+            sheet.refresh();
+          };
+          row.append(b);
+        }
+        body.append(row);
+      }
       if (!save.hats.length) body.append(el('p', '', 'No hats yet: Gus sells them, and chests hold rarer ones.'));
       const b = el('button', 'big-btn', `Open chests · ${save.tokens} tokens`);
       b.onclick = openChests;
@@ -81,6 +115,7 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         body.append(row);
       };
       toggle('Real clock', 'Follow the time where you are, instead of a 24-minute island day.', save.settings.clock === 'real', () => (save.settings.clock = save.settings.clock === 'real' ? 'island' : 'real'));
+      toggle('Retro pixels', 'Big soft pixels, like an old computer game. Easier on the battery too.', save.settings.pixels, () => (save.settings.pixels = !save.settings.pixels));
       toggle('Shadows', 'Softer on the battery when off. Takes effect when the game is next opened.', save.settings.quality === 'high', () => (save.settings.quality = save.settings.quality === 'high' ? 'low' : 'high'));
       body.append(el('div', 'section', 'For testing'));
       const pinRow = (label: string, options: (string | null)[], get: () => string | null, set: (v: string | null) => void): void => {
@@ -157,7 +192,11 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         ['A bite', 'Little nibbles first. When the bobber goes right under and the ! shows, tap Hook!'],
         ['Reeling', 'Hold to reel. When the fish thrashes or the line bar goes red, let go for a moment, then reel again.'],
         ['Where to fish', 'The sea, the deep water off the end of the pier, the pond in the woods and the creek all have their own fish. Some only come out at night, at dawn and dusk, or in the rain.'],
-        ['Tokens', 'Shiny and golden fish give tokens. Spend them on chests at the shop for hats, things and new characters.'],
+        ['Quality', 'Fish come Normal, ★ Fine, ★★ Shiny, ★★★ Golden or ★★★★ Prismatic. Better bait finds finer fish, worth far more.'],
+        ['Lures', 'A lure changes which fish bites: the biggest of three, the rarest, two at once, more treasure. Buy them at the shop.'],
+        ['Tokens', 'Shiny, golden and prismatic fish give tokens. Spend them on chests at the shop for hats, things and new characters.'],
+        ['Luck', "Gus sells scratch tickets. Some casts bring up a treasure chest. A lucky catch can call a rain cloud that follows you, with rain fish under it."],
+        ['Secrets', "Twelve pieces of sea glass are hidden round the island. Big red mushrooms bounce you high. With a metal detector, buried things turn up every day."],
         ['Errands', 'The notice board by the shop has errands. Hand them in for coins.'],
       ];
       for (const [t, d] of tips) {

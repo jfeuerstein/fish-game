@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { rng } from '../core/rng';
 import { BAITS, RODS } from '../game/economy';
 import type { Zone } from '../world/island';
-import { BY_ID, SPECIES, valueOf } from './fish';
+import { BY_ID, JOURNAL_SPECIES as SPECIES, valueOf } from './fish';
 import { type Conditions, candidates, rollCatch } from './roll';
 import { type Fighter, startReel, stepReel } from './reel';
 
@@ -41,7 +41,7 @@ describe('fish', () => {
     const base: Conditions = { zone: 'deep', hour: 23, raining: true, rod: RODS[0], bait: BAITS[0] };
     const plain = count(base);
     const best = count({ ...base, rod: RODS[4], bait: BAITS[5] });
-    expect(plain).toBeLessThan(0.03);
+    expect(plain).toBeLessThan(0.05);
     expect(best).toBeGreaterThan(plain * 3);
   });
 

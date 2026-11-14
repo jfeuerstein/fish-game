@@ -108,29 +108,57 @@ export class Audio {
     });
   }
 
-  /** Change the music, crossfading. */
+  /** Change the music, crossfading. A piece plays through, then there is a rest, then it comes back. */
   setMusic(name: string): void {
     if (!this.ctx || this.muted || this.musicWanted === name) return;
     this.musicWanted = name;
-    const now = this.ctx.currentTime;
     if (this.music) {
       const old = this.music.loop;
-      old.gain.gain.setTargetAtTime(0, now, 1.2);
-      setTimeout(() => old.src.stop(), 6000);
+      old.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 1.2);
+      setTimeout(() => {
+        try {
+          old.src.stop();
+        } catch {
+          /* Already stopped. */
+        }
+      }, 6000);
       this.music = null;
     }
+    // A change of mood starts the new piece soon, but not on top of the old one.
+    clearTimeout(this.restTimer);
+    this.restTimer = window.setTimeout(() => this.startPiece(), this.resting ? 1500 : 2500);
+  }
+
+  private restTimer = 0;
+  private resting = false;
+  /** Keep the music going without rests (a radio nearby). */
+  keepPlaying = false;
+
+  private startPiece(): void {
+    const name = this.musicWanted;
+    if (!this.ctx || !name) return;
+    this.resting = false;
     void this.load(`music-${name}`).then((buf) => {
-      if (!buf || !this.ctx || this.musicWanted !== name) return;
+      if (!buf || !this.ctx || this.musicWanted !== name || this.music) return;
       const g = this.ctx.createGain();
       g.gain.value = 0;
       g.connect(this.musicBus);
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
-      src.loop = true;
       src.connect(g);
       src.start();
-      g.gain.setTargetAtTime(1, this.ctx.currentTime, 2);
+      g.gain.setTargetAtTime(1, this.ctx.currentTime, 2.5);
+      // Fade out over the last few seconds.
+      g.gain.setTargetAtTime(0, this.ctx.currentTime + buf.duration - 6, 2);
       this.music = { name, loop: { src, gain: g } };
+      src.onended = () => {
+        if (this.music?.loop.src !== src) return;
+        this.music = null;
+        this.resting = true;
+        // Quiet for a minute or two: the waves and birds have the island to themselves.
+        const rest = this.keepPlaying ? 2000 : 50000 + Math.random() * 70000;
+        this.restTimer = window.setTimeout(() => this.startPiece(), rest);
+      };
     });
   }
 }

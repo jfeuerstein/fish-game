@@ -90,7 +90,7 @@ export function advance(q: Quest, e: QuestEvent): Quest {
       case 'zone': add = real && e.zone === q.zone ? 1 : 0; break;
       case 'species': add = e.fish.species === q.species ? 1 : 0; break;
       case 'size': return real && e.fish.size >= q.goal ? { ...q, progress: q.goal } : q;
-      case 'shiny': add = e.fish.variant !== 'normal' ? 1 : 0; break;
+      case 'shiny': add = e.fish.variant === 'shiny' || e.fish.variant === 'golden' || e.fish.variant === 'prismatic' ? 1 : 0; break;
       case 'night': add = real && e.night ? 1 : 0; break;
       case 'rain': add = real && e.raining ? 1 : 0; break;
       case 'tier': add = s && q.tier && RANK.indexOf(s.tier) >= RANK.indexOf(q.tier) ? 1 : 0; break;

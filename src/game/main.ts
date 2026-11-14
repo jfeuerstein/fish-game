@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { loadIndex } from '../assets/models';
 import { Audio } from '../audio/audio';
 import { parseConfig } from '../config';
-import { BY_ID, TIER_COLOR, TIER_LABEL, type Catch, sayLength } from '../fishing/fish';
+import { BY_ID, TIER_COLOR, TIER_LABEL, type Catch, quip, sayLength } from '../fishing/fish';
+import { rollCatch } from '../fishing/roll';
 import { Fishing } from '../fishing/fishing';
 import { Effects } from '../fx/particles';
 import { Controls } from '../input/controls';
@@ -30,12 +31,15 @@ import { PlacedThings } from '../world/placed';
 import type { Seat } from '../world/props';
 import { World } from '../world/world';
 import { bitesAt, dayNumber, hourAt, pinnedHour, rainingAt, sayHour } from './clock';
-import { baitById, levelFor, rodById } from './economy';
+import { HATS, baitById, levelFor, lureById, rodById } from './economy';
+import { newTitles } from './titles';
+import { buriedToday, digUp, SHROOMS, SEA_GLASS } from '../world/secrets';
+import { Finds } from '../world/finds';
 import { applyCatch } from './progress';
-import { SAVE_KEY, type Save, parseSave } from './save';
+import { BACKUP_KEY, SAVE_KEY, type Save, parseSave } from './save';
 import type { Session } from './session';
 
-type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk';
+type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk' | 'dig';
 
 export class Game implements Session {
   readonly cfg = parseConfig(location.search);
@@ -75,11 +79,38 @@ export class Game implements Session {
   private board = new THREE.Vector3(10, 0, 9);
   private started = false;
   private lastStats = '';
+  finds!: Finds;
+  detecting = false;
+  /** The island's rain cloud, following the player after a lucky catch, until this time (ms). */
+  private cloudUntil = 0;
+  private digging = 0;
+  private buried: { x: number; z: number; key: string }[] = [];
+  private buriedDay = -1;
+  private beepClock = 0;
+  private beepGap = 1;
+  private nearBuried: { x: number; z: number; key: string } | null = null;
+  private titleClock = 0;
 
   constructor() {
     let text: string | null = null;
     try {
       text = this.cfg.fresh ? null : localStorage.getItem(SAVE_KEY);
+      if (!this.cfg.fresh) {
+        // If the save is ever lost or broken, an older copy is still there.
+        let good = false;
+        try {
+          good = !!text && typeof JSON.parse(text) === 'object';
+        } catch {
+          good = false;
+        }
+        const backup = localStorage.getItem(BACKUP_KEY);
+        if (!good && backup) text = JSON.parse(backup).save;
+        else if (good) {
+          const kept = backup ? (JSON.parse(backup) as { day: number }).day : -1;
+          const today = Math.floor(Date.now() / 86_400_000);
+          if (kept !== today) localStorage.setItem(BACKUP_KEY, JSON.stringify({ day: today, save: text }));
+        }
+      }
     } catch {
       /* No storage: the game plays and forgets. */
     }
@@ -92,7 +123,8 @@ export class Game implements Session {
     this.app = document.getElementById('app')!;
     const low = this.cfg.low || this.save.settings.quality === 'low';
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, low ? 1.5 : 2));
+    this.renderer.setPixelRatio(this.save.settings.pixels ? 0.42 : Math.min(window.devicePixelRatio, low ? 1.5 : 2));
+    if (this.save.settings.pixels) canvas.style.imageRendering = 'pixelated';
     this.renderer.shadowMap.enabled = !low;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -153,11 +185,26 @@ export class Game implements Session {
     this.chalk.onDone = () => this.endChalk();
     this.chalk.onStroke = () => this.audio.play('chalk', { volume: 0.25, rate: 0.9 + Math.random() * 0.3 });
     this.world.group.add(this.chalk.mesh);
-    this.uke = new Uke(this.app, this.audio);
+    this.uke = new Uke(this.app, this.audio, () => this.save);
+    this.uke.onChange = () => this.changed();
     this.uke.onNote = () => (this.body.pluck = 1);
     this.uke.onDone = () => this.stopActivity();
     this.placed = new PlacedThings(this.world, this.world.field);
     for (const p of this.save.placed) await this.placed.add(p);
+    this.finds = new Finds(this.world.field);
+    this.world.group.add(this.finds.group);
+    if (models) {
+      await this.finds.load(this.save.glass);
+      await this.body.setExtra(this.save.extra);
+    }
+    this.player.onLand = (v) => {
+      if (v > 6) {
+        this.audio.play('stepwood', { volume: 0.5, rate: 0.7 });
+        this.rig.bump(Math.min(0.15, v * 0.01));
+      }
+    };
+    this.hud.onJump = () => this.jump();
+    window.addEventListener('keydown', (e) => e.key === ' ' && this.jump());
 
     const openChests = (): void => this.sheets.chests.show();
     this.sheets = {
@@ -221,7 +268,8 @@ export class Game implements Session {
 
   private fishingHooks(): ConstructorParameters<typeof Fishing>[3] {
     return {
-      conditions: (zone) => ({ zone, hour: this.hour, raining: this.raining, rod: rodById(this.save.rod), bait: baitById(this.save.bait) }),
+      conditions: (zone) => ({ zone, hour: this.hour, raining: this.raining, rod: rodById(this.save.rod), bait: baitById(this.save.bait), lure: lureById(this.save.lure) }),
+      tip: (id) => this.tip(id),
       landed: (c, zone) => this.landed(c, zone),
       snapped: () => {
         this.save.stats.snapped++;
@@ -242,13 +290,28 @@ export class Game implements Session {
     };
   }
 
-  private landed(c: Catch, zone: Parameters<typeof applyCatch>[2]): void {
+  private landed(c: Catch, zone: Parameters<typeof applyCatch>[2], second = false): void {
+    if (c.species === 'treasure') return this.treasure();
     const night = !bitesAt('day', this.hour);
     const r = applyCatch(this.save, c, zone, night, this.raining);
     const s = BY_ID[c.species];
-    this.hud.showCatch({ icon: `${import.meta.env.BASE_URL}icons/fish-${c.species}.webp`, name: s.name, size: sayLength(c.size) + (c.huge ? ' · huge!' : ''), tier: TIER_LABEL[s.tier], tierColor: TIER_COLOR[s.tier], variant: c.variant, value: r.value, first: r.first, best: r.best, tokens: r.tokens });
-    this.audio.play(c.variant !== 'normal' || s.tier === 'legendary' || s.tier === 'epic' ? 'rare' : 'catch', { volume: 0.8 });
+    const lure = lureById(this.save.lure);
+    const notes: string[] = [];
+    // A lucky clover sometimes brings a little bag of coins with the fish.
+    if (lure.effect === 'lucky' && Math.random() < 0.22) {
+      const bag = Math.round(10 + r.value * 0.6);
+      this.save.coins += bag;
+      notes.push(`+${bag} coin bag!`);
+    }
+    // A lucky catch can call a rain cloud, with rain fish under it.
+    if (!second && Math.random() < (lure.effect === 'rain' ? 0.3 : 0.05)) {
+      this.cloudUntil = performance.now() + 75000 / this.cfg.warp;
+      setTimeout(() => this.hud.toast('A little rain cloud has gathered over you. Rain fish are biting!', 'good'), 2200);
+    }
+    this.hud.showCatch({ icon: `${import.meta.env.BASE_URL}icons/fish-${c.species}.webp`, name: s.name, size: sayLength(c.size) + (c.huge ? ' · huge!' : ''), tier: TIER_LABEL[s.tier], tierColor: TIER_COLOR[s.tier], variant: c.variant, value: r.value, first: r.first, best: r.best, tokens: r.tokens, quip: quip(c), note: [second ? 'Twin catch!' : '', ...notes].filter(Boolean).join(' ') || undefined });
+    this.audio.play(c.variant === 'golden' || c.variant === 'prismatic' || c.variant === 'shiny' || s.tier === 'legendary' || s.tier === 'epic' ? 'rare' : 'catch', { volume: 0.8 });
     if (!r.kept) this.hud.toast('Your cooler is full, so you let it go. Sell some at the shop!');
+    if (c.variant !== 'normal') this.tip('quality');
     if (r.tokens) setTimeout(() => this.hud.toast(`+${r.tokens} token${r.tokens > 1 ? 's' : ''}! Open a chest at the shop.`, 'gold'), 700);
     for (const _ of r.finished) setTimeout(() => this.hud.toast('An errand is done! Hand it in at the board.', 'good'), 1200);
     if (r.levelUp) {
@@ -257,7 +320,63 @@ export class Game implements Session {
         this.hud.toast(`Level ${r.levelUp}! New things at the shop.`, 'gold');
       }, 1600);
     }
+    // A twin hook sometimes brings up a second fish.
+    const cond = this.fishing.lastConditions;
+    if (!second && lure.effect === 'twin' && cond && Math.random() < 0.18) {
+      const extra = rollCatch({ ...cond, lure: undefined }, Math.random);
+      if (extra.species !== 'treasure') setTimeout(() => this.landed(extra, zone, true), 1800);
+    }
+    this.checkTitles();
     this.changed();
+  }
+
+  /** A treasure chest on the line: opened on the spot. */
+  private treasure(): void {
+    const level = levelFor(this.save.xp).level;
+    const coins = Math.round((60 + Math.random() * 160) * (1 + level * 0.08));
+    this.save.coins += coins;
+    const token = Math.random() < 0.3 ? 1 : 0;
+    this.save.tokens += token;
+    const missing = HATS.filter((h) => h.gift && !this.save.hats.includes(h.id));
+    let hat = '';
+    if (missing.length && Math.random() < 0.1) {
+      const h = missing[Math.floor(Math.random() * missing.length)];
+      this.save.hats.push(h.id);
+      hat = h.name;
+    }
+    if (!this.save.journal.treasure) this.save.journal.treasure = { count: 0, best: 50, variants: ['normal'], first: Date.now() };
+    this.save.journal.treasure.count++;
+    this.hud.showCatch({ icon: `${import.meta.env.BASE_URL}icons/fish-treasure.webp`, name: 'Treasure Chest', size: 'It rattles!', tier: 'Treasure', tierColor: '#d79a1c', variant: 'golden', value: coins, first: false, best: false, tokens: token, quip: hat ? `Inside, wrapped in seaweed: a ${hat}!` : 'Coins, a little damp.', note: undefined });
+    this.audio.play('rare');
+    this.audio.play('coin');
+    this.changed();
+  }
+
+  /** A word of help the first time something happens. */
+  private tip(id: string): void {
+    const key = `tip-${id}`;
+    if (this.save.hints.includes(key) || !this.cfg.hud) return;
+    this.save.hints.push(key);
+    const words: Record<string, string> = {
+      bite: 'A bite! Tap Hook! before it lets go.',
+      reel: 'Hold Reel to wind it in.',
+      thrash: 'It is thrashing! Let go for a moment, then reel again.',
+      quality: 'A finer fish! Better bait finds more of these, and they are worth much more.',
+    };
+    if (words[id]) this.hud.toast(words[id]);
+    this.changed();
+  }
+
+  private checkTitles(): void {
+    for (const t of newTitles(this.save)) {
+      setTimeout(() => this.hud.toast(`New title: ${t}! Show it from More › Wardrobe.`, 'gold'), 2400);
+      this.changed();
+    }
+  }
+
+  private jump(): void {
+    if (this.mode !== 'walk' || this.fishing.busy || Sheet.current) return;
+    this.player.jump();
   }
 
   // ---------- Session ----------
@@ -284,6 +403,26 @@ export class Game implements Session {
     this.changed();
   }
 
+  wearExtra(id: string | null): void {
+    this.save.extra = id;
+    void this.body.setExtra(id);
+    this.changed();
+  }
+
+  showTitle(title: string | null): void {
+    this.save.title = title;
+    this.changed();
+  }
+
+  toggleDetector(): void {
+    this.stopActivity();
+    this.detecting = !this.detecting && this.save.detector;
+    this.body.rodOut = !this.detecting;
+    void this.body.hold(this.detecting ? 'detector' : null, 1.0);
+    if (this.detecting) this.hud.toast('Detector on. Walk about: it beeps faster near buried things.');
+    else this.finds.showMound(null);
+  }
+
   become(character: string): void {
     if (!this.save.characters.includes(character) || character === this.save.character) return;
     this.save.character = character;
@@ -298,6 +437,7 @@ export class Game implements Session {
       (this.player as unknown as { body: Character }).body = fresh;
       await fresh.setRod(this.save.rod);
       await fresh.setHat(this.save.hat);
+      await fresh.setExtra(this.save.extra);
       this.fishing = new Fishing(this.world.field, fresh, this.fx, this.fishingHooks(), this.scene);
       this.player.sync();
     });
@@ -318,6 +458,7 @@ export class Game implements Session {
 
   playUke(): void {
     this.stopActivity();
+    if (this.detecting) this.toggleDetector();
     this.mode = 'uke';
     this.player.free = false;
     this.body.action = 'uke';
@@ -380,6 +521,7 @@ export class Game implements Session {
 
   private boardBoat(): void {
     this.stopActivity();
+    if (this.detecting) this.toggleDetector();
     this.mode = 'boat';
     this.boat.aboard = true;
     this.player.free = false;
@@ -481,7 +623,10 @@ export class Game implements Session {
     const gusNear = this.gus.body.group.position.distanceTo(p) < 3;
     const seat = this.mode === 'walk' ? this.nearSeat() : null;
     const thing = this.mode === 'walk' ? this.placed.near(p) : null;
-    if (this.mode === 'boat') hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
+    const dig = this.nearBuried;
+    if (this.mode === 'dig') hud.setSecond(null);
+    else if (dig && this.detecting && this.mode === 'walk') hud.setSecond('Dig', () => this.startDig(dig));
+    else if (this.mode === 'boat') hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
     else if (this.mode === 'sit') hud.setSecond('Stand up', () => this.stopActivity());
     else if (npc) hud.setSecond(`Chat`, () => {
       npc.chat(performance.now());
@@ -503,6 +648,7 @@ export class Game implements Session {
     const flat = new THREE.Vector3(p.x, 0, p.z);
     if (this.mode !== 'boat' && flat.distanceTo(this.shopFront) < 3.2) hud.setAction('Shop', () => this.openSheet('shop'), undefined, 'green');
     else if (this.mode !== 'boat' && flat.distanceTo(this.board) < 2.6) hud.setAction('Errands', () => this.openSheet('board'), undefined, 'green');
+    else if (this.detecting && this.mode === 'walk') hud.setAction('Put away', () => this.toggleDetector(), undefined, 'blue');
     else if ((this.mode === 'walk' || this.mode === 'boat' || this.mode === 'emote') && this.waterAhead()) hud.setAction('Cast', cast, () => f.release(rod));
     else hud.setAction(null);
   }
@@ -524,10 +670,11 @@ export class Game implements Session {
     const mode = this.save.settings.clock;
     const tz = new Date().getTimezoneOffset();
     this.hour = pinnedHour(this.pin.time) ?? hourAt(now, mode, tz);
-    this.raining = this.pin.weather ? this.pin.weather === 'rain' : rainingAt(now, mode);
-    this.rain += ((this.raining ? 1 : 0) - this.rain) * (1 - Math.exp(-dt * 0.4));
-    if (this.frames < 3) this.rain = this.raining ? 1 : 0;
-    void dayNumber;
+    const skyRain = this.pin.weather ? this.pin.weather === 'rain' : rainingAt(now, mode);
+    const cloud = performance.now() < this.cloudUntil;
+    this.raining = skyRain || cloud;
+    this.rain += ((skyRain ? 1 : 0) - this.rain) * (1 - Math.exp(-dt * 0.4));
+    if (this.frames < 3) this.rain = skyRain ? 1 : 0;
 
     const look = this.controls.takeLook();
     this.rig.turn(look.x, look.y);
@@ -571,7 +718,10 @@ export class Game implements Session {
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
     this.world.update(dt, this.hour, this.rain, this.player.pos);
-    this.fx.setRain(this.rain);
+    this.fx.setRain(Math.max(this.rain, cloud ? 0.7 : 0));
+    this.finds.update(dt);
+    this.finds.setCloud(cloud, this.player.pos);
+    if (this.started) this.secrets(dt, now);
     this.fx.update(dt, this.camera);
 
     if (this.started) {
@@ -579,6 +729,7 @@ export class Game implements Session {
       this.hud.setReel(this.fishing.reelState ? this.fishing.reelState.progress : null, this.fishing.reelState?.tension ?? 0, this.fishing.reelState?.thrashing ?? false, this.fishing.fishIcon);
       this.hud.setPower(this.fishing.castPower);
       this.overheads();
+      this.hud.setJump(this.mode === 'walk' && !this.fishing.busy && !Sheet.current && !this.detecting);
       this.sound(dt);
     }
     const lv = levelFor(this.save.xp);
@@ -590,6 +741,113 @@ export class Game implements Session {
     this.hud?.setClock(sayHour(this.hour), this.raining, this.world.sky.palette.night > 0.5);
     this.keep();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Sea glass, bounce mushrooms, the metal detector, digging, and titles. */
+  private secrets(dt: number, now: number): void {
+    const p = this.player.pos;
+    // Bounce mushrooms throw anyone who steps on them.
+    if (this.mode === 'walk' && !this.player.airborne) {
+      const i = this.finds.shroomUnder(p);
+      if (i !== null) {
+        const sh = SHROOMS[i];
+        this.player.launch(sh.up, sh.yaw, sh.forward);
+        this.finds.boing(i);
+        this.audio.play('bite', { rate: 1.7, volume: 0.8 });
+        if (!this.save.hints.includes('tip-shroom')) {
+          this.save.hints.push('tip-shroom');
+          this.hud.toast('Boing!');
+        }
+      }
+    }
+    // Sea glass, picked up by walking into it.
+    const g = this.finds.glassNear(p);
+    if (g !== null && !this.save.glass.includes(g)) {
+      const at = this.finds.take(g);
+      this.save.glass.push(g);
+      this.save.tokens += 1;
+      if (at) this.fx.sparkle(at, false);
+      this.audio.play('rare', { volume: 0.7 });
+      const n = this.save.glass.length;
+      this.hud.toast(n >= SEA_GLASS.length ? 'All twelve pieces of sea glass! +1 token, and the title Beachcomber.' : `Sea glass! ${n} of ${SEA_GLASS.length} found. +1 token`, 'gold');
+      this.checkTitles();
+      this.changed();
+    }
+    // The metal detector beeps faster, and higher, the nearer something buried is.
+    this.nearBuried = null;
+    if (this.detecting) {
+      const day = dayNumber(now, this.save.settings.clock, new Date().getTimezoneOffset());
+      if (day !== this.buriedDay) {
+        this.buriedDay = day;
+        this.buried = buriedToday(this.world.field, day);
+      }
+      let best = Infinity;
+      let spot: { x: number; z: number; key: string } | null = null;
+      for (const b of this.buried) {
+        if (this.save.dug.includes(b.key)) continue;
+        const d = Math.hypot(b.x - p.x, b.z - p.z);
+        if (d < best) {
+          best = d;
+          spot = b;
+        }
+      }
+      this.beepGap = best < 30 ? 0.12 + (best / 30) * 1.1 : 2;
+      this.beepClock += dt;
+      if (best < 30 && this.beepClock > this.beepGap) {
+        this.beepClock = 0;
+        this.audio.play('nibble', { rate: 1.6 + (1 - best / 30) * 1.2, volume: 0.5 });
+      }
+      this.finds.showMound(best < 3 ? spot : null);
+      if (best < 1.9) this.nearBuried = spot;
+      if (this.mode === 'walk' && this.player.pace < 0.05 && this.body.action === 'idle') this.body.action = 'sweep';
+    }
+    if (this.mode === 'dig') {
+      this.digging -= dt;
+      if (this.digging <= 0) this.finishDig();
+    }
+    this.titleClock -= dt;
+    if (this.titleClock <= 0) {
+      this.titleClock = 6;
+      this.checkTitles();
+    }
+  }
+
+  private startDig(spot: { x: number; z: number; key: string }): void {
+    this.mode = 'dig';
+    this.player.free = false;
+    this.body.action = 'dig';
+    this.digging = 1.4;
+    this.nearBuried = spot;
+    (this as unknown as { digSpot: typeof spot }).digSpot = spot;
+    this.audio.play('splashstep', { rate: 0.6, volume: 0.6 });
+  }
+
+  private finishDig(): void {
+    const spot = (this as unknown as { digSpot: { x: number; z: number; key: string } }).digSpot;
+    this.mode = 'walk';
+    this.player.free = true;
+    this.body.action = 'idle';
+    if (!spot || this.save.dug.includes(spot.key)) return;
+    this.save.dug.push(spot.key);
+    const missing = HATS.filter((h) => h.gift && !this.save.hats.includes(h.id)).map((h) => ({ id: h.id, name: h.name }));
+    const find = digUp(Math.floor(spot.x * 1000 + spot.z * 7), levelFor(this.save.xp).level, missing);
+    if (find.kind === 'coins') {
+      this.save.coins += find.coins;
+      this.hud.toast(`You dug up ${find.name}! Worth ${find.coins} coins.`, 'good');
+      this.audio.play('coin');
+    } else if (find.kind === 'token') {
+      this.save.tokens += find.tokens;
+      this.hud.toast(`You dug up ${find.name}! +1 token`, 'gold');
+      this.audio.play('rare');
+    } else {
+      this.save.hats.push(find.id);
+      this.hud.toast(`You dug up a ${find.name}! It's a little muddy.`, 'gold');
+      this.audio.play('rare');
+    }
+    this.finds.showMound(null);
+    this.fx.splash(new THREE.Vector3(spot.x, this.world.field.heightAt(spot.x, spot.z), spot.z), 0.5, 0x8a6440);
+    this.checkTitles();
+    this.changed();
   }
 
   /** Speech bubbles over islanders, and the "!" over the player when a fish bites. */
@@ -610,6 +868,12 @@ export class Game implements Session {
       }
     }
     if (!said) this.hud.say(null);
+    const head = toScreen(this.player.pos.clone().add(new THREE.Vector3(0, this.save.hat ? 1.75 : 1.5, 0)));
+    this.hud.setTag(this.save.title && head.on && this.mode !== 'chalk' ? this.save.title : null, head.x, head.y);
+    if (this.detecting) {
+      const top = toScreen(this.player.pos.clone().add(new THREE.Vector3(0, 2.0, 0)));
+      this.hud.setBlip(top.on, top.x, top.y, this.beepClock > this.beepGap - 0.12);
+    } else this.hud.setBlip(false);
     if (this.fishing.state === 'bite') {
       const s = toScreen(this.player.pos.clone().add(new THREE.Vector3(0, 1.75, 0)));
       this.hud.exclaim(true, s.x, s.y);
@@ -632,6 +896,7 @@ export class Game implements Session {
     this.audio.loop('fire', fire * 0.6);
     this.audio.setMusic(this.rain > 0.5 ? 'rain' : night > 0.5 ? 'night' : 'day');
     const radio = this.placed.radioNear(p);
+    this.audio.keepPlaying = radio > 0;
     this.audio.setVolumes({ sfx: this.save.settings.sfx, ambience: this.save.settings.ambience, music: Math.min(1, this.save.settings.music * (1 + radio * 1.2)) });
   }
 
@@ -688,7 +953,7 @@ export class Game implements Session {
         this.save.tokens += tokens;
         this.changed();
       },
-      catchNow: (species: string, variant: 'normal' | 'shiny' | 'golden' = 'normal') => {
+      catchNow: (species: string, variant: Catch['variant'] = 'normal') => {
         const s = BY_ID[species];
         this.landed({ species, size: (s.size[0] + s.size[1]) / 2, variant, huge: false, at: Date.now() }, s.zones[0]);
       },

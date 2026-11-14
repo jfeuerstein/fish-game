@@ -11,6 +11,11 @@ export interface Session {
   changed(): void;
   /** Put on a hat (or take it off), become another character. */
   wear(hat: string | null): void;
+  wearExtra(id: string | null): void;
+  showTitle(title: string | null): void;
+  /** Switch the metal detector on or off. */
+  toggleDetector(): void;
+  detecting: boolean;
   become(character: string): void;
   /** Set a piece of furniture down in front of the player. */
   setDown(id: string): void;

@@ -27,6 +27,14 @@ export function funSheet(app: HTMLElement, s: Session, chalk: () => boolean): Sh
       s.playUke();
     };
     grid.append(uke);
+    if (s.save.detector) {
+      const det = el('button', `tile${s.detecting ? ' on' : ''}`, `<img src="${icon('detector')}" alt="">${s.detecting ? 'Put detector away' : 'Metal detector'}`);
+      det.onclick = () => {
+        sheet.close();
+        s.toggleDetector();
+      };
+      grid.append(det);
+    }
     body.append(grid);
     body.append(el('p', '', chalk() ? 'You are by the chalk square: tap Draw by the big button to draw on it.' : 'There is a patch of the village square for chalk drawings. Walk onto it to draw.'));
   });

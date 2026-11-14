@@ -66,6 +66,28 @@ deploys to GitHub Pages.
   the shop. **Boat** (`src/world/boat.ts`), **placed furniture** (`placed.ts`).
 - **Sound** (`src/audio/audio.ts`): MP3s made through fal, played with Web Audio from the first touch.
 
+## What the game leans into
+
+`docs/what-players-love.md` is research into what players of social fishing games love besides
+the other players, and how each point shows up here. Keep to it when adding things:
+
+- **Fishing depth:** five qualities by bait (`Variant` in `fish.ts`: normal, fine, shiny, golden,
+  prismatic; odds in `BAITS[].quality`), lures that change which fish bites (`LURES` and
+  `rollCatch` in `roll.ts`), treasure chests from casts, coin bags, twin catches, rain clouds
+  that follow you after a lucky catch, tiny to giant species, a quip on every catch, and a
+  journal tab of what is biting now.
+- **Luck:** scratch tickets (`tickets.ts`, `ui/scratch.ts`: the prize is decided at purchase and
+  pays back a little under the price on average), chests with a spinning strip (`crates.ts`).
+- **Secrets:** sea glass, bounce mushrooms and jumping, a metal detector with things buried
+  each day (`world/secrets.ts`, `world/finds.ts`).
+- **Customization and toys:** characters, hats, accessories (`x-*`, placed by measuring the body),
+  titles from achievements (`titles.ts`), a ukulele with every note, six chord slots and a strum.
+- **Feel:** music plays a piece, rests a minute or two and comes back (`audio.ts`); a retro-pixel
+  setting; a daily save backup (`cove.save.backup`); a tip the first time each thing happens.
+
+Generated characters may have their rig's left and right swapped. `Character.faceForward` looks
+at the head from both ways (the snout or beak sticks out) and turns the model to face +z.
+
 ## Assets
 
 Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.

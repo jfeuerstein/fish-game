@@ -334,3 +334,88 @@ FISH = {
     'seaweed': wrap(seaweed),
     'bottle': wrap(bottle),
 }
+
+
+def shrimp(m):
+    c = '#f0907a'
+    for i in range(7):
+        a = i / 6 * 2.4
+        r = 0.09 - i * 0.008
+        m.sphere(c if i % 2 else '#f4a892', matrix=T(math.cos(a) * 0.32, 0, math.sin(a) * 0.32 - 0.1) @ S(0.08, r, r), seg=8, rings=5)
+    m.fin(c, [(0.0, 0.0), (-0.12, 0.1), (-0.12, -0.1)], thickness=0.02, matrix=T(-0.27, 0, 0.14) @ R('Y', -40))
+    for k in range(4):
+        m.cylinder('#d8705a', matrix=T(0.25 - k * 0.05, 0, -0.18) @ R('Y', 20), seg=4, r=0.008, depth=0.14)
+    for side in (-1, 1):
+        m.cylinder('#c9604a', matrix=T(0.4, side * 0.03, 0.05) @ R('Z', side * 15) @ R('Y', 60), seg=4, r=0.006, depth=0.5)
+    eyes(m, 0.34, 0.05, 0.02, 0.025, white=False)
+
+
+def snail(m):
+    shell = lambda c: hexrgb('#b07a4a') if int((math.atan2(c.z - 0.2, c.x + 0.05) + 3.2) * 2.2) % 2 else hexrgb('#8a5a32')
+    m.sphere(shell, matrix=T(-0.05, 0, 0.22) @ S(0.24, 0.16, 0.24), seg=12, rings=8)
+    m.torus('#6f4628', matrix=T(-0.05, 0, 0.22) @ R('X', 90), R=0.12, r=0.04, seg=12, tube=5)
+    m.sphere('#c9b48a', deform=lambda p: (p[0] * 0.4, p[1] * 0.11, max(p[2], -0.3) * 0.08), seg=10, rings=6, matrix=T(0.05, 0, 0.0))
+    m.sphere('#c9b48a', matrix=T(0.34, 0, 0.08) @ S(0.08, 0.07, 0.08), seg=8, rings=5)
+    for side in (-1, 1):
+        m.cylinder('#c9b48a', matrix=T(0.38, side * 0.03, 0.18) @ R('X', side * 15), seg=4, r=0.012, depth=0.14)
+        m.sphere('#1b1d22', matrix=T(0.38, side * 0.05, 0.26), r=0.02, seg=6, rings=4)
+
+
+def tadpole(m):
+    m.sphere('#4a4f3a', matrix=T(0.15, 0, 0) @ S(0.24, 0.18, 0.18), seg=10, rings=7)
+    m.fin('#5f6448', [(-0.05, 0), (-0.5, 0.1), (-0.62, 0), (-0.5, -0.1)], thickness=0.02)
+    eyes(m, 0.28, 0.13, 0.06, 0.04)
+
+
+def sunfish(m):
+    c = lambda p: mix(hexrgb('#c9d2da'), hexrgb('#8d9aa8'), smooth(-0.2, 0.3, p.z))
+    m.sphere(c, deform=lambda p: (p[0] * 0.45, p[1] * 0.12, p[2] * 0.5), seg=12, rings=8)
+    m.fin('#8d9aa8', [(0.0, 0.4), (-0.12, 0.95), (-0.25, 0.4)], thickness=0.04)
+    m.fin('#8d9aa8', [(0.0, -0.4), (-0.12, -0.95), (-0.25, -0.4)], thickness=0.04)
+    m.fin('#9aa6b2', [(-0.38, 0.3), (-0.52, 0.15), (-0.52, -0.15), (-0.38, -0.3)], thickness=0.04)
+    eyes(m, 0.3, 0.1, 0.12, 0.05)
+
+
+def manta(m):
+    top = '#2d3a4a'
+    def shape(p):
+        x, y, z = p
+        w = 1 - abs(x) * 0.7
+        return (x * 0.38, y * 0.62 * w, z * 0.07 + abs(y) * abs(y) * -0.05)
+    m.sphere(lambda c: hexrgb(top) if c.z > 0 else hexrgb('#e8ecef'), deform=shape, seg=14, rings=6)
+    for side in (-1, 1):
+        m.box(top, matrix=T(0.38, side * 0.09, 0) @ R('Z', side * 10), size=(0.14, 0.04, 0.03))
+    m.cylinder(top, matrix=T(-0.55, 0, 0) @ R('Y', 90), seg=4, r=0.012, depth=0.4)
+    eyes(m, 0.3, 0.14, 0.02, 0.025, white=False)
+
+
+def whale_shark(m):
+    fish_body(m, dict(back='#3e5670', belly='#e6ecf0', h=0.26, w=0.22, blunt=0.95, tailshape='moon', tail=1.2, dorsal=1.2, pattern=('spots', 0.2, '#e6eef8'), eye=0.03))
+    m.box('#2b3d52', matrix=T(0.49, 0, -0.04), size=(0.03, 0.14, 0.02))
+
+
+def giant_squid(m):
+    red = '#b8433a'
+    m.sphere(red, deform=lambda p: (p[0] * 0.3 + (0.04 if p[0] > 0 else 0), p[1] * 0.08, p[2] * 0.08), seg=10, rings=6, matrix=T(0.2, 0, 0))
+    m.fin(red, [(0.52, 0), (0.42, 0.12), (0.36, 0)], thickness=0.015)
+    m.fin(red, [(0.52, 0), (0.42, -0.12), (0.36, 0)], thickness=0.015)
+    for k in range(10):
+        a = k / 10 * math.pi * 2
+        long = 0.62 if k < 2 else 0.4
+        m.cone('#c9564a', matrix=T(-0.1 - long / 2, math.cos(a) * 0.04, math.sin(a) * 0.04) @ R('Y', -90), seg=4, r1=0.02, r2=0.004, depth=long)
+    eyes(m, -0.02, 0.07, 0.01, 0.035)
+
+
+def treasure(m):
+    m.box('#a5784a', matrix=T(0, 0, 0.3), size=(1.0, 0.65, 0.6))
+    m.cylinder('#a5784a', matrix=T(0, 0, 0.6) @ R('Y', 90), seg=12, r=0.33, depth=1.0, deform=lambda p: (p[0], p[1], max(p[2], 0)))
+    for x in (-0.36, 0.36):
+        m.box('#5f6870', matrix=T(x, 0, 0.3), size=(0.1, 0.67, 0.6))
+        m.cylinder('#5f6870', matrix=T(x, 0, 0.6) @ R('Y', 90), seg=12, r=0.345, depth=0.1, deform=lambda p: (p[0], p[1], max(p[2], 0)))
+    m.box('#ecbf3a', matrix=T(0, -0.34, 0.55), size=(0.16, 0.06, 0.2))
+
+
+FISH.update({
+    'shrimp': wrap(shrimp), 'snail': wrap(snail), 'tadpole': wrap(tadpole), 'sunfish': wrap(sunfish), 'manta': wrap(manta),
+    'whale-shark': wrap(whale_shark), 'giant-squid': wrap(giant_squid), 'treasure': wrap(treasure),
+})

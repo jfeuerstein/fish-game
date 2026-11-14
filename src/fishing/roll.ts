@@ -1,8 +1,8 @@
 // What bites, how big it is, and how long the wait is. Pure: everything random comes from `rand`.
 import { bitesAt } from '../game/clock';
-import { type Bait, type Rod } from '../game/economy';
+import { type Bait, type Lure, LURES, type Rod } from '../game/economy';
 import type { Zone } from '../world/island';
-import { type Catch, SPECIES, type Species, type Tier, type Variant } from './fish';
+import { type Catch, SPECIES, type Species, type Tier, type Variant, BY_ID } from './fish';
 
 export interface Conditions {
   zone: Zone;
@@ -10,6 +10,8 @@ export interface Conditions {
   raining: boolean;
   rod: Rod;
   bait: Bait;
+  /** The lure on the line (a plain hook when not given). */
+  lure?: Lure;
 }
 
 /** How often each tier bites, before bait and rod have their say. */
@@ -46,9 +48,13 @@ function pick<T extends { weight: number }>(items: T[], rand: () => number): T {
   return items[items.length - 1];
 }
 
-/** Roll a catch. */
-export function rollCatch(c: Conditions, rand: () => number, now = Date.now()): Catch {
-  const { species } = pick(candidates(c), rand);
+const RANK: Tier[] = ['junk', 'common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+/** One fish, as it might bite. */
+function rollOne(c: Conditions, rand: () => number, now: number): Catch {
+  const lure = c.lure ?? LURES[0];
+  const list = candidates(c).map((x) => (x.species.tier === 'junk' && lure.effect === 'magnet' ? { ...x, weight: x.weight * 3 } : x));
+  const { species } = pick(list, rand);
   const [lo, hi] = species.size;
   // Most are smallish; the bait can push them bigger.
   const skew = 1.9 - (c.bait.size ?? 0) * 1.6;
@@ -56,14 +62,39 @@ export function rollCatch(c: Conditions, rand: () => number, now = Date.now()): 
   const huge = species.tier !== 'junk' && rand() < 0.035 + (c.bait.size ?? 0) * 0.05;
   if (huge) u = 0.92 + rand() * 0.08;
   const size = Math.round((lo + (hi - lo) * u) * 10) / 10;
-  let variant: Variant = 'normal';
-  if (species.tier !== 'junk') {
-    const r = rand();
-    const luck = 1 + c.rod.luck * 1.5;
-    if (r < 0.01 * luck) variant = 'golden';
-    else if (r < 0.06 * luck) variant = 'shiny';
-  }
-  return { species: species.id, size, variant, huge, at: now };
+  return { species: species.id, size, variant: species.tier === 'junk' ? 'normal' : rollQuality(c, rand), huge, at: now };
+}
+
+/** How fine a catch is: the bait sets the odds, the rod's luck lifts them. */
+export function rollQuality(c: Conditions, rand: () => number): Variant {
+  const luck = 1 + c.rod.luck * 1.5;
+  const [fine, shiny, golden, prismatic] = c.bait.quality;
+  const r = rand();
+  if (r < prismatic * luck) return 'prismatic';
+  if (r < (prismatic + golden) * luck) return 'golden';
+  if (r < (prismatic + golden + shiny) * luck) return 'shiny';
+  if (r < (prismatic + golden + shiny + fine) * luck) return 'fine';
+  return 'normal';
+}
+
+/** Chance a cast brings up a treasure chest instead of a fish. */
+export function treasureChance(c: Conditions): number {
+  return (c.lure?.effect === 'magnet' ? 0.07 : 0.02) * (c.zone === 'deep' ? 1.3 : 1);
+}
+
+/** Roll a catch, with the lure's say: of three, the biggest, smallest or rarest bites. */
+export function rollCatch(c: Conditions, rand: () => number, now = Date.now()): Catch {
+  if (rand() < treasureChance(c)) return { species: 'treasure', size: 50, variant: 'normal', huge: false, at: now };
+  const effect = c.lure?.effect ?? 'none';
+  if (effect !== 'big' && effect !== 'small' && effect !== 'sparkle') return rollOne(c, rand, now);
+  const three = [rollOne(c, rand, now), rollOne(c, rand, now), rollOne(c, rand, now)];
+  const frac = (x: Catch): number => {
+    const s = BY_ID[x.species];
+    return (x.size - s.size[0]) / (s.size[1] - s.size[0] || 1);
+  };
+  const by = effect === 'sparkle' ? (x: Catch) => RANK.indexOf(BY_ID[x.species].tier) + frac(x) * 0.01 : effect === 'big' ? (x: Catch) => x.size : (x: Catch) => -x.size;
+  void frac;
+  return three.reduce((a, b) => (by(b) > by(a) ? b : a));
 }
 
 /** Seconds until something bites. */
