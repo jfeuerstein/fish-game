@@ -318,7 +318,8 @@ export class Character {
     if (rig.headBone) {
       const at = rig.headBone.getWorldPosition(new THREE.Vector3()).applyMatrix4(toLocal);
       if (at.y > h * 0.3 && at.y < browY) {
-        neckY = at.y;
+        // On these chunky rigs the head bone sits about the jaw; the neck is a little below it.
+        neckY = at.y - h * 0.06;
         neckW = width(neckY);
       }
     }

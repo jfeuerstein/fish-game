@@ -49,8 +49,8 @@ export const FITS: Record<string, Fit> = {
   'hat-chef': hat(0.7, 0.62, { per: { 'char-frog': { forward: -0.11, sink: 0.55 } } }),
   'x-glasses': { bone: 'head', place: 'face', width: 0.7, sink: 0, lift: 0.04, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.12 } } },
   'x-shades': { bone: 'head', place: 'face', width: 0.72, sink: 0, lift: 0.04, forward: 0, tilt: 0, per: { 'char-frog': { lift: 0.12 } } },
-  'x-scarf': { bone: 'chest', place: 'neck', width: 1.25, sink: 0.45, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.08, width: 1.1 } } },
-  'x-bowtie': { bone: 'chest', place: 'chest', width: 0.38, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.07 } } },
+  'x-scarf': { bone: 'chest', place: 'neck', width: 1.15, sink: 0.45, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.03, width: 1.1 } } },
+  'x-bowtie': { bone: 'chest', place: 'chest', width: 0.4, sink: 0, lift: 0, forward: 0, tilt: 0, per: { 'char-frog': { lift: -0.02 } } },
   'x-backpack': { bone: 'chest', place: 'back', width: 0.55, sink: 0, lift: 0, forward: 0, tilt: 0 },
   'x-flower': { bone: 'head', place: 'ear', width: 0.32, sink: 0, lift: 0, forward: 0, tilt: 0 },
 };
