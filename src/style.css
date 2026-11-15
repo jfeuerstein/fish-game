@@ -407,6 +407,47 @@ button {
   font-family: var(--font);
   font-weight: 700;
 }
+/* The day's bounty, under the clock. */
+.bounty-chip {
+  gap: 5px;
+  padding: 2px 8px 2px 4px;
+  font-size: 16px;
+  background: var(--brass-hi);
+}
+.bounty-chip img {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+}
+.bounty-chip.filled {
+  background: var(--paper-2);
+  color: var(--ink-soft);
+}
+.bounty-chip.filled img {
+  opacity: 0.5;
+}
+.bounty-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  background: var(--brass-hi);
+  border: var(--edge);
+  box-shadow: var(--press);
+  color: var(--ink);
+}
+.bounty-card.filled {
+  background: var(--paper-2);
+}
+.bounty-card img {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+}
+.bounty-card .title {
+  font-size: 22px;
+}
 .clock {
   display: inline-flex;
   align-items: center;

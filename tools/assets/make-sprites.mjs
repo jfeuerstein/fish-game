@@ -32,7 +32,7 @@ const CACHE = `${ROOT}tools/assets/cache`;
 const SHEETS = `${ROOT}art/sprites/sheets`;
 const args = process.argv.slice(2);
 const flag = (name) => args.find((a, i) => args[i - 1] === name);
-const by = flag('--by') ?? 'fal';
+const by = flag('--by') ?? 'tripo';
 const only = (flag('--sheets') ?? '').split(',').filter(Boolean).map(Number);
 const redo = new Set((flag('--redo') ?? '').split(',').filter(Boolean).map(Number));
 const cutOnly = args.includes('--cut-only');
@@ -53,6 +53,8 @@ const ITEM_SHEETS = [
   ['f-radio', 'f-flamingo', 'f-gnome', 'f-tiki', 'f-hammock', 'f-telescope', 'f-snowman', 'x-flower', 'x-bowtie'],
   ['x-glasses', 'x-scarf', 'x-shades', 'x-backpack', 'x-mustache', 'x-snorkel', 'char-otter', 'char-frog', 'char-raccoon'],
   ['coin', 'detector', 'upgrade-cooler', 'ukulele', 'ticket-lucky', 'gull', 'boat-ticket'],
+  // The camp catalogue.
+  ['f-tent', 'f-firepit', 'f-bedroll', 'f-stump', 'f-table', 'f-stove', 'f-woodpile', 'f-lights', 'f-washline'],
 ];
 /** What an item is, as its model or picture was asked for, without the words about how a model wants it posed. */
 const itemSays = (id) => {

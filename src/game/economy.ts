@@ -144,20 +144,36 @@ export interface Furniture {
   prize?: boolean;
   /** Plays music nearby. */
   music?: boolean;
+  /** In the camp catalogue: the things a campsite is made of. */
+  camp?: boolean;
+  /** A fire: it has a flame, and throws a flickering light after dark. */
+  fire?: boolean;
+  /** Throws real light after dark, not only a glow. */
+  lamp?: boolean;
 }
 export const FURNITURE: readonly Furniture[] = [
-  { id: 'f-chair', name: 'Camp Chair', price: 180, seat: true },
-  { id: 'f-cooler', name: 'Picnic Cooler', price: 120 },
-  { id: 'f-lantern', name: 'Lantern', price: 260, glow: true },
+  { id: 'f-chair', name: 'Camp Chair', price: 180, seat: true, camp: true },
+  { id: 'f-cooler', name: 'Picnic Cooler', price: 120, camp: true },
+  { id: 'f-lantern', name: 'Lantern', price: 260, glow: true, camp: true },
   { id: 'f-plant', name: 'Potted Plant', price: 200 },
   { id: 'f-umbrella', name: 'Beach Umbrella', price: 340 },
   { id: 'f-radio', name: 'Radio', price: 0, prize: true, music: true },
   { id: 'f-flamingo', name: 'Lawn Flamingo', price: 0, prize: true },
   { id: 'f-gnome', name: 'Fishing Gnome', price: 0, prize: true },
   { id: 'f-tiki', name: 'Tiki Torch', price: 0, prize: true, glow: true },
-  { id: 'f-hammock', name: 'Hammock', price: 900, seat: true },
+  { id: 'f-hammock', name: 'Hammock', price: 900, seat: true, camp: true },
   { id: 'f-telescope', name: 'Telescope', price: 0, prize: true },
   { id: 'f-snowman', name: 'Snowman', price: 0, prize: true },
+  // The camp catalogue: with the chair, cooler, lantern and hammock above, what a campsite is made of.
+  { id: 'f-tent', name: 'Canvas Tent', price: 650, camp: true },
+  { id: 'f-firepit', name: 'Campfire', price: 320, camp: true, fire: true, glow: true },
+  { id: 'f-bedroll', name: 'Bedroll', price: 220, camp: true, seat: true },
+  { id: 'f-stump', name: 'Stump Stool', price: 90, camp: true, seat: true },
+  { id: 'f-table', name: 'Camp Table', price: 240, camp: true },
+  { id: 'f-stove', name: 'Stove and Kettle', price: 300, camp: true },
+  { id: 'f-woodpile', name: 'Woodpile', price: 140, camp: true },
+  { id: 'f-lights', name: 'String Lights', price: 480, camp: true, glow: true, lamp: true },
+  { id: 'f-washline', name: 'Washing Line', price: 200, camp: true },
 ];
 
 /** Things to wear besides hats. `prize` ones are won at the Lucky Gull, not sold. */

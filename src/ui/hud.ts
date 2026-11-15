@@ -63,6 +63,8 @@ export class Hud {
   private blip = el('div', 'blip');
   private tag = el('div', 'name-tag');
   private shoutEl = el('div', 'shout');
+  private bountyChip = el('div', 'chip bounty-chip');
+  private bountyKey = '';
   onJump: (() => void) | null = null;
   private onAction: (() => void) | null = null;
   private onActionUp: (() => void) | null = null;
@@ -89,6 +91,8 @@ export class Hud {
     const right = el('div', 'top-right');
     right.append(lv, el('div', 'chip clock-chip'));
     right.lastElementChild!.append(this.clock);
+    this.bountyChip.hidden = true;
+    right.append(this.bountyChip);
     top.append(left, right);
 
     this.card.addEventListener('pointerdown', () => this.hideCard());
@@ -180,6 +184,16 @@ export class Hud {
     this.sky = t;
     this.clock.innerHTML = `<span>${text}</span>`;
     this.clock.prepend(pixelGlyph(SKY_ICON[sky], 14, '#96691f'));
+  }
+
+  /** The day's bounty, under the clock: the fish Gus wants, ticked once it has been brought to him. */
+  setBounty(species: string, name: string, filled: boolean): void {
+    const key = `${species}|${filled}`;
+    if (key === this.bountyKey) return;
+    this.bountyKey = key;
+    this.bountyChip.hidden = false;
+    this.bountyChip.classList.toggle('filled', filled);
+    this.bountyChip.innerHTML = `<img src="${icon(`fish-${species}`)}" alt=""><span>${filled ? 'Bounty paid' : `Wanted: ${name}`}</span>`;
   }
 
   /** What the main button does here. `onUp` makes it a hold-and-release button. */

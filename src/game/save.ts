@@ -57,6 +57,13 @@ export interface Save {
   questsDone: number;
   boat: boolean;
   stats: { caught: number; earned: number; snapped: number; played: number };
+  /** The day's bounty: the calendar day it was last filled, and how many have been filled. */
+  bounty: { filled: number; count: number };
+  /** The islanders: who has been met, how many favours each has been done, what each has said today, and boasts beaten. */
+  met: string[];
+  favours: Record<string, number>;
+  talk: { day: number; said: string[] };
+  rivalWins: number;
   settings: Settings;
   hints: string[];
   /** The lure on the line, and the lures owned. */
@@ -123,6 +130,11 @@ export function newSave(): Save {
     questsDone: 0,
     boat: false,
     stats: { caught: 0, earned: 0, snapped: 0, played: 0 },
+    bounty: { filled: -1, count: 0 },
+    met: [],
+    favours: {},
+    talk: { day: -1, said: [] },
+    rivalWins: 0,
     settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high', pixels: false, bigHeads: false, grain: 1 },
     hints: [],
     lure: 'lure-none',
@@ -258,6 +270,11 @@ export function parseSave(text: string | null): Save {
     questsDone: Math.floor(num(o.questsDone, 0, 0)),
     boat: o.boat === true,
     stats: { caught: num(st.caught, 0, 0), earned: num(st.earned, 0, 0), snapped: num(st.snapped, 0, 0), played: num(st.played, 0, 0) },
+    bounty: { filled: Math.floor(num(rec(o.bounty).filled, -1, -1)), count: Math.floor(num(rec(o.bounty).count, 0, 0)) },
+    met: strs(o.met),
+    favours: Object.fromEntries(Object.entries(rec(o.favours)).filter((e): e is [string, number] => typeof e[1] === 'number' && e[1] >= 0).map(([k, v]) => [k, Math.floor(v)])),
+    talk: { day: Math.floor(num(rec(o.talk).day, -1)), said: strs(rec(o.talk).said).slice(-80) },
+    rivalWins: Math.floor(num(o.rivalWins, 0, 0)),
     settings: {
       music: num(s.music, fresh.settings.music, 0, 1),
       sfx: num(s.sfx, fresh.settings.sfx, 0, 1),

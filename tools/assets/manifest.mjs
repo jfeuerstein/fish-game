@@ -108,7 +108,7 @@ export const MODELS = {
   'f-tiki': { kind: 'prop', what: 'a tiki torch: a bamboo pole with a woven basket at the top holding an orange flame', h: 1.8, faces: 2500, item: true },
 
   // --- Camp things: the catalogue the player makes a campsite of their own from ---
-  'f-tent': { kind: 'prop', what: 'a small A-frame camping tent of sage green canvas with its two door flaps tied open and a wooden pole at the front', h: 1.5, faces: 3000, item: true },
+  'f-tent': { kind: 'prop', what: 'a small A-frame camping tent of sage green canvas with its two door flaps tied open and a wooden pole at the front', h: 2.1, faces: 3000, item: true },
   'f-firepit': { kind: 'prop', what: 'a campfire: a ring of round grey stones with a few crossed logs and one chunky orange and yellow flame', h: 0.7, faces: 3000, item: true },
   'f-bedroll': { kind: 'prop', what: 'a quilted blue sleeping bag rolled out flat on the ground with a small cream pillow at one end', h: 0.3, faces: 2500, item: true },
   'f-stump': { kind: 'prop', what: 'a short fat tree stump to sit on, with pale rings on its flat top and rough brown bark', h: 0.5, faces: 2000, item: true },

@@ -161,6 +161,31 @@ the owner's: do not route a deploy round it.
   one (`CameraRig.roomOf`).
 - **Flames** (`World.addFlame`) are their own light: faceted tongues drawn unlit that jump in
   steps. A fire's painted flame is lit like wood and was a dark lump at dusk.
+- **The day's bounty** (`src/game/bounty.ts`, pure, tested; `src/ui/bountyCard.ts`): each
+  calendar day (the player's own, not the island's 24 minutes) Gus wants one kind of fish. It
+  sells for double all day and the first one earns a bounty on top, once. Every fish that can
+  be asked for (no odds and ends, no legends, none that want rain) comes round once before
+  any repeats. It is shown under the clock, at the top of the shop's Sell tab and on the
+  board, with where to look; the owner asked for it as a target for each session. The save
+  keeps the day it was last filled (`bounty`).
+- **What the islanders say** (`src/npc/talk.ts`, pure, tested): each has a voice (Puddle
+  quacks, Birch is dry, Juniper says Mmm, Gus sells). Spoken to, they say the first of these
+  not yet said to them today: hello (once ever), a word on a fish just landed, where the
+  bounty might be found, the favour they would like (an ordinary fish from their own waters:
+  with one in the bag the button reads Give, it pays well over Gus's price, and every third
+  comes with a pearl; a golden fish is never taken), their boast (a length they say they
+  landed today, to beat with the journal's best), a word on what the player is wearing, the
+  rain or the night, and then their own lines in turn. The board lists what each neighbour is
+  waiting for. The save keeps who has been met, favours done, what was said today and boasts
+  beaten (`met`, `favours`, `talk`, `rivalWins`). The owner likes rare fish being a long
+  hunt: nothing here points at one.
+- **The campsite** (`src/game/camp.ts`, pure, tested): the shop's Camp tab is a catalogue of
+  camp things (`camp` in `FURNITURE`): tent, campfire, bedroll, stump, table, stove, woodpile,
+  string lights, washing line, and the chair, cooler, lantern and hammock there already. There
+  is no plot: a camp is wherever its things are set down. A placed fire has a flame and
+  throws a jumping light, and string lights a steady one, from a few spare lights made at the
+  start (`World.borrowLamp`: a light made on the spot would have every material made again).
+  A tent with a fire and a seat beside it earns Happy Camper.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
   the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
   and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;

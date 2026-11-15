@@ -12,7 +12,7 @@ import { Screen } from '../fx/screen';
 import { type Look, lookFor } from '../look/look';
 import { setLook } from '../look/material';
 import { Controls } from '../input/controls';
-import { NPCS, Npc, Shopkeeper } from '../npc/npcs';
+import { GUS_LINES, NPCS, Npc, Shopkeeper } from '../npc/npcs';
 import { CameraRig } from '../player/camera';
 import { Character } from '../player/character';
 import { Player } from '../player/player';
@@ -28,6 +28,8 @@ import { journalSheet } from '../ui/journal';
 import { moreSheet } from '../ui/more';
 import { Sheet } from '../ui/sheet';
 import { Coach } from '../ui/coach';
+import { NAMES, doFavour, favourInBag, talk, type Who } from '../npc/talk';
+import { bountyFilled, bountyFor, calendarDay, isBounty } from './bounty';
 import { coachDue, coachNext, type CoachStep } from './coach';
 import { TURN } from '../player/steer';
 import { BENCH_SECS, BENCH_SETTLE, BENCH_STEPS, benchReport, readout, summarise, type BenchLine } from '../debug/bench';
@@ -346,6 +348,33 @@ export class Game implements Session {
     } else this.coachBegin();
   }
 
+  /** The fish landed last, for the islanders to remark on, and how many times each has been spoken to. */
+  private lastCatch: Catch | null = null;
+  private turns: Record<string, number> = {};
+
+  /**
+   * Speak to an islander: hand over the fish they asked for if it is in the bag, or else hear
+   * what they have to say (src/npc/talk.ts). `voice` puts the words over their head.
+   */
+  private speakTo(who: Who, voice: (words: string) => void, lines: readonly string[]): void {
+    const given = who !== 'npc-pelican' ? doFavour(this.save, who) : null;
+    const said = given ?? talk(this.save, who, { day: this.today, now: Date.now(), raining: this.raining, night: this.world.sky.palette.night > 0.5, caught: this.lastCatch }, lines, (this.turns[who] = (this.turns[who] ?? 0) + 1) - 1);
+    voice(said.text);
+    this.audio.play('wave', { volume: 0.4, rate: 0.9 + Math.random() * 0.3 });
+    if (said.did?.kind === 'favour') {
+      this.audio.play('quest');
+      this.hud.toast(`${NAMES[who]} is pleased: +${said.did.coins} coins${said.did.pearl ? ' and a pearl' : ''}.`, 'good');
+    } else if (said.did?.kind === 'rival') this.hud.toast(`You out-fished ${NAMES[who]} today!`, 'gold');
+    this.changed();
+  }
+
+  /** The calendar day where the player is: the day's bounty goes by it. */
+  get today(): number {
+    return calendarDay(Date.now(), new Date().getTimezoneOffset());
+  }
+  /** The day the player was last told what Gus wants. */
+  private bountyTold = -1;
+
   // ---------- The first minute ----------
 
   private coach: Coach | null = null;
@@ -422,6 +451,7 @@ export class Game implements Session {
     if (c.species === 'treasure') return this.treasure();
     const night = !bitesAt('day', this.hour);
     const r = applyCatch(this.save, c, zone, night, this.raining);
+    this.lastCatch = { ...c, at: Date.now() };
     const s = BY_ID[c.species];
     const lure = lureById(this.save.lure);
     const notes: string[] = [];
@@ -436,6 +466,7 @@ export class Game implements Session {
       this.cloudUntil = performance.now() + 75000 / this.cfg.warp;
       setTimeout(() => this.hud.toast('A little rain cloud has gathered over you. Rain fish are biting!', 'good'), 2200);
     }
+    if (isBounty(c.species, this.today) && !bountyFilled(this.save.bounty, this.today)) notes.push('The one Gus wants today!');
     this.hud.showCatch({ icon: `${import.meta.env.BASE_URL}icons/fish-${c.species}.webp`, name: s.name, size: sayLength(c.size) + (c.huge ? ' · huge!' : ''), tier: TIER_LABEL[s.tier], tierColor: TIER_COLOR[s.tier], variant: c.variant, value: r.value, first: r.first, best: r.best, tokens: r.tokens, quip: quip(c), note: [second ? 'Twin catch!' : '', ...notes].filter(Boolean).join(' ') || undefined });
     this.audio.play(c.variant === 'golden' || c.variant === 'prismatic' || c.variant === 'shiny' || s.tier === 'legendary' || s.tier === 'epic' ? 'rare' : 'catch', { volume: 0.8 });
     // The rarest catches get the arcade's fanfare too.
@@ -846,11 +877,12 @@ export class Game implements Session {
     else if (dig && this.detecting && this.mode === 'walk') hud.setSecond('Dig', () => this.startDig(dig));
     else if (this.mode === 'boat') hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
     else if (this.mode === 'sit') hud.setSecond('Stand up', () => this.stopActivity());
-    else if (npc) hud.setSecond(`Chat`, () => {
-      npc.chat(performance.now());
-      this.audio.play('wave', { volume: 0.4, rate: 0.9 + Math.random() * 0.3 });
-    });
-    else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.gus.chat(performance.now()));
+    else if (npc) {
+      // With the fish they asked for in the bag, the button hands it over.
+      const who = npc.def.id as Who;
+      const ready = favourInBag(this.save, who);
+      hud.setSecond(ready >= 0 ? `Give ${BY_ID[this.save.bag[ready].species]?.name ?? 'fish'}` : 'Chat', () => this.speakTo(who, (words) => npc.chat(performance.now(), words), npc.def.lines));
+    } else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.speakTo('npc-pelican', (words) => this.gus.chat(performance.now(), words), GUS_LINES));
     else if (seat) hud.setSecond('Sit', () => this.sitOn(seat));
     else if (this.boat.nearMooring(p) && p.y > 2) hud.setSecond(this.save.boat ? 'Row' : 'Boat', () => (this.save.boat ? this.boardBoat() : this.hud.toast('The rowboat needs a licence. Gus sells them (Upgrades).')));
     else if (Chalk.near(p)) hud.setSecond('Draw', () => this.startChalk());
@@ -1102,6 +1134,15 @@ export class Game implements Session {
       this.hud?.setStats(this.save.coins, this.save.tokens, lv.level, lv.into / lv.need);
     }
     this.hud?.setClock(sayHour(this.hour), this.raining, this.world.sky.palette.night > 0.5);
+    // The day's bounty, under the clock. (Not while the first minute is being taught: one thing at a time.)
+    if (this.hud && this.started && !this.coach) {
+      const wanted = bountyFor(this.today);
+      this.hud.setBounty(wanted.id, wanted.name, bountyFilled(this.save.bounty, this.today));
+      if (this.bountyTold !== this.today && this.cfg.hud) {
+        this.bountyTold = this.today;
+        if (!bountyFilled(this.save.bounty, this.today)) this.hud.toast(`Gus wants a ${wanted.name} today. Double coins, and a bounty for the first.`, 'gold');
+      }
+    }
     this.keep();
     this.screen.render(this.scene, this.camera);
   }

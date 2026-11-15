@@ -1,6 +1,7 @@
 // Titles: little names earned by doing things, shown above the player. Pure.
 import { BY_ID, JOURNAL_SPECIES } from '../fishing/fish';
 import type { Save } from './save';
+import { campKinds, campMade } from './camp';
 
 export interface Title {
   name: string;
@@ -27,6 +28,11 @@ export const TITLES: readonly Title[] = [
   { name: 'Lucky Duck', how: 'Win an epic or legendary prize at the Lucky Gull.', earned: (s) => s.arcade.rarest >= 4 },
   { name: 'Tycoon', how: 'Earn 25,000 coins selling fish.', earned: (s) => s.stats.earned >= 25000 },
   { name: 'Busy Paws', how: 'Finish 20 errands.', earned: (s) => s.questsDone >= 20 },
+  { name: "Gus's Favourite", how: 'Fill 10 of the day\'s bounties.', earned: (s) => s.bounty.count >= 10 },
+  { name: 'Good Neighbour', how: 'Do five favours for the islanders.', earned: (s) => Object.values(s.favours).reduce((a, n) => a + n, 0) >= 5 },
+  { name: 'Top Rod', how: 'Beat an islander\'s catch of the day ten times.', earned: (s) => s.rivalWins >= 10 },
+  { name: 'Happy Camper', how: 'Make camp: set down a tent with a fire and somewhere to sit beside it.', earned: (s) => campMade(s.placed) },
+  { name: 'Camp Warden', how: 'Have eight different camp things round one tent.', earned: (s) => campKinds(s.placed) >= 8 },
 ];
 
 /** Titles the save has newly earned (adding them to it). */

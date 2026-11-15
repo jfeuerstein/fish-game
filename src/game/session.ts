@@ -35,6 +35,8 @@ export interface Session {
   runBench(): void;
   /** Settings that change how the game runs. */
   applySettings(): void;
+  /** The calendar day where the player is: the day's bounty goes by it. */
+  today: number;
   /** The island's hour, and whether it rains. */
   hour: number;
   raining: boolean;

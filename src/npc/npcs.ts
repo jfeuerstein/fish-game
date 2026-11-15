@@ -70,6 +70,9 @@ export const NPCS: NpcDef[] = [
   },
 ];
 
+/** How long a line stays up, ms: longer for a longer line. */
+export const readingTime = (text: string): number => Math.max(4000, 1500 + text.length * 60);
+
 export const GUS_LINES = [
   'Welcome to the shop! I buy fish, I sell everything else.',
   'Better bait means fussier fish. Fussier fish means more coins!',
@@ -125,10 +128,10 @@ export class Npc {
     this.body.rodOut = true;
   }
 
-  /** Say the next line. */
-  chat(now: number): string {
-    const text = this.def.lines[this.line++ % this.def.lines.length];
-    this.saying = { text, until: now + 5000 };
+  /** Say something: what is given, or the next of their own lines. It stays up long enough to read. */
+  chat(now: number, words?: string): string {
+    const text = words ?? this.def.lines[this.line++ % this.def.lines.length];
+    this.saying = { text, until: now + readingTime(text) };
     if (this.mode === 'fish' || this.mode === 'walk') {
       this.mode = 'wave';
       this.timer = 2;
@@ -249,9 +252,9 @@ export class Shopkeeper {
     this.body.group.position.copy(at);
     this.body.group.rotation.y = yaw;
   }
-  chat(now: number): string {
-    const text = GUS_LINES[this.line++ % GUS_LINES.length];
-    this.saying = { text, until: now + 5000 };
+  chat(now: number, words?: string): string {
+    const text = words ?? GUS_LINES[this.line++ % GUS_LINES.length];
+    this.saying = { text, until: now + readingTime(text) };
     this.body.action = 'wave';
     setTimeout(() => (this.body.action = 'idle'), 2000);
     return text;

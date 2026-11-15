@@ -1,4 +1,5 @@
 // The bait shop: sell fish, buy rods, bait, hats, things for around the island, upgrades.
+import { bountyCard, todaysPrice } from './bountyCard';
 import { valueOf, BY_ID, sayLength, stars } from '../fishing/fish';
 import { BAITS, BOAT_LICENCE, COOLERS, DETECTOR, EXTRAS, FURNITURE, HATS, LURES, RODS, levelFor } from '../game/economy';
 import { sell, spend } from '../game/progress';
@@ -24,14 +25,16 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       sheet.refresh();
     };
     if (tab === 'Sell') {
-      const total = save.bag.reduce((a, c) => a + valueOf(c), 0);
+      const total = save.bag.reduce((a, _c, i) => a + todaysPrice(s, i), 0);
+      body.append(bountyCard(s));
       body.append(el('p', '', save.bag.length ? `Gus looks into your cooler. "Nice haul! I'll take the lot for ${total.toLocaleString()} coins."` : '"Nothing to sell? Go catch something, I\'ll be here."'));
       if (save.bag.length) {
         const all = el('button', 'big-btn', `Sell everything · ${total.toLocaleString()}`);
         all.onclick = () => {
-          const r = sell(save);
+          const r = sell(save, undefined, s.today);
           s.audio.play('coin');
           s.hud.toast(`Sold for ${r.coins.toLocaleString()} coins!`, 'good');
+          if (r.bounty) s.hud.toast(`Bounty paid: +${r.bounty} coins!`, 'gold');
           for (const _ of r.finished) s.hud.toast('An errand is done! Hand it in at the board.', 'good');
           s.changed();
           sheet.refresh();
@@ -42,10 +45,11 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         const sp = BY_ID[c.species];
         const row = el('div', 'row');
         row.innerHTML = `<img src="${icon(`fish-${c.species}`)}" alt="" class="q-${c.variant}"><div class="grow"><div class="title">${sp.name}${c.variant !== 'normal' ? ` <b class="vb ${c.variant}">${stars(c.variant)}</b>` : ''}</div><div class="sub">${sayLength(c.size)}${c.huge ? ' · huge!' : ''}</div></div>`;
-        const b = el('button', 'btn', `${valueOf(c)}`);
+        const b = el('button', `btn${todaysPrice(s, i) > valueOf(c) ? ' coral' : ''}`, `${todaysPrice(s, i)}`);
         b.onclick = () => {
-          const r = sell(save, [i]);
+          const r = sell(save, [i], s.today);
           s.audio.play('coin', { volume: 0.6 });
+          if (r.bounty) s.hud.toast(`Bounty paid: +${r.bounty} coins!`, 'gold');
           for (const _ of r.finished) s.hud.toast('An errand is done! Hand it in at the board.', 'good');
           s.changed();
           sheet.refresh();
@@ -176,10 +180,11 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         grid.append(t);
       }
       body.append(el('p', '', 'The rarest hats are only won at the Lucky Gull, for pearls.'), grid);
-    } else if (tab === 'Things') {
-      body.append(el('p', '', 'Things to set down anywhere on the island. Find them in your bag.'));
+    } else if (tab === 'Camp' || tab === 'Things') {
+      const camp = tab === 'Camp';
+      body.append(el('p', '', camp ? '"Pitch a camp anywhere you like. A tent, a fire and somewhere to sit, and it\'s a camp. The rest is making it yours." Find what you buy in your bag.' : 'Things to set down anywhere on the island. Find them in your bag.'));
       const grid = el('div', 'grid');
-      for (const f of FURNITURE.filter((x) => !x.prize)) {
+      for (const f of FURNITURE.filter((x) => !x.prize && !!x.camp === camp)) {
         const t = el('button', 'tile');
         const n = save.furniture[f.id] ?? 0;
         const out = save.placed.filter((p) => p.id === f.id).length;
@@ -247,6 +252,6 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       det.append(d);
       body.append(det);
     }
-  }, ['Sell', 'Rods', 'Lures', 'Bait', 'Hats', 'Wear', 'Things', 'Upgrades', 'Pearls']);
+  }, ['Sell', 'Rods', 'Lures', 'Bait', 'Hats', 'Wear', 'Camp', 'Things', 'Upgrades', 'Pearls']);
   return sheet;
 }

@@ -23,7 +23,7 @@ export class World {
   private glows: THREE.Sprite[] = [];
   private glowMat: THREE.SpriteMaterial;
   /** What is lit after dark: lamps, the fire, the shop's counter, the lighthouse. */
-  private lamps: { light: THREE.PointLight; strength: number; flickers: boolean }[] = [];
+  private lamps: { light: THREE.PointLight; strength: number; flickers: boolean; spare?: boolean }[] = [];
   private flames: THREE.Object3D[] = [];
   private beam: THREE.Object3D | null = null;
   private lofi = false;
@@ -127,6 +127,28 @@ export class World {
     return flame;
   }
 
+  /**
+   * A light for something set down after the island was lit: one of a few spares, made with the
+   * rest and kept dark. (A new light made on the spot would have every material on the island
+   * made again for the new count of lights: a long stall on a phone.) Gives the light, or null
+   * if the spares are all out, in which case the thing only glows.
+   */
+  borrowLamp(at: THREE.Vector3, reach: number, strength: number, colour = 0xffc98a, flickers = false): THREE.PointLight | null {
+    const spare = this.lamps.find((l) => l.spare && l.strength === 0);
+    if (!spare) return null;
+    spare.light.position.copy(at);
+    spare.light.distance = reach;
+    spare.light.color.set(colour);
+    spare.strength = strength;
+    spare.flickers = flickers;
+    return spare.light;
+  }
+
+  returnLamp(light: THREE.PointLight): void {
+    const l = this.lamps.find((x) => x.light === light);
+    if (l) l.strength = 0;
+  }
+
   removeFlame(flame: THREE.Object3D): void {
     this.group.remove(flame);
     this.flames = this.flames.filter((f) => f !== flame);
@@ -161,6 +183,11 @@ export class World {
       this.addLamp(p, 9, 3, 0xff9448, true);
       this.addGlow(p, 1.4);
       this.addFlame(new THREE.Vector3(fire.x, ground(fire.x, fire.z) + 0.22, fire.z), 1.0);
+    }
+    // Spares, dark until something the player sets down asks for one (see `borrowLamp`).
+    for (let i = 0; i < SPARE_LAMPS; i++) {
+      this.addLamp(new THREE.Vector3(0, -50, 0), 1, 0);
+      this.lamps[this.lamps.length - 1].spare = true;
     }
     const shop = at('shop');
     if (shop) this.addLamp(front(shop, 0.4, 1.9), 7, 2.4);
@@ -232,6 +259,9 @@ export class World {
     }
   }
 }
+
+/** Lights kept ready for what the player sets down: campfires and strings of lights. */
+const SPARE_LAMPS = 4;
 
 /**
  * In the lo-fi look lamplight does not fade: it falls in three flat steps and stops, so a lamp

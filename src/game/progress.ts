@@ -1,5 +1,6 @@
 // What a catch, a sale or a purchase does to the save. Pure: takes the save, changes it, and
 // says what happened so it can be announced.
+import { bountyFilled, bountyFor, bountyPrize, isBounty, priceOn } from './bounty';
 import { BY_ID, type Catch, VARIANT_XP, valueOf } from '../fishing/fish';
 import type { Zone } from '../world/island';
 import { tokensFor } from './crates';
@@ -57,19 +58,31 @@ function questsFor(save: Save, e: QuestEvent): number[] {
   return finished;
 }
 
-/** Sell fish from the bag by index (all of them when none are given). Returns the coins made. */
-export function sell(save: Save, which?: number[]): { coins: number; finished: number[] } {
+/**
+ * Sell fish from the bag by index (all of them when none are given). Returns the coins made.
+ * Given the calendar day, the day's bounty counts: its fish sells for double, and the first one
+ * sold that day earns the bounty on top (`bounty`: what it paid, 0 if none was).
+ */
+export function sell(save: Save, which?: number[], day?: number): { coins: number; finished: number[]; bounty: number } {
   const pick = which ? new Set(which) : null;
   let coins = 0;
+  let wanted = false;
   save.bag = save.bag.filter((c, i) => {
     if (pick && !pick.has(i)) return true;
-    coins += valueOf(c);
+    coins += day === undefined ? valueOf(c) : priceOn(c, day, valueOf);
+    if (day !== undefined && isBounty(c.species, day)) wanted = true;
     return false;
   });
+  let bounty = 0;
+  if (wanted && day !== undefined && !bountyFilled(save.bounty, day)) {
+    bounty = bountyPrize(bountyFor(day));
+    save.bounty = { filled: day, count: save.bounty.count + 1 };
+    coins += bounty;
+  }
   save.coins += coins;
   save.stats.earned += coins;
   const finished = coins ? questsFor(save, { type: 'sell', coins }) : [];
-  return { coins, finished };
+  return { coins, finished, bounty };
 }
 
 /** Hand in a finished errand at the board: its reward, and a fresh errand in its place. */

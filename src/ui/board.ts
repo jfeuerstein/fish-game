@@ -1,4 +1,6 @@
 // The notice board: three errands pinned up by the islanders.
+import { favoursOpen, spotWords } from '../npc/talk';
+import { bountyCard } from './bountyCard';
 import { describe, done } from '../game/quests';
 import { claimQuest } from '../game/progress';
 import type { Session } from '../game/session';
@@ -8,6 +10,18 @@ import { Sheet } from './sheet';
 export function boardSheet(app: HTMLElement, s: Session): Sheet {
   const sheet: Sheet = new Sheet(app, 'Notice Board', (body) => {
     const save = s.save;
+    body.append(bountyCard(s));
+    // What the neighbours have asked for, once they have been met.
+    const asks = favoursOpen(s.save);
+    if (asks.length) {
+      body.append(el('div', 'section', 'Neighbours'));
+      for (const f of asks) {
+        const row = el('div', 'row');
+        row.innerHTML = `<img src="${icon(`fish-${f.fish.id}`)}" alt=""><div class="grow"><div class="sub">${f.name} would like</div><div class="title">${f.fish.name}</div><div class="sub">${f.have ? 'You have one. Take it to them.' : `Try ${spotWords(f.fish)}.`}</div></div>`;
+        body.append(row);
+      }
+      body.append(el('div', 'section', 'Errands'));
+    }
     body.append(el('p', '', 'Errands from around the island. Every third one done, the board leaves you a pearl.'));
     for (const q of save.quests) {
       const row = el('div', 'row');
