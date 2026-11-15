@@ -18,7 +18,7 @@ import { Logger, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dedup, meshopt, prune, simplify, weld } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
-import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import sharp from 'sharp';
 import { eyesOnCorners, eyesOnTexture, readBody, trianglesOnTexture } from './eyes.mjs';
 import { INKS, calm, inkFor, inked, inkedSmall } from './palette.mjs';
@@ -190,7 +190,9 @@ const SPRITE = 48;
 
 /** An icon as a pixel sprite: 48 across, a few inks, hard edges, a dark line round it. */
 export async function lofiIcon(id) {
-  const src = `${ROOT}art/icons/${id}.webp`;
+  // A sprite drawn for the purpose (art/sprites, from make-sprites.mjs) comes before the picture a model was shaped from.
+  const drawn = `${ROOT}art/sprites/${id}.png`;
+  const src = existsSync(drawn) ? drawn : `${ROOT}art/icons/${id}.webp`;
   const inner = SPRITE - 2;
   const trimmed = await sharp(src).ensureAlpha().trim({ threshold: 1 }).png().toBuffer();
   const fitted = await sharp(trimmed).resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 }, kernel: 'lanczos3' }).png().toBuffer();

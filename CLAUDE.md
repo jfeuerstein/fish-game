@@ -21,6 +21,7 @@ node tools/icons.mjs [prefix]                                # render menu icons
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
 node tools/assets/eyes.mjs [id ...]                          # say where each character's painted eyes are found (lofi.mjs does this itself)
+NODE_USE_ENV_PROXY=1 node tools/assets/make-sprites.mjs [--by tripo|fal] [--sheets 1,2] [--redo n] [--cut-only]   # the fish's sprites, sixteen to a sheet
 NODE_USE_ENV_PROXY=1 node tools/assets/make-tripo.mjs id ... # Tripo direct: picture -> model -> slimmed GLB + icon (--kinds hat,extra,prop,fish)
 NODE_USE_ENV_PROXY=1 node tools/assets/make-ground.mjs       # Tripo: the ground's painted textures, made to repeat
 node tools/fit-check.mjs outdir [items] [--chars ...] [--socket]   # every hat/accessory on every character, front and side
@@ -30,8 +31,10 @@ tools/blender/run.sh [id ...]                                # Blender (bpy): mo
 ```
 
 Run `npm test`, `npm run build` and `node tools/touch-check.mjs` before pushing. The browser tools
-need Playwright's Chromium (cloud sessions have it). Every push runs the tests and build and
-deploys to GitHub Pages.
+need Playwright's Chromium (cloud sessions have it). Every push runs the tests and build; the
+deploy to GitHub Pages only goes through from a branch the `github-pages` environment allows
+(the default branch, unless the owner adds others under Settings > Environments). That rule is
+the owner's: do not route a deploy round it.
 
 ## How it is put together
 
@@ -48,12 +51,19 @@ deploys to GitHub Pages.
   flowers in `scatter.ts` (seeded, kept off paths and water). Props are instanced per kind
   (`props.ts`); compressed geometry is widened to floats before baking (`toFloat`).
 - **Ground and water** have shaders of their own, and the finished picture one more
-  (`src/fx/screen.ts`). The ground is pixel art, sixteen pixels to the metre: five 64-pixel
+  (`src/fx/screen.ts`). The ground is pixel art, sixteen pixels to the metre: eight
   tiles, and what each ground pixel is (grass, sand, earth, rock, paving) read from the splat
-  weights as a texture, so grounds meet along a stair of pixels (`terrain.ts`). The water is flat
+  weights as a texture, so grounds meet along a stair of pixels (`terrain.ts`). Grass, sand
+  and earth each have a second tile, laid in patches among the first, and rock and paving have
+  one tile twice the size, so no stretch of ground is one tile over and over. The water is flat
   bands of colour by depth over a height texture, with foam, wave marks and glints as hard
   pixels, eight to the metre, moved five times a second (`water.ts`). Each keeps its old smooth
   form for `look=smooth`.
+- **Night** is moonlit (a strong pale light from one side, deep blue elsewhere) and lit by lamps:
+  `World.addLamp` puts a light at every lamp-post, the campfire (which flickers), the counters of
+  the shop, the arcade and the fishing hut, and the top of the lighthouse, whose beam goes round.
+  In the lo-fi look lamplight does not fade but falls in three flat steps and stops
+  (`stepLamplight` changes three.js's own falloff once), so each lamp throws a hard-edged pool.
 - **Sky** (`sky.ts`): hand-tuned palettes for moments of the day, blended by the hour, greyed by rain.
   A day on the island is 24 minutes (`clock.ts`); Settings can follow the real clock. Rain comes in
   spells chosen from the clock alone.
@@ -98,8 +108,13 @@ deploys to GitHub Pages.
   buttons by the right thumb, and Bag/Journal/Fun/More along the bottom. The bottom third is the
   movement stick; anywhere higher turns the camera.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
-  the shop. **Boat** (`src/world/boat.ts`), **placed furniture** (`placed.ts`).
+  the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
+  and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;
+  `Character.watching` and `fidgets`; the fidgets are poses in `poses.ts`). **Boat** (`src/world/boat.ts`), **placed furniture** (`placed.ts`).
 - **Sound** (`src/audio/audio.ts`): MP3s made through fal, played with Web Audio from the first touch.
+  In the lo-fi look everything goes through a narrow band with a little tape saturation, the
+  effects are cut to a few dozen levels so they crunch, and the music wavers in pitch like a worn
+  cassette (`lofi`; `look=smooth` plays it clean).
 
 ## What the game leans into
 
@@ -129,12 +144,20 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
 - **Two folders.** The asset tools write soft, detailed models and pictures into `art/`
   (`art/models`, `art/icons`, `art/textures`, `art/title.webp`). Nothing there is shipped.
   `tools/assets/lofi.mjs` cuts each down to what the game draws, in `public/`: a model to a few
-  hundred triangles (`CUT`, by kind) with a 64 to 256 pixel texture in the island's inks (a
+  hundred triangles (`CUT`, by kind) with a 64 to 512 pixel texture in the island's inks (the
+  four buildings get the finest, since they fill the screen when stood beside; a
   character's painted eyes found and painted out on the way: see The look); an
-  icon to a 48-pixel sprite with a dark line round it; the title picture to 201 pixels across.
-  It draws the five ground tiles itself, as pixel art. It costs nothing and takes ten seconds;
+  icon to a 48-pixel sprite with a dark line round it; the title picture to 201 pixels across
+  and the Home Screen icon to 64.
+  It draws the eight ground tiles itself, as pixel art. It costs nothing and takes ten seconds;
   the Tripo and fal tools run it when they finish. Never edit `public/models`, `public/icons` or
   `public/textures` by hand, and change how lo-fi a thing is in `lofi.mjs`, not in its source.
+- **The fish's sprites** are drawn for the purpose, not shrunk from the toy pictures their
+  models were shaped from: `make-sprites.mjs` asks Tripo's image model for sixteen pixel-art
+  sprites to a sheet (three sheets, 10 credits each; the request must be under 1,800
+  characters), cuts each sprite out by finding its drawing, and saves it in `art/sprites/`,
+  which `lofi.mjs` uses before `art/icons/`. The sheets are kept in `art/sprites/sheets/`. Look
+  at a new sheet before keeping it: one left out puts every fish after it under the wrong name.
 - **The inks** are one list of 54 colours: `tools/assets/palette.mjs` for the tools and
   `src/look/inks.ts` for the game, held together by a test. Every texture and icon is moved to
   them (`inkFor`: nearest by eye, hue before lightness).
@@ -170,12 +193,15 @@ this genre, made the island's own. Six things make it, and anything new must tak
 - **A small picture, blown up.** The world is drawn at one pixel to two screen points (201 by
   437 on the owner's phone; three points with Settings > Chunkier pixels), with no smoothing,
   into a picture of its own; `Screen` (`src/fx/screen.ts`) puts it on the canvas with each colour
-  cut to 31 levels and dithered, and the page blows the canvas up with hard pixels.
+  cut to 31 levels and dithered a little (Settings > Grain: none, a little, full; fully
+  dithered, every flat colour becomes a cross-hatch), and the page blows the canvas up with hard pixels.
   `src/look/look.ts` (pure, tested) holds the numbers.
 - **A short palette.** The inks (see Assets). Colour things made in code from `INKS`.
 - **Light in steps.** Make every lit material with `lit()` in `src/look/material.ts`, never
   `new MeshLambertMaterial`: it is three.js's toon material with a ramp of three tones. Models
-  are given a normal for each face when loaded, so each face is one flat tone. The ground stays
+  are given a normal for each face when loaded, so each face is one flat tone; a building
+  (`walls` in its file, from `lofi.mjs`) is lit smoothly across faces that nearly agree and
+  sharply at corners, since a flat wall lit face by face breaks into jagged patches. The ground stays
   smoothly lit. Shadows are one hard-edged tone (`BasicShadowMap`), and the shadow's picture is
   moved a whole pixel of itself at a time so its edge does not crawl. No film tone mapping.
 - **Pixels meant to be seen.** `pixelled()` gives a texture hard pixels. The sky is bands of
@@ -209,7 +235,8 @@ paper and deep ink, brass for what is precious and a red-orange enamel for the b
 all of them inks. One pixel typeface (Jersey 15) in its one weight. Everything is flat: a fill, a
 two-point ink line and a hard shadow down and to the right; buttons are keys that go down when
 pressed. No blur, no glass, no soft shadows, no gradients but hard stripes (a test holds the
-first three). Icons are pixel sprites and are never smoothed. Line drawings, never emoji. The
+first three). Icons are pixel sprites and are never smoothed. Line drawings, never emoji, and
+drawn as pixels (`pixelGlyph` in `src/ui/pixels.ts`). Confetti is big square pixels. The
 arcade is the same pieces with the inks turned about: pale on night, lined in brass. Use the
 variables.
 
