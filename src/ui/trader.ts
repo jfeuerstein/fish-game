@@ -20,7 +20,7 @@ export function traderSheet(app: HTMLElement, s: Session): Sheet {
           return;
         }
         s.audio.play('coin', { volume: 0.5 });
-        s.hud.toast(w.gives.furniture ? `${w.name} is in your bag.` : w.gives.pearls ? 'A pearl, warm from a pocket.' : `${w.name}: in the tackle box.`, 'good');
+        s.hud.toast(w.gives.furniture ? `${w.name} is in your bag.` : w.gives.pearls ? 'A pearl, warm from a pocket.' : w.gives.chart ? 'A chart. Row to the buoy south of the pier head, and out past it.' : `${w.name}: in the tackle box.`, 'good');
         s.changed();
         sheet.refresh();
       };

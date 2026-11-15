@@ -123,6 +123,11 @@ export const MODELS = {
   'f-chime': { kind: 'prop', what: 'a wind chime of sea shells and bits of driftwood hanging from the arm of a short wooden post', h: 1.6, faces: 3000, item: true },
   'f-shipbottle': { kind: 'prop', what: 'a model sailing ship inside a big glass bottle lying on a little wooden stand', h: 0.5, faces: 3000, item: true },
   'stall': { kind: 'prop', what: "a travelling trader's stall: a striped blanket spread on the ground with a few crates, jars and baskets on it, and a lantern hanging from a crooked pole at one corner", h: 1.9, faces: 5000 },
+  // Kettle Isle
+  'cannery': { kind: 'prop', what: 'a ruined old fish cannery: a long weathered grey timber shed on stone footings, its rusty corrugated iron roof half fallen in, one tall brick chimney at one end, a wide dark open doorway in the middle of its long front wall, and a faded painted fish on the boards beside the door', h: 6.5, faces: 9000 },
+  'room-cannery': { kind: 'prop', what: 'a dolls house room with no front wall and no ceiling, seen from its open front: the inside of an abandoned fish cannery, a floor of worn grey planks and three walls of grey boards with broken windows, a long workbench with rusty tins along the back wall, a big rusty iron boiler in the back right corner, an old wooden desk with an open ledger on it against the left wall, a stack of wooden crates against the right wall, the middle of the floor bare', h: 3.6, faces: 9000 },
+  'coral': { kind: 'prop', what: 'a clump of coral on a small rock: a branching orange-pink coral, a round purple brain coral and a little yellow fan', h: 0.9, faces: 1800 },
+  'wreck': { kind: 'prop', what: 'the wreck of a small wooden fishing boat lying tilted on its side, its curved ribs showing through broken planks, a snapped mast, barnacles along the hull', h: 3, faces: 5000 },
   // Toys: the rarest prizes, which change how the island is got about or fished.
   'toy-skateboard': { kind: 'prop', what: 'a chunky wooden skateboard, a sea-blue deck with one red stripe down it and four fat yellow wheels', h: 0.2, faces: 2500, item: true },
   'toy-pogo': { kind: 'prop', what: 'a red pogo stick standing upright: a big coiled steel spring, two foot pegs, a T handle with black rubber grips and a rubber foot', h: 1.25, faces: 2500, item: true },
@@ -249,6 +254,20 @@ export const FISH_ART = {
   'crystal-crab': 'a crab with a shell of pale blue crystal spikes and purple claws, seen from above',
   'frost-char': 'an icy blue char fish with a white belly and pale frosty spots',
   'maple-salmon': 'a salmon coloured like autumn leaves, deep red with orange and gold patches',
+  // Kettle Isle: the crater lake
+  'ember-newt': 'a small newt, orange as an ember with a yellow belly and black spots, seen from above',
+  'steam-pike': 'a long pale grey pike with a white belly and faint wisps of steam coming off its back',
+  'door-carp': 'an enormous flat-sided carp as tall as it is long, moss green with big dull bronze scales and a heavy frowning mouth',
+  'the-lid': 'a huge round flat fish like a pot lid, dark slate grey with a brass-coloured knob-shaped bump in the middle of its back and two small eyes on top, seen from above',
+  // Kettle Isle: the reef
+  'parrotfish': 'a parrotfish, turquoise and pink with a beak-like mouth',
+  'clownfish': 'a small orange clownfish with three white bands edged in black',
+  'reef-moray': 'a moray eel, speckled yellow-green, its mouth a little open, coiled in an S',
+  'lionfish': 'a lionfish with red and white stripes and long spiny fanned fins',
+  // Kettle Isle: the tide pools
+  'hermit-crab': 'a hermit crab peeping out of a spiral whelk shell, orange legs and eye stalks',
+  'sea-urchin': 'a round purple sea urchin covered in spines',
+  'sea-slug': 'a small sea slug, bright blue with yellow stripes and two feathery orange horns',
 };
 
 /** Pictures only (no model): icons for things in the shop and the game's own art. */

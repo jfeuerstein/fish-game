@@ -89,9 +89,23 @@ export const SPECIES: readonly Species[] = [
   // The seasons
   { id: 'frost-char', name: 'Frost Char', zones: ['creek'], tier: 'uncommon', size: [25, 60], value: 40, watch: 'day', seasons: ['winter'], fight: 0.4, note: 'Cold to the touch, even after an hour by the fire.' },
   { id: 'maple-salmon', name: 'Maple Salmon', zones: ['creek'], tier: 'rare', size: [40, 90], value: 85, watch: 'twilight', seasons: ['fall'], fight: 0.55, note: 'Runs up the creek when the leaves turn, wearing them.' },
-  { id: 'boot', name: 'Old Boot', zones: ['ocean', 'deep', 'pond', 'creek'], tier: 'junk', size: [25, 32], value: 1, watch: 'any', fight: 0.05, note: 'One day you will find the other one.' },
-  { id: 'can', name: 'Tin Can', zones: ['ocean', 'deep', 'pond', 'creek'], tier: 'junk', size: [10, 14], value: 1, watch: 'any', fight: 0.05, note: 'Recycling it anyway.' },
-  { id: 'seaweed', name: 'Seaweed', zones: ['ocean', 'deep'], tier: 'junk', size: [20, 60], value: 2, watch: 'any', fight: 0.05, note: 'Smells like the seaside.' },
+  // Kettle Isle: the crater lake. Everything in it is bigger and slower than it has any right to be.
+  { id: 'ember-newt', name: 'Ember Newt', zones: ['lake'], tier: 'common', size: [8, 18], value: 16, watch: 'any', fight: 0.12, note: 'Warm in the hand, like a stone left by the fire.' },
+  { id: 'steam-pike', name: 'Steam Pike', zones: ['lake'], tier: 'uncommon', size: [60, 130], value: 58, watch: 'day', fight: 0.55, note: 'Comes up out of the warm water with its back smoking.' },
+  { id: 'door-carp', name: 'Door Carp', zones: ['lake'], tier: 'rare', size: [120, 220], value: 150, watch: 'twilight', fight: 0.75, note: 'The size of a door, and about as interested in moving.' },
+  { id: 'the-lid', name: 'The Lid', zones: ['lake'], tier: 'legendary', size: [220, 340], value: 900, watch: 'night', fight: 1.0, note: 'It has sat on the bottom of the Kettle longer than the cannery stood.' },
+  // Kettle Isle: the reef flat.
+  { id: 'parrotfish', name: 'Parrotfish', zones: ['reef'], tier: 'common', size: [25, 50], value: 18, watch: 'day', fight: 0.3, note: 'Eats coral and makes sand. The beach is, in a way, its doing.' },
+  { id: 'clownfish', name: 'Clownfish', zones: ['reef'], tier: 'uncommon', size: [6, 12], value: 36, watch: 'day', fight: 0.15, note: 'Not actually joking.' },
+  { id: 'reef-moray', name: 'Reef Moray', zones: ['reef'], tier: 'rare', size: [80, 150], value: 120, watch: 'night', fight: 0.7, note: 'All of it comes out of a hole you would not have thought held half.' },
+  { id: 'lionfish', name: 'Lionfish', zones: ['reef'], tier: 'epic', size: [20, 40], value: 210, watch: 'twilight', fight: 0.5, note: 'Handle by the tail. There is no good end, but that is the better one.' },
+  // Kettle Isle: the tide pools.
+  { id: 'hermit-crab', name: 'Hermit Crab', zones: ['pools'], tier: 'common', size: [4, 10], value: 12, watch: 'any', fight: 0.1, note: 'Would like its shell back when you have finished looking.' },
+  { id: 'sea-urchin', name: 'Sea Urchin', zones: ['pools'], tier: 'uncommon', size: [6, 12], value: 30, watch: 'any', fight: 0.1, note: 'Reeling it in is the easy part.' },
+  { id: 'sea-slug', name: 'Sea Slug', zones: ['pools'], tier: 'rare', size: [3, 8], value: 110, watch: 'day', fight: 0.1, note: 'Dressed for a party nobody else was told about.' },
+  { id: 'boot', name: 'Old Boot', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools'], tier: 'junk', size: [25, 32], value: 1, watch: 'any', fight: 0.05, note: 'One day you will find the other one.' },
+  { id: 'can', name: 'Tin Can', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools'], tier: 'junk', size: [10, 14], value: 1, watch: 'any', fight: 0.05, note: 'Recycling it anyway.' },
+  { id: 'seaweed', name: 'Seaweed', zones: ['ocean', 'deep', 'reef', 'pools'], tier: 'junk', size: [20, 60], value: 2, watch: 'any', fight: 0.05, note: 'Smells like the seaside.' },
   { id: 'bottle', name: 'Message in a Bottle', zones: ['ocean', 'deep'], tier: 'junk', size: [25, 30], value: 25, watch: 'any', fight: 0.05, note: '"Hope you are having a nice day." Signed, a stranger.' },
   { id: 'treasure', name: 'Treasure Chest', zones: [], tier: 'junk', size: [40, 60], value: 0, watch: 'any', fight: 0.2, note: 'Something heavy on the line, and it rattles. Opened on the spot.' },
 ];
@@ -119,7 +133,7 @@ export const TIER_LABEL: Record<Tier, string> = {
   junk: 'Junk',
 };
 
-export const ZONE_LABEL: Record<Zone, string> = { ocean: 'Ocean', deep: 'Deep water', pond: 'Pond', creek: 'Creek', cave: 'Sea cave' };
+export const ZONE_LABEL: Record<Zone, string> = { ocean: 'Ocean', deep: 'Deep water', pond: 'Pond', creek: 'Creek', cave: 'Sea cave', lake: 'The Kettle', reef: 'Reef flat', pools: 'Tide pools', spring: 'Hot spring' };
 /** When a fish is about, said in a few words: its hours, and its weather or seasons if it keeps to any. */
 export function sayWhen(s: Species): string {
   const parts = [WATCH_LABEL[s.watch]];
@@ -130,8 +144,12 @@ export function sayWhen(s: Species): string {
   return parts.join(' · ');
 }
 
-/** Whether a fish can be had on any day of the year, whatever the sky: what an errand or a bounty may ask for. */
-export const everyDay = (s: Species): boolean => !s.rain && !s.weather && !s.seasons && !s.zones.includes('cave');
+/** Kettle Isle's waters: a fish that lives only in them is not at the cove at all. */
+export const FAR_ZONES: readonly Zone[] = ['lake', 'reef', 'pools'];
+export const farAway = (s: Species): boolean => s.zones.length > 0 && s.zones.every((z) => FAR_ZONES.includes(z));
+
+/** Whether a fish can be had on any day of the year, whatever the sky, without leaving the cove: what an errand or a bounty may ask for. */
+export const everyDay = (s: Species): boolean => !s.rain && !s.weather && !s.seasons && !s.zones.includes('cave') && !farAway(s);
 
 export const WATCH_LABEL: Record<Watch, string> = { any: 'Any time', day: 'Daytime', night: 'Night', twilight: 'Dawn & dusk' };
 

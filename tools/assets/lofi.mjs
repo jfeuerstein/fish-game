@@ -65,14 +65,14 @@ const CUT = {
 /** The buildings, which fill the screen, and the small growing things, which are everywhere. */
 const BIG = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'cliff']);
 /** Things people have built, which keep their shape (see `made` above); anything set down from the bag (`f-`) is one too. */
-const MADE = new Set(['stall', 'cave-mouth', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'bench', 'picnic-table', 'lamp-post', 'signpost', 'mailbox', 'fence', 'crates', 'barrel', 'campfire', 'buoy', 'pier']);
+const MADE = new Set(['stall', 'wreck', 'cave-mouth', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'bench', 'picnic-table', 'lamp-post', 'signpost', 'mailbox', 'fence', 'crates', 'barrel', 'campfire', 'buoy', 'pier']);
 const isMade = (id) => MADE.has(id) || id.startsWith('f-');
 /** The trees: each is cut twice, once to be seen near and once far (see `tree` and `far` above). */
 export const TREES = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm']);
 const PLANT = new Set(['bush', 'flowers', 'grass-tuft', 'mushrooms', 'cattails', 'lilypad', 'rock-a', 'rock-b', 'shell', 'cloud']);
 
 const index = JSON.parse(readFileSync(`${ROOT}public/models/index.json`, 'utf8'));
-const HOUSES = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'room-shop', 'room-hut', 'room-aquarium', 'room-cave']);
+const HOUSES = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'room-shop', 'room-hut', 'room-aquarium', 'room-cave', 'cannery', 'room-cannery']);
 const SPRIGS = new Set(['flowers', 'grass-tuft']);
 const cutFor = (id) => CUT[SPRIGS.has(id) ? 'sprig' : HOUSES.has(id) ? 'house' : TREES.has(id) ? 'tree' : isMade(id) ? 'made' : BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
 

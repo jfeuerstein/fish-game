@@ -1,10 +1,13 @@
 // The island's ground: a height for every point, the water over it, and what kind of water a
 // bobber lands in. Pure, no three.js, so it runs under Vitest.
 import { clamp, fbm, smoothstep } from '../core/rng';
-import { CAVE, BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, STEP, WORLD_SIZE, bridgeBank, creekLevel, floorAt, nearestOnLine } from './layout';
+import { HOME } from './isle';
+import { REEF, kettleHeight, kettleShore, reefiness } from './kettle';
+import { CAVE, BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, POOLS, STEP, WORLD_SIZE, bridgeBank, creekLevel, floorAt, nearestOnLine } from './layout';
 
 /** Distance from the centre to the shore at an angle (radians, atan2(z, x)). */
 export function shoreRadius(angle: number): number {
+  if (!HOME) return kettleShore(angle);
   return 62 + 6 * Math.sin(2 * angle + 0.6) + 4 * Math.sin(3 * angle - 1.1) + 3.5 * fbm(Math.cos(angle) * 2.2 + 5, Math.sin(angle) * 2.2 + 5, 3, 11);
 }
 
@@ -21,8 +24,13 @@ function beachiness(angle: number): number {
   return smoothstep(0.9, 0.2, d);
 }
 
-/** The ground's height before it is sampled onto a grid. */
+/** The ground's height before it is sampled onto a grid: this island's. */
 export function rawHeight(x: number, z: number): number {
+  return HOME ? coveHeight(x, z) : kettleHeight(x, z);
+}
+
+/** Driftwood Cove's ground. */
+function coveHeight(x: number, z: number): number {
   const angle = Math.atan2(z, x);
   const d = Math.hypot(x, z);
   const inland = shoreRadius(angle) - d;
@@ -120,13 +128,15 @@ export class Heightfield {
 }
 
 /** The kinds of water. `cave` is the sea cave's pool, which is a place of its own (see src/world/rooms.ts), not on the island's ground. */
-export type Zone = 'ocean' | 'deep' | 'pond' | 'creek' | 'cave';
+/** The last four are Kettle Isle's: the crater lake, the reef flat, the tide pools, and the hot spring (which is not fished). */
+export type Zone = 'ocean' | 'deep' | 'pond' | 'creek' | 'cave' | 'lake' | 'reef' | 'pools' | 'spring';
 
 /** The surface of whatever water is at a point, or null where it is dry. */
 export function waterAt(field: Heightfield, x: number, z: number): { level: number; zone: Zone; depth: number } | null {
   const ground = field.heightAt(x, z);
+  for (const p of POOLS) if (Math.hypot(x - p.x, z - p.z) < p.r + 0.9 && ground < p.level) return { level: p.level, zone: p.hot ? 'spring' : 'pools', depth: p.level - ground };
   const pondD = Math.hypot(x - POND.x, z - POND.z);
-  if (pondD < POND.r + 2 && ground < POND.level) return { level: POND.level, zone: 'pond', depth: POND.level - ground };
+  if (pondD < POND.r + 2 && ground < POND.level) return { level: POND.level, zone: HOME ? 'pond' : 'lake', depth: POND.level - ground };
   const c = nearestOnLine(CREEK, x, z);
   if (c.d < CREEK_WIDTH * 1.6) {
     const level = creekLevel(c.t);
@@ -136,6 +146,8 @@ export function waterAt(field: Heightfield, x: number, z: number): { level: numb
   }
   // Before the mouth of the sea cave the water is the cave's own.
   if (ground < 0 && Math.hypot(x - CAVE.x, z - CAVE.z) < CAVE.r) return { level: 0, zone: 'cave', depth: -ground };
+  // Over Kettle Isle's reef flat the shallow sea is the reef's own.
+  if (!HOME && ground < 0 && ground > -REEF.depth && reefiness(Math.atan2(z, x)) > 0.5) return { level: 0, zone: 'reef', depth: -ground };
   if (ground < 0) return { level: 0, zone: ground < -5.5 ? 'deep' : 'ocean', depth: -ground };
   return null;
 }
@@ -145,7 +157,7 @@ export function fishingZone(field: Heightfield, x: number, z: number): Zone | nu
   // Not through the boards of the pier.
   if (floorAt(x, z) !== null) return null;
   const w = waterAt(field, x, z);
-  return w && w.depth > 0.35 ? w.zone : null;
+  return w && w.depth > 0.35 && w.zone !== 'spring' ? w.zone : null;
 }
 
 /** Where someone on foot stands: on the pier's boards, or on the ground. */

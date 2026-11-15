@@ -18,6 +18,7 @@ node tools/shot.mjs out.png "at=shop" 402 874 1 "window.__cove.open('shop')"   #
 node tools/play-check.mjs outdir                             # three scripted casts from the pier, with pictures
 node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons, a dragged thumb walks and turns, and a whole cast by thumb
 node tools/bench-check.mjs                                   # runs the game's own benchmark end to end (its numbers mean nothing off the phone)
+node tools/cross-check.mjs outdir                            # rows to Kettle Isle and back by the buttons, with pictures; and that a kept save opens on the island it was put away on
 node tools/icons.mjs [prefix]                                # render menu icons from the models (into art/icons)
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
@@ -32,7 +33,7 @@ NODE_USE_ENV_PROXY=1 node tools/assets/make-media.mjs        # fal: textures, ti
 tools/blender/run.sh [id ...]                                # Blender (bpy): models fal did not make
 ```
 
-Run `npm test`, `npm run build` and `node tools/touch-check.mjs` before pushing. The browser tools
+Run `npm test`, `npm run build` and `node tools/touch-check.mjs` before pushing (and `node tools/cross-check.mjs` after touching either island's layout, the boat or the save). The browser tools
 need Playwright's Chromium (cloud sessions have it). Every push runs the tests and build; the
 deploy to GitHub Pages only goes through from a branch the `github-pages` environment allows
 (the default branch, unless the owner adds others under Settings > Environments). That rule is
@@ -45,7 +46,7 @@ the owner's: do not route a deploy round it.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `isle=kettle` loads Kettle Isle (`at` then takes its places: `jetty`, `cannery`, `notch`, `lake`, `spring`, `pools`, `reef`). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
   the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
@@ -306,6 +307,39 @@ the owner's: do not route a deploy round it.
   of it is `src/world/ride.ts`; they are got on and used from the Fun sheet, and anything
   else the player does (casting, sitting, going indoors) gets them off. Landing in deep water
   puts the player back where they last stood, as a jump always has.
+
+- **Two islands** (`src/world/isle.ts`). Driftwood Cove, and Kettle Isle, a wilder one a boat's
+  row away; the owner asked for it, and for the crossing to be a loading card rather than a
+  seamless sea. **Only one island is ever loaded.** Which one is chosen once, as the page
+  loads (`ISLE`, `HOME`: from `isle=` in the address, else from `cove.isle` in storage, and
+  always the cove under the tests and for an unkept save), and everything that says where
+  things are picks its island's version there and then: `layout.ts` (`POND`, `PIER`, `PATHS`,
+  `PLACED`, `PLACES`, `START`, `CROSSING` and the rest each have a cove value and a Kettle
+  value; what an island lacks is put at `NOWHERE`, off the map, so nothing is ever near it),
+  `island.ts` (`rawHeight`, `shoreRadius`, `waterAt`), the scatter's rules, the chart. A test
+  of Kettle Isle mocks `./isle` (see `kettle.test.ts`). In `main.ts` the cove's own things
+  (shop, Lucky Gull, board, hut, lighthouse, islanders, Gus, the trader, sea glass, mushrooms,
+  the first-minute guide) are simply not there when `!HOME`: their doors are set nowhere.
+- **The crossing** (`Game.cross`): in the boat beside the buoy (`CROSSING`: south of the
+  cove's pier head, east of Kettle's jetty) the second button reads Row out, or Row home. It
+  wants the **sea chart**, which Tansy sells (always on her stall until bought; `seaChart` in
+  the save). The save is kept, the island's name is put in storage, and the page is loaded
+  again; `src/main.ts` sees the crossing's mark in session storage and shows a card over the
+  title's picture ("Rowing out to Kettle Isle…") in place of the title, and the game begins by
+  itself, at the boat. A kept save opens on the island it was put away on.
+- **Kettle Isle** (`src/world/kettle.ts`, pure, tested): an old crater with a lake in it (the
+  Kettle: `POND` there, zone `lake`, held in by a rim with a notch to walk in by), a reef flat
+  off the south-west shore where the sea stays wadeable for thirty metres (zone `reef`, with
+  coral scattered on it and a wreck), a shelf of bare rock on the north-east shore with four
+  tide pools cut in it (zone `pools`), and a hot spring on the mountain's flank (zone `spring`:
+  not fished; Soak sits in it, and it steams). Pools are `POOLS`: each is cut into the ground
+  with a bank the one-metre grid can hold, and drawn as a disc of water at its own level.
+  Nobody lives there: no shop, so what is caught goes home in the cooler. A jetty, a ruined
+  cannery to go into (`room-cannery`: a ledger read a page at a time, and a crate with
+  something in it once a day; `src/game/kettle.ts`), an old fire ring. Eleven fish in the
+  three waters (`farAway` in `fish.ts`), with their own page of the journal and a set; an
+  errand, a bounty or a favour never asks for one (`everyDay`). Things set down are kept by
+  island (`isle` on a `PlacedThing`).
 
 ## What the game leans into
 

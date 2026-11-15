@@ -38,8 +38,20 @@ describe('the trader', () => {
     for (let d = 0; d < 40; d++) {
       const s = stock(d);
       expect(new Set(s.map((w) => w.id)).size).toBe(s.length);
-      expect(s.length).toBe(5);
+      expect(s.length).toBe(6);
     }
+  });
+
+  it('sells the chart to Kettle Isle once, and for good', () => {
+    const save = newSave();
+    save.coins = 5000;
+    const chart = stock(3).find((w) => w.gives.chart)!;
+    expect(save.seaChart).toBe(false);
+    expect(buyWare(save, 3, chart)).toBe(true);
+    expect(save.seaChart).toBe(true);
+    // Another visit: it is not sold twice.
+    expect(sold(save, 40, chart)).toBe(true);
+    expect(buyWare(save, 40, chart)).toBe(false);
   });
 
   it('sells each thing once a visit', () => {

@@ -17,6 +17,8 @@ export interface PlacedThing {
   x: number;
   z: number;
   yaw: number;
+  /** Set down on Kettle Isle. Without this, on the cove. */
+  isle?: 'kettle';
 }
 
 export interface Settings {
@@ -75,6 +77,10 @@ export interface Save {
   toys: string[];
   toyAt: Record<string, number>;
   tricks: number;
+  /** The chart that shows the way to Kettle Isle, bought from the trader. */
+  seaChart: boolean;
+  /** Kettle Isle's cannery: the day its crate was last gone through (-1 never), and pages of its ledger read. */
+  cannery: { day: number; pages: number };
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -168,6 +174,8 @@ export function newSave(): Save {
     toys: [],
     toyAt: {},
     tricks: 0,
+    seaChart: false,
+    cannery: { day: -1, pages: 0 },
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -295,7 +303,7 @@ export function parseSave(text: string | null): Save {
   const placed = (Array.isArray(o.placed) ? o.placed : [])
     .map((p) => rec(p))
     .filter((p) => typeof p.id === 'string')
-    .map((p) => ({ id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
+    .map((p): PlacedThing => (p.isle === 'kettle' ? { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0), isle: 'kettle' } : { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
   const quests = (Array.isArray(o.quests) ? o.quests : []).map(readQuest).filter((q): q is Quest => q !== null);
   const s = rec(o.settings);
   const st = rec(o.stats);
@@ -327,6 +335,8 @@ export function parseSave(text: string | null): Save {
     toys: strs(o.toys).filter((id) => id.startsWith('toy-')),
     toyAt: Object.fromEntries(Object.entries(rec(o.toyAt)).filter((e): e is [string, number] => typeof e[1] === 'number' && e[0].startsWith('toy-'))),
     tricks: Math.floor(num(o.tricks, 0, 0)),
+    seaChart: o.seaChart === true,
+    cannery: { day: Math.floor(num(rec(o.cannery).day, -1, -1)), pages: Math.floor(num(rec(o.cannery).pages, 0, 0)) },
     gull: { fed: Math.floor(num(rec(o.gull).fed, -1, -1)), streak: Math.floor(num(rec(o.gull).streak, 0, 0)), tame: rec(o.gull).tame === true, giftDay: Math.floor(num(rec(o.gull).giftDay, -1, -1)), gifts: Math.floor(num(rec(o.gull).gifts, 0, 0)) },
     bait: str(o.bait, 'bait-worm'),
     baits,

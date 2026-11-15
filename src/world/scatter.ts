@@ -2,6 +2,8 @@
 // water, buildings and anywhere people gather. Pure.
 import { fbm, rng } from '../core/rng';
 import { Heightfield, pathDistance, waterAt } from './island';
+import { HOME } from './isle';
+import { KETTLE } from './kettle';
 import { BRIDGE, CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, type Placed, bridgeLocal, nearestOnLine } from './layout';
 
 /** Places kept clear of anything growing, as circles. */
@@ -60,7 +62,7 @@ export function spotAt(field: Heightfield, x: number, z: number): Spot {
 
 const dry = (s: Spot): boolean => s.h > 1.0 && s.shore > 1.5;
 
-export const RULES: GrowRule[] = [
+const COVE_RULES: GrowRule[] = [
   { id: 'tree-pine', count: 150, scale: [0.75, 1.25], space: 3.2, fits: (s) => dry(s) && s.wood > 0.05 && s.slope < 0.9 && s.path > 3 && s.shore > 3 },
   { id: 'tree-round', count: 55, scale: [0.75, 1.15], space: 4, fits: (s) => dry(s) && s.wood > -0.25 && s.wood < 0.25 && s.slope < 0.6 && s.path > 3.5 && s.shore > 3 },
   { id: 'tree-birch', count: 50, scale: [0.75, 1.2], space: 3, fits: (s) => dry(s) && s.wood > -0.15 && s.slope < 0.7 && s.path > 3 && s.shore > 2 },
@@ -70,6 +72,21 @@ export const RULES: GrowRule[] = [
   { id: 'log', count: 10, scale: [0.9, 1.2], space: 3, fits: (s) => dry(s) && s.wood > 0.1 && s.path > 2.5 && s.slope < 0.4 },
   { id: 'mushrooms', count: 30, scale: [0.8, 1.3], space: 1, fits: (s) => dry(s) && s.wood > 0.2 && s.path > 1.8 },
 ];
+
+/** Kettle Isle is wilder: more of everything, palms along the low shores, and nothing but rock inside the crater. */
+const outOfCrater = (s: Spot): boolean => Math.hypot(s.x - KETTLE.x, s.z - KETTLE.z) > KETTLE.rim + 1;
+const KETTLE_RULES: GrowRule[] = [
+  { id: 'tree-pine', count: 210, scale: [0.75, 1.3], space: 3.2, fits: (s) => dry(s) && outOfCrater(s) && s.h > 3.2 && s.wood > -0.1 && s.slope < 0.9 && s.path > 3 && s.shore > 3 },
+  { id: 'tree-round', count: 60, scale: [0.75, 1.15], space: 4, fits: (s) => dry(s) && outOfCrater(s) && s.h < 5 && s.wood > -0.3 && s.wood < 0.3 && s.slope < 0.5 && s.path > 3.5 && s.shore > 3 },
+  { id: 'tree-palm', count: 46, scale: [0.8, 1.25], space: 4.5, tries: 200, fits: (s) => s.h > 1.0 && s.h < 2.7 && s.slope < 0.35 && s.path > 3 && s.shore > 2 },
+  { id: 'tree-birch', count: 30, scale: [0.75, 1.2], space: 3, fits: (s) => dry(s) && outOfCrater(s) && s.wood > 0 && s.slope < 0.7 && s.path > 3 && s.shore > 2 },
+  { id: 'bush', count: 140, scale: [0.7, 1.3], space: 1.6, fits: (s) => dry(s) && s.path > 2 && s.slope < 0.7 },
+  { id: 'rock-a', count: 60, scale: [0.6, 1.5], space: 3, fits: (s) => s.h > 0.6 && s.path > 2.5 && (s.slope > 0.35 || s.h < 1.6) },
+  { id: 'rock-b', count: 70, scale: [0.6, 1.3], space: 2, fits: (s) => s.h > -0.4 && s.path > 2 && (s.slope > 0.3 || s.h < 1.4) },
+  { id: 'log', count: 14, scale: [0.9, 1.2], space: 3, fits: (s) => dry(s) && outOfCrater(s) && s.wood > 0.1 && s.path > 2.5 && s.slope < 0.4 },
+  { id: 'mushrooms', count: 30, scale: [0.8, 1.3], space: 1, fits: (s) => dry(s) && s.wood > 0.2 && s.path > 1.8 },
+];
+export const RULES: GrowRule[] = HOME ? COVE_RULES : KETTLE_RULES;
 
 /** Little things that do not get in anyone's way. */
 export const FLOWER_RULES: GrowRule[] = [
@@ -113,6 +130,22 @@ export function lilypads(seed = 3): Placed[] {
     const a = r() * Math.PI * 2;
     const d = POND.r * (0.45 + r() * 0.45);
     out.push({ id: 'lilypad', x: POND.x + Math.cos(a) * d, z: POND.z + Math.sin(a) * d, yaw: r() * 6.28, scale: 0.8 + r() * 0.6, y: POND.level + 0.02 });
+  }
+  return out;
+}
+
+/** Coral on Kettle Isle's reef flat: clumps standing on the bottom where the water is shallow, some breaking the surface. */
+export function corals(field: Heightfield, seed = 5): Placed[] {
+  if (HOME) return [];
+  const r = rng(seed);
+  const out: Placed[] = [];
+  for (let tries = 0; out.length < 46 && tries < 6000; tries++) {
+    const x = (r() - 0.5) * field.half * 1.9;
+    const z = (r() - 0.5) * field.half * 1.9;
+    const w = waterAt(field, x, z);
+    if (!w || w.zone !== 'reef' || w.depth < 0.35 || w.depth > 1.3) continue;
+    if (out.some((c) => Math.hypot(c.x - x, c.z - z) < 4)) continue;
+    out.push({ id: 'coral', x, z, yaw: r() * Math.PI * 2, scale: 0.8 + r() * 0.9, y: field.heightAt(x, z) - 0.05 });
   }
   return out;
 }

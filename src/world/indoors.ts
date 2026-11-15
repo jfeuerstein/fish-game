@@ -8,7 +8,7 @@ import { model } from '../assets/models';
 import { pixelled } from '../look/material';
 import { heading } from '../player/steer';
 
-export type RoomId = 'shop' | 'hut' | 'aquarium';
+export type RoomId = 'shop' | 'hut' | 'aquarium' | 'cannery';
 
 export interface RoomSpot {
   id: string;
@@ -39,6 +39,17 @@ export const ROOMS: Record<RoomId, Room> = {
     spots: [
       { id: 'bench', label: 'Tackle', fx: -0.35, fz: -0.2, reach: 1.4 },
       { id: 'stove', label: 'Warm hands', fx: 0.4, fz: -0.25, reach: 1.3 },
+    ],
+  },
+  // Kettle Isle's: what was left when everyone went.
+  cannery: {
+    name: 'The cannery',
+    model: 'room-cannery',
+    yaw: 0.5,
+    dist: 10,
+    spots: [
+      { id: 'ledger', label: 'Read', fx: -0.5, fz: -0.3, reach: 1.7 },
+      { id: 'crate', label: 'Rummage', fx: 0.55, fz: 0.35, reach: 1.6 },
     ],
   },
   aquarium: { name: 'The aquarium', model: 'room-aquarium', yaw: 0.12, dist: 9.4, spots: [{ id: 'tank', label: 'Tank', fx: 0, fz: -0.35, reach: 2.2 }] },

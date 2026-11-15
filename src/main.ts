@@ -2,6 +2,7 @@ import './style.css';
 import { Game } from './game/main';
 import { drawLogo } from './ui/logo';
 import { liveTitle } from './ui/titleArt';
+import { CROSSING_KEY, ISLE, ISLE_NAME } from './world/isle';
 
 /**
  * Launched from the Home Screen, iOS can lay the page out shorter than the screen it shows.
@@ -30,6 +31,23 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     // Once the game is running, keep a copy of all of it for playing with no signal.
     setTimeout(() => (reg.active ?? navigator.serviceWorker.controller)?.postMessage('keep-all'), 20000);
   });
+}
+
+// Arriving from the other island: the title gives way to a card that says where the boat is
+// going, over the same picture, and the game begins by itself when it has loaded.
+let arriving: string | null = null;
+try {
+  arriving = sessionStorage.getItem(CROSSING_KEY);
+} catch {
+  /* No storage: the title as ever. */
+}
+if (arriving) {
+  const title = document.getElementById('title');
+  title?.classList.add('crossing');
+  const says = document.createElement('p');
+  says.className = 'crossing-says';
+  says.textContent = ISLE === 'kettle' ? `Rowing out to ${ISLE_NAME.kettle}…` : `Rowing home to ${ISLE_NAME.cove}…`;
+  title?.querySelector('.title-card')?.prepend(says);
 }
 
 // The title picture moves from the moment it is up: the water laps, gulls drift, the bobber dips.

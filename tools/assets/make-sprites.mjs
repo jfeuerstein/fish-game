@@ -80,7 +80,8 @@ const sixteens = (ids) => {
 
 /** The two sets of sprites: their sheets, what each thing looks like, what its file is called, and how they are seen. */
 const SETS = {
-  fish: { sheets: sixteens(Object.keys(FISH_ART)), says: (id) => FISH_ART[id], name: (id) => `fish-${id}`, sheet: 'sheet', view: 'Every animal has one small round black eye. Seen from the side facing left unless said.' },
+  // (The first 57 fish fill four sheets, the last not to the end; Kettle Isle's eleven have a sheet of their own, so that none of those is painted again.)
+  fish: { sheets: [...sixteens(Object.keys(FISH_ART).slice(0, 57)), Object.keys(FISH_ART).slice(57)], says: (id) => FISH_ART[id], name: (id) => `fish-${id}`, sheet: 'sheet', view: 'Every animal has one small round black eye. Seen from the side facing left unless said.' },
   items: { sheets: ITEM_SHEETS, says: itemSays, name: (id) => id, sheet: 'items', view: 'Each thing whole and on its own, with nobody wearing or holding it, seen from the front and a little above, upright; a fishing rod lies on a slant. Animals have small round black eyes.' },
 };
 const which = args.find((a) => a in SETS) ?? 'fish';

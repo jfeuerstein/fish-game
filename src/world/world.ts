@@ -6,7 +6,7 @@ import { Colliders } from './colliders';
 import { Heightfield } from './island';
 import { PLACED, type Placed, pierSections, railPosts } from './layout';
 import { Props } from './props';
-import { FLOWER_RULES, RULES, lilypads, scatter } from './scatter';
+import { FLOWER_RULES, RULES, lilypads, scatter, corals } from './scatter';
 import type { Weather } from '../game/clock';
 import { SEASON_LOOK, type Season } from '../look/season';
 import type { Air } from './sky';
@@ -52,7 +52,7 @@ export class World {
   /** Everything that has to be loaded. `progress` is called as each kind of thing arrives. */
   async populate(progress: (done: number, of: number) => void, models: boolean): Promise<void> {
     if (!models) return;
-    const things = [...PLACED, ...pierSections(), ...scatter(this.field, RULES, 1), ...scatter(this.field, FLOWER_RULES, 2), ...lilypads()];
+    const things = [...PLACED, ...pierSections(), ...scatter(this.field, RULES, 1), ...scatter(this.field, FLOWER_RULES, 2), ...lilypads(), ...corals(this.field)];
     const kinds = new Set(things.map((t) => t.id)).size + 1;
     let done = 0;
     const tick = (): void => progress(++done, kinds);

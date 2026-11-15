@@ -55,7 +55,9 @@ import { Uke } from '../ui/uke';
 import { Boat } from '../world/boat';
 import { fishingZone, shoreRadius, standHeight, waterAt } from '../world/island';
 import { splatAt } from '../world/terrain';
-import { CAMP, CAVE, PIER, PLACES, PLACED, POND } from '../world/layout';
+import { CAMP, CANNERY, CAVE, CROSSING, PIER, PLACES, PLACED, POND, POOLS, START } from '../world/layout';
+import { CROSSING_KEY, HOME, ISLE, ISLE_KEY, ISLE_NAME, type IsleId } from '../world/isle';
+import { CANNERY_PAGES, rummage } from './kettle';
 import { PlacedThings, ghostOf } from '../world/placed';
 import type { Seat } from '../world/props';
 import { World } from '../world/world';
@@ -81,6 +83,8 @@ const SLAPPED = ['Ow! Rude.', 'Was that a FISH?', 'I did not deserve that.', 'Sm
 const MISSED = ['You slap the air with a fish. It feels good.', 'Nobody to slap. The fish is relieved.', 'A mighty swing, at nothing.'];
 
 export class Game implements Session {
+  /** Where things are on this island, for the tools (which reach the game only through `window.__cove`). */
+  static readonly layout = { CROSSING, PLACES };
   readonly cfg = parseConfig(location.search);
   renderer!: THREE.WebGLRenderer;
   screen!: Screen;
@@ -126,6 +130,8 @@ export class Game implements Session {
   private shouting: { text: string; until: number } | null = null;
   private app!: HTMLElement;
   private shopFront = new THREE.Vector3(0, 0, 9);
+  /** Kettle Isle: the cannery's door. */
+  private canneryDoor = new THREE.Vector3(9000, 0, 9000);
   /** The fishing hut's door, and the lighthouse: where it stands, how wide it is and how high its gallery. */
   private hutFront = new THREE.Vector3(48, 0, 6);
   private tower = { x: 31, z: -37, r: 3, top: 20 };
@@ -210,53 +216,72 @@ export class Game implements Session {
     this.player = new Player(this.body, this.world.field, this.world.solid);
     this.boat = new Boat(this.world.field);
     this.gus = new Shopkeeper(this.scene);
-    this.npcs = NPCS.map((d) => new Npc(d, this.world.field, this.scene));
+    // The islanders live at the cove.
+    this.npcs = HOME ? NPCS.map((d) => new Npc(d, this.world.field, this.scene)) : [];
     const models = this.cfg.models;
     await Promise.all([
       this.world.populate((d, n) => (bar.style.width = `${Math.round((d / n) * 100)}%`), models),
       models ? this.body.load() : Promise.resolve(),
       models ? this.boat.load(this.scene) : Promise.resolve(),
     ]);
-    // The shop's counter, and the board, from the sizes of their models.
-    const shop = PLACED.find((p) => p.id === 'shop')!;
-    const depth = this.world.props.sizes.get('shop')?.z ?? 6;
-    this.shopFront.set(shop.x, 0, shop.z + depth / 2 + 1.4);
-    const booth = PLACED.find((p) => p.id === 'arcade')!;
-    const boothDepth = this.world.props.sizes.get('arcade')?.z ?? 4;
-    const by = booth.yaw ?? 0;
-    this.arcadeFront.set(booth.x + Math.sin(by) * (boothDepth / 2 + 1.4), 0, booth.z + Math.cos(by) * (boothDepth / 2 + 1.4));
-    // The gull stands on the corner of the counter, beside whoever is playing.
-    this.gullYaw = by;
-    const side = new THREE.Vector3(Math.cos(by), 0, -Math.sin(by));
-    this.gullHome.set(booth.x + Math.sin(by) * (boothDepth / 2 + 0.5) + side.x * 2.2, 0, booth.z + Math.cos(by) * (boothDepth / 2 + 0.5) + side.z * 2.2);
-    this.gullHome.y = this.world.field.heightAt(this.gullHome.x, this.gullHome.z);
-    if (models) {
-      void model('gull').then((g) => {
-        if (!g) return;
-        this.gull = g;
-        g.position.copy(this.gullHome);
-        g.rotation.y = by;
-        this.scene.add(g);
-      });
-    }
-    const hut = PLACED.find((p) => p.id === 'fishing-hut')!;
-    const hutDepth = this.world.props.sizes.get('fishing-hut')?.z ?? 4;
-    this.hutFront.set(hut.x + Math.sin(hut.yaw ?? 0) * (hutDepth / 2 + 1.2), 0, hut.z + Math.cos(hut.yaw ?? 0) * (hutDepth / 2 + 1.2));
-    const light = PLACED.find((p) => p.id === 'lighthouse')!;
-    const lightSize = this.world.props.sizes.get('lighthouse');
-    this.tower = { x: light.x, z: light.z, r: Math.max(lightSize?.x ?? 5, lightSize?.z ?? 5) / 2, top: this.world.field.heightAt(light.x, light.z) + (lightSize?.y ?? 12) * 0.74 };
+    // Where the cove's doors and counters are. Kettle Isle has none of them: there they are nowhere, and nothing is ever near them.
+    const nowhere = 9000;
+    for (const v of [this.shopFront, this.arcadeFront, this.hutFront, this.board]) v.set(nowhere, 0, nowhere);
+    this.tower = { x: nowhere, z: nowhere, r: 1, top: 0 };
     this.scopeEl.className = 'scope';
     this.scopeEl.hidden = true;
     this.app.append(this.scopeEl);
-    const boardAt = PLACED.find((p) => p.id === 'notice-board')!;
-    this.board.set(boardAt.x + Math.sin(boardAt.yaw ?? 0) * 1.6, 0, boardAt.z + Math.cos(boardAt.yaw ?? 0) * 1.6);
+    const shop = PLACED.find((p) => p.id === 'shop') ?? { x: 0, z: 0 };
+    if (HOME) {
+      // The shop's counter, and the board, from the sizes of their models.
+      const depth = this.world.props.sizes.get('shop')?.z ?? 6;
+      this.shopFront.set(shop.x, 0, shop.z + depth / 2 + 1.4);
+      const booth = PLACED.find((p) => p.id === 'arcade')!;
+      const boothDepth = this.world.props.sizes.get('arcade')?.z ?? 4;
+      const by = booth.yaw ?? 0;
+      this.arcadeFront.set(booth.x + Math.sin(by) * (boothDepth / 2 + 1.4), 0, booth.z + Math.cos(by) * (boothDepth / 2 + 1.4));
+      // The gull stands on the corner of the counter, beside whoever is playing.
+      this.gullYaw = by;
+      const side = new THREE.Vector3(Math.cos(by), 0, -Math.sin(by));
+      this.gullHome.set(booth.x + Math.sin(by) * (boothDepth / 2 + 0.5) + side.x * 2.2, 0, booth.z + Math.cos(by) * (boothDepth / 2 + 0.5) + side.z * 2.2);
+      this.gullHome.y = this.world.field.heightAt(this.gullHome.x, this.gullHome.z);
+      if (models) {
+        void model('gull').then((g) => {
+          if (!g) return;
+          this.gull = g;
+          g.position.copy(this.gullHome);
+          g.rotation.y = by;
+          this.scene.add(g);
+        });
+      }
+      const hut = PLACED.find((p) => p.id === 'fishing-hut')!;
+      const hutDepth = this.world.props.sizes.get('fishing-hut')?.z ?? 4;
+      this.hutFront.set(hut.x + Math.sin(hut.yaw ?? 0) * (hutDepth / 2 + 1.2), 0, hut.z + Math.cos(hut.yaw ?? 0) * (hutDepth / 2 + 1.2));
+      const light = PLACED.find((p) => p.id === 'lighthouse')!;
+      const lightSize = this.world.props.sizes.get('lighthouse');
+      this.tower = { x: light.x, z: light.z, r: Math.max(lightSize?.x ?? 5, lightSize?.z ?? 5) / 2, top: this.world.field.heightAt(light.x, light.z) + (lightSize?.y ?? 12) * 0.74 };
+      const boardAt = PLACED.find((p) => p.id === 'notice-board')!;
+      this.board.set(boardAt.x + Math.sin(boardAt.yaw ?? 0) * 1.6, 0, boardAt.z + Math.cos(boardAt.yaw ?? 0) * 1.6);
+    } else {
+      // The cannery's door, from the size of its model.
+      const deep = this.world.props.sizes.get('cannery')?.z ?? 6;
+      this.canneryDoor.set(CANNERY.x + Math.sin(CANNERY.yaw) * (deep / 2 + 1.3), 0, CANNERY.z + Math.cos(CANNERY.yaw) * (deep / 2 + 1.3));
+    }
     if (models) {
       await this.body.setRod(this.save.rod);
       this.body.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm);
       await this.body.setHat(this.save.hat);
-      await Promise.all([this.gus.load(new THREE.Vector3(shop.x + 2.6, this.world.field.heightAt(shop.x + 2.6, this.shopFront.z - 0.4), this.shopFront.z - 0.4), 0), ...this.npcs.map((n) => n.load())]);
+      if (HOME) await Promise.all([this.gus.load(new THREE.Vector3(shop.x + 2.6, this.world.field.heightAt(shop.x + 2.6, this.shopFront.z - 0.4), this.shopFront.z - 0.4), 0), ...this.npcs.map((n) => n.load())]);
+      else this.gus.body.group.position.set(nowhere, 0, nowhere);
     }
-    const at = PLACES[this.cfg.at ?? 'plaza'] ?? PLACES.plaza;
+    // Whoever has just rowed across steps off where the boat ties up; otherwise, where a visit begins.
+    try {
+      this.arriving = sessionStorage.getItem(CROSSING_KEY) !== null;
+      sessionStorage.removeItem(CROSSING_KEY);
+    } catch {
+      /* No storage. */
+    }
+    const at = PLACES[this.cfg.at ?? (this.arriving ? 'boat' : START)] ?? PLACES[START];
     this.player.place(at.x, at.z, at.yaw);
     this.player.onStep = (surface) => {
       // On wheels there are no footsteps: a clack of the board over whatever is under it.
@@ -268,7 +293,7 @@ export class Game implements Session {
       this.footfall(surface);
     };
     this.rig = new CameraRig(this.camera, this.world.field);
-    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well)/.test(c.name));
+    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well|cannery)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
     if (this.cfg.zoom) this.rig.zoom = this.cfg.zoom;
     this.controls = new Controls(this.app);
@@ -288,7 +313,8 @@ export class Game implements Session {
     this.uke.onDone = () => this.stopActivity();
     this.placed = new PlacedThings(this.world, this.world.field);
     this.placed.campName = this.save.campName;
-    for (const p of this.save.placed) await this.placed.add(p);
+    // Only what was set down on this island stands on it.
+    for (const p of this.save.placed) if (this.onThisIsle(p)) await this.placed.add(p);
     this.finds = new Finds(this.world.field);
     this.forage = new Foraging(this.world.field, (x, z) => this.openGround(x, z));
     this.scene.add(this.forage.group);
@@ -304,11 +330,12 @@ export class Game implements Session {
         return g ? g.clone().setY(g.y + 0.2) : new THREE.Vector3(x, PIER.deck + 3.6, z);
       };
       const sign = PLACED.find((q) => q.id === 'signpost')!;
-      void this.wild.perch([lamp(61, 12.8), lamp(101, 7.6), new THREE.Vector3(sign.x, this.world.field.heightAt(sign.x, sign.z) + (this.world.props.sizes.get('signpost')?.y ?? 2.2), sign.z)]);
+      // (On Kettle Isle one gull keeps to the jetty's lamp; the pier's own gull is there only if it is tame and has come along.)
+      void this.wild.perch(HOME ? [lamp(61, 12.8), lamp(101, 7.6), new THREE.Vector3(sign.x, this.world.field.heightAt(sign.x, sign.z) + (this.world.props.sizes.get('signpost')?.y ?? 2.2), sign.z)] : [lamp(97, 14.1)], HOME || this.save.gull.tame);
     }
     this.hud.onBait = () => this.openSheet('tackle');
     if (models) {
-      await this.finds.load(this.save.glass);
+      if (HOME) await this.finds.load(this.save.glass);
       await this.body.setExtra(this.save.extra);
     }
     this.player.onLand = (v) => {
@@ -388,7 +415,8 @@ export class Game implements Session {
       this.welcome();
     };
     start.onclick = go;
-    if (!this.cfg.title) go();
+    // Off the boat from the other island: straight in, no button to press.
+    if (!this.cfg.title || this.arriving) go();
 
     if (this.cfg.zoo) await this.zoo(this.cfg.zoo);
     if (this.cfg.stats) this.setStats(true);
@@ -412,6 +440,17 @@ export class Game implements Session {
 
   private welcome(): void {
     if (this.cfg.hud === false) return;
+    if (!HOME) {
+      // Kettle Isle: said the first time, and a word each time after.
+      const first = !this.save.hints.includes('kettle');
+      if (first) {
+        this.save.hints.push('kettle');
+        this.changed();
+      }
+      setTimeout(() => this.hud.toast(first ? 'Kettle Isle. Nobody has lived here for a long time.' : 'Kettle Isle.', first ? 'gold' : ''), 400);
+      if (first) setTimeout(() => this.hud.toast('There is no shop: what you catch goes home in the cooler. The boat is at the jetty.'), 3600);
+      return;
+    }
     if (!this.save.hints.includes('welcome')) {
       this.save.hints.push('welcome');
       this.changed();
@@ -466,7 +505,7 @@ export class Game implements Session {
 
   /** Start walking someone new through their first fish. Says whether it did. */
   private coachBegin(): boolean {
-    if (this.coach || !this.cfg.coach || !this.cfg.hud || !coachDue(this.save.hints, this.save.stats.caught)) return false;
+    if (!HOME || this.coach || !this.cfg.coach || !this.cfg.hud || !coachDue(this.save.hints, this.save.stats.caught)) return false;
     this.coach = new Coach(this.app);
     this.coach.onSkip = () => this.coachEnd();
     this.coachStep = 'walk';
@@ -634,6 +673,9 @@ export class Game implements Session {
   // ---------- Bait to be found ----------
 
   private forage!: Foraging;
+  private steamClock = 0;
+  /** This load is the end of a crossing from the other island. */
+  private arriving = false;
   /** The toy being ridden (src/game/toys.ts), as it is seen, and the tricks of this jump: the one being done and those done. */
   riding: string | null = null;
   private ride = new Ride();
@@ -756,6 +798,78 @@ export class Game implements Session {
   wearExtra(id: string | null): void {
     this.save.extra = id;
     void this.body.setExtra(id);
+    this.changed();
+  }
+
+  // ---------- The other island ----------
+
+  /**
+   * Row across to the other island. The game is put away and begun again there, behind a card
+   * that says so: only one island is ever loaded.
+   */
+  private cross(): void {
+    if (HOME && !this.save.seaChart) {
+      this.hud.toast('Past the buoy it is open sea. You would want a chart: the trader who comes by boat sells one.');
+      return;
+    }
+    const to: IsleId = HOME ? 'kettle' : 'cove';
+    this.fishing.cancel();
+    this.keep(true);
+    try {
+      sessionStorage.setItem(CROSSING_KEY, to);
+      if (!this.cfg.fresh) localStorage.setItem(ISLE_KEY, to);
+    } catch {
+      /* No storage: the address carries it. */
+    }
+    const url = new URL(location.href);
+    // A save that is kept remembers the island itself; the tools' unkept one is told in the address.
+    if (this.cfg.fresh || url.searchParams.has('isle')) url.searchParams.set('isle', to);
+    url.searchParams.delete('at');
+    this.audio.play('row');
+    this.hud.toast(`Rowing ${HOME ? 'out to' : 'home to'} ${ISLE_NAME[to]}…`);
+    setTimeout(() => location.replace(url.toString()), 500);
+  }
+
+  /** Sit in the hot spring. */
+  private soak(): void {
+    const hot = POOLS.find((q) => q.hot);
+    if (!hot) return;
+    const p = this.player.pos;
+    this.sitOn({ x: p.x, z: p.z, y: hot.level - 0.42, yaw: this.player.yaw, lift: 0.36, kind: 'spring' });
+    if (!this.save.hints.includes('soaked')) {
+      this.save.hints.push('soaked');
+      this.hud.toast('Oh, that is warm. Stay as long as you like.', 'gold');
+      this.checkTitles();
+      this.changed();
+    }
+  }
+
+  /** Steam off the hot spring, when the player is near enough to see it. */
+  private steam(dt: number): void {
+    const hot = POOLS.find((q) => q.hot);
+    if (!hot || Math.hypot(hot.x - this.player.pos.x, hot.z - this.player.pos.z) > 45) return;
+    this.steamClock -= dt;
+    if (this.steamClock > 0) return;
+    this.steamClock = 0.45;
+    const a = Math.random() * Math.PI * 2;
+    const d = Math.random() * hot.r * 0.8;
+    this.fx.puff(new THREE.Vector3(hot.x + Math.cos(a) * d, hot.level + 0.15, hot.z + Math.sin(a) * d), 0.55);
+  }
+
+  /** The cannery's ledger: a page each time it is read, in order, and round again. */
+  private readLedger(): void {
+    const page = this.save.cannery.pages % CANNERY_PAGES.length;
+    this.save.cannery.pages++;
+    this.hud.toast(`“${CANNERY_PAGES[page]}”`);
+    this.audio.play('card', { volume: 0.4 });
+    this.changed();
+  }
+
+  /** The crate in the cannery: something in it once a day. */
+  private rummageCrate(): void {
+    const got = rummage(this.save, this.today, Math.random());
+    this.audio.play(got.empty ? 'click' : 'coin', { volume: 0.4 });
+    this.hud.toast(got.says, got.pearl ? 'gold' : '');
     this.changed();
   }
 
@@ -932,6 +1046,11 @@ export class Game implements Session {
     }
   }
 
+  /** Whether a thing set down was set down on the island the game is on. */
+  private onThisIsle(p: PlacedThing): boolean {
+    return (p.isle ?? 'cove') === ISLE;
+  }
+
   /** Where the thing being carried would stand, and whether it may. */
   private carriedTo(): { x: number; z: number; yaw: number; ok: boolean } {
     const yaw = this.player.yaw;
@@ -953,7 +1072,7 @@ export class Game implements Session {
     this.carrying = null;
     if (!(this.save.furniture[c.id] > 0)) return;
     this.save.furniture[c.id]--;
-    const thing = { id: c.id, x: to.x, z: to.z, yaw: to.yaw };
+    const thing: PlacedThing = HOME ? { id: c.id, x: to.x, z: to.z, yaw: to.yaw } : { id: c.id, x: to.x, z: to.z, yaw: to.yaw, isle: 'kettle' };
     this.save.placed.push(thing);
     void this.placed.add(thing);
     this.audio.play('click');
@@ -1146,7 +1265,7 @@ export class Game implements Session {
     const p = this.player.pos;
     const camp = PLACED.find((x) => x.id === 'campfire');
     if (camp && Math.hypot(camp.x - p.x, camp.z - p.z) < 2.4) return true;
-    return this.save.placed.some((t) => t.id === 'f-firepit' && Math.hypot(t.x - p.x, t.z - p.z) < 2.4);
+    return this.save.placed.some((t) => t.id === 'f-firepit' && this.onThisIsle(t) && Math.hypot(t.x - p.x, t.z - p.z) < 2.4);
   }
 
   private nearSeat(): Seat | null {
@@ -1182,6 +1301,8 @@ export class Game implements Session {
       else if (spot.id === 'counter') hud.setAction('Shop', () => this.openSheet('shop'), undefined, 'green');
       else if (spot.id === 'bench') hud.setAction('Tackle', () => this.openSheet('tackle'), undefined, 'green');
       else if (spot.id === 'stove') hud.setAction('Warm hands', () => (this.body.action = 'warm'), undefined, 'blue');
+      else if (spot.id === 'ledger') hud.setAction('Read', () => this.readLedger(), undefined, 'blue');
+      else if (spot.id === 'crate') hud.setAction('Rummage', () => this.rummageCrate(), undefined, 'green');
       else hud.setAction('Tank', () => this.openSheet('aquarium'), undefined, 'green');
       return;
     }
@@ -1241,7 +1362,11 @@ export class Game implements Session {
     const found = this.forage.near(p);
     if (this.mode === 'dig') hud.setSecond(null);
     else if (dig && this.detecting && this.mode === 'walk') hud.setSecond('Dig', () => this.startDig(dig));
-    else if (this.mode === 'boat') hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
+    else if (this.mode === 'boat') {
+      // Beside the buoy the way is open to the other island.
+      if (Math.hypot(this.boat.pos.x - CROSSING.x, this.boat.pos.z - CROSSING.z) < CROSSING.reach) hud.setSecond(HOME ? 'Row out' : 'Row home', () => this.cross());
+      else hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
+    }
     else if (this.mode === 'sit') hud.setSecond('Stand up', () => this.stopActivity());
     else if (npc) {
       // With the fish they asked for in the bag, the button hands it over.
@@ -1250,6 +1375,8 @@ export class Game implements Session {
       hud.setSecond(ready >= 0 ? `Give ${BY_ID[this.save.bag[ready].species]?.name ?? 'fish'}` : 'Chat', () => this.speakTo(who, (words) => npc.chat(performance.now(), words), npc.def.lines));
     } else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.speakTo('npc-pelican', (words) => this.gus.chat(performance.now(), words), GUS_LINES));
     else if (this.mode === 'walk' && this.gullNear()) hud.setSecond('Feed gull', () => this.feedTheGull());
+    else if (this.mode === 'walk' && Math.hypot(p.x - this.canneryDoor.x, p.z - this.canneryDoor.z) < 2.6) hud.setSecond('Go inside', () => void this.goInside('cannery'));
+    else if (this.mode === 'walk' && waterAt(this.world.field, p.x, p.z)?.zone === 'spring') hud.setSecond('Soak', () => this.soak());
     else if (this.mode === 'walk' && this.traderIn && this.trader.pos.distanceTo(p) < 3.2) hud.setSecond('Chat', () => this.trader.chat(performance.now()));
     else if (this.mode === 'walk' && Math.hypot(p.x - this.shopFront.x, p.z - this.shopFront.z) < 3.2) hud.setSecond('Go inside', () => void this.goInside('shop'));
     else if (this.mode === 'walk' && Math.hypot(p.x - this.hutFront.x, p.z - this.hutFront.z) < 2.4) hud.setSecond('Go inside', () => void this.goInside('hut'));
@@ -1385,7 +1512,7 @@ export class Game implements Session {
     }
     if (!this.scope) return;
     // What the glass is on: held there a moment, it is picked out.
-    const camp = this.save.placed.find((q) => q.id === 'f-tent');
+    const camp = this.save.placed.find((q) => q.id === 'f-tent' && this.onThisIsle(q));
     const where: Record<Sight, THREE.Vector3 | null> = {
       trawler: this.world.trawler,
       pier: new THREE.Vector3(PIER.head.x1, PIER.deck + 1, PIER.z),
@@ -1694,9 +1821,9 @@ export class Game implements Session {
     if (this.fishing.state === 'aiming' || this.fishing.state === 'flying') this.player.yaw = this.rig.yaw + Math.PI;
     this.body.update(dt);
     for (const n of this.npcs) n.update(dt, this.player.pos, this.hour);
-    this.gus.update(dt, this.player.pos);
+    if (HOME) this.gus.update(dt, this.player.pos);
     // The trader: here by day on their days, gone by dark.
-    const here = !this.benching && (this.cfg.trader ?? traderHere(this.today, this.hour));
+    const here = HOME && !this.benching && (this.cfg.trader ?? traderHere(this.today, this.hour));
     if (here !== this.traderIn) {
       this.traderIn = here;
       void this.trader.show(here, this.save.character);
@@ -1735,6 +1862,7 @@ export class Game implements Session {
     this.forageUpdate(dt, now);
     this.finds.setCloud(cloud, this.player.pos);
     if (this.started) this.secrets(dt, now);
+    if (!HOME) this.steam(dt);
     this.fx.update(dt, this.camera, this.player.pos);
 
     if (this.started) {
@@ -1774,7 +1902,7 @@ export class Game implements Session {
   private secrets(dt: number, now: number): void {
     const p = this.player.pos;
     // Bounce mushrooms throw anyone who steps on them.
-    if (this.mode === 'walk' && !this.player.airborne) {
+    if (HOME && this.mode === 'walk' && !this.player.airborne) {
       const i = this.finds.shroomUnder(p);
       if (i !== null) {
         const sh = SHROOMS[i];
@@ -1789,7 +1917,7 @@ export class Game implements Session {
       }
     }
     // Sea glass, picked up by walking into it.
-    const g = this.finds.glassNear(p);
+    const g = HOME ? this.finds.glassNear(p) : null;
     if (g !== null && !this.save.glass.includes(g)) {
       const at = this.finds.take(g);
       this.save.glass.push(g);
@@ -1966,6 +2094,7 @@ export class Game implements Session {
         frames: this.frames,
         hour: +this.hour.toFixed(2),
         rain: +this.rain.toFixed(2),
+        isle: ISLE,
         mode: this.mode,
         fishing: this.fishing.state,
         pos: this.player.pos.toArray().map((v) => +v.toFixed(2)),

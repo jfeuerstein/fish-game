@@ -2845,3 +2845,21 @@ button {
   height: 36px;
   image-rendering: pixelated;
 }
+
+/* The crossing: the title's picture with a card that says where the boat is going, and no button. */
+#title.crossing .title-name,
+#title.crossing #start {
+  display: none;
+}
+#title .crossing-says {
+  margin: 4px 0 12px;
+  font-family: var(--display);
+  font-size: 30px;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.chart-pin.left {
+  flex-direction: row-reverse;
+  transform: translate(calc(-100% + 6px), -4px);
+}

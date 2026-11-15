@@ -1,7 +1,8 @@
 // The journal: every fish there is, silhouettes until caught, with where and when to look.
 import { SETS, setProgress } from '../game/sets';
 import { RARITIES, RARITY_LABEL } from '../game/crates';
-import { BY_ID, JOURNAL_SPECIES as SPECIES, TIER_COLOR, TIER_LABEL, VARIANTS, VARIANT_LABEL, ZONE_LABEL, sayLength, sayWhen, stars } from '../fishing/fish';
+import { HOME } from '../world/isle';
+import { farAway, BY_ID, JOURNAL_SPECIES as SPECIES, TIER_COLOR, TIER_LABEL, VARIANTS, VARIANT_LABEL, ZONE_LABEL, sayLength, sayWhen, stars } from '../fishing/fish';
 import { candidates } from '../fishing/roll';
 import { baitById, lureById, rodById } from '../game/economy';
 import type { Zone } from '../world/island';
@@ -16,10 +17,11 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
     const save = s.save;
     const real = SPECIES.filter((x) => x.tier !== 'junk');
     void BY_ID;
-    if (tab === 'Fish' || tab === 'Odds & ends') {
-      const list = tab === 'Fish' ? real : SPECIES.filter((x) => x.tier === 'junk');
+    if (tab === 'Fish' || tab === 'Kettle Isle' || tab === 'Odds & ends') {
+      // Kettle Isle's fish have a page of their own: the cove's page is the cove's.
+      const list = tab === 'Fish' ? real.filter((x) => !farAway(x)) : tab === 'Kettle Isle' ? real.filter(farAway) : SPECIES.filter((x) => x.tier === 'junk');
       const got = list.filter((x) => save.journal[x.id]).length;
-      body.append(el('p', '', `${got} of ${list.length} found.${tab === 'Fish' ? ' Tap one for where to look.' : ''}`));
+      body.append(el('p', '', `${got} of ${list.length} found.${tab === 'Odds & ends' ? '' : ' Tap one for where to look.'}`));
       if (detail && BY_ID[detail]) {
         const sp = BY_ID[detail];
         const j = save.journal[sp.id];
@@ -53,7 +55,7 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
       }
     } else if (tab === 'Biting now') {
       body.append(el('p', '', `What bites right now${s.raining ? ', in the rain' : ''}, with your bait and lure. Unknown ones show as shadows.`));
-      for (const zone of ['ocean', 'deep', 'pond', 'creek'] as Zone[]) {
+      for (const zone of (HOME ? ['ocean', 'deep', 'pond', 'creek'] : ['lake', 'reef', 'pools', 'ocean', 'deep']) as Zone[]) {
         const list = candidates({ zone, hour: s.hour, raining: s.raining, rod: rodById(save.rod), bait: baitById(save.bait), lure: lureById(save.lure) }).filter((c) => c.species.tier !== 'junk');
         const total = list.reduce((a, b) => a + b.weight, 0);
         body.append(el('div', 'section', ZONE_LABEL[zone]));
@@ -90,6 +92,6 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
         body.append(r);
       }
     }
-  }, ['Fish', 'Biting now', 'Sets', 'Odds & ends', 'Stats']);
+  }, ['Fish', 'Kettle Isle', 'Biting now', 'Sets', 'Odds & ends', 'Stats']);
   return sheet;
 }

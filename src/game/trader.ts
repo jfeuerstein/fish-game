@@ -31,7 +31,7 @@ export interface Ware {
   blurb: string;
   price: number;
   /** What buying it gives. */
-  gives: { furniture?: string; bait?: { id: string; count: number }; pearls?: number };
+  gives: { furniture?: string; bait?: { id: string; count: number }; pearls?: number; chart?: boolean };
   /** The picture it is shown with. */
   icon: string;
 }
@@ -41,22 +41,26 @@ export const WARES: readonly Ware[] = [
   { id: 'chime', name: 'Shell Wind Chime', blurb: 'Shells on strings. It knocks about in any wind.', price: 380, gives: { furniture: 'f-chime' }, icon: 'f-chime' },
   { id: 'bottle', name: 'Ship in a Bottle', blurb: 'Nobody will say how the ship got in.', price: 520, gives: { furniture: 'f-shipbottle' }, icon: 'f-shipbottle' },
   { id: 'pearl', name: 'A Pearl', blurb: 'One, from far off. For the gull, I expect.', price: 900, gives: { pearls: 1 }, icon: 'ticket-lucky' },
+  { id: 'chart', name: 'Sea Chart', blurb: 'The way to Kettle Isle, past the buoy south of the pier head. Nobody lives there. Mind the reef.', price: 600, gives: { chart: true }, icon: 'icon-map' },
   { id: 'glow', name: 'Glow Grubs, a dozen', blurb: 'Cheaper than Gus, and livelier.', price: 150, gives: { bait: { id: 'bait-glow', count: 12 } }, icon: 'bait-glow' },
   { id: 'minnows', name: 'Minnows, a bucket', blurb: 'Twenty, give or take the ones that got out.', price: 110, gives: { bait: { id: 'bait-minnow', count: 20 } }, icon: 'bait-minnow' },
   { id: 'golden', name: 'Golden Flies, three', blurb: 'From an island where everything is a bit much.', price: 420, gives: { bait: { id: 'bait-golden', count: 3 } }, icon: 'bait-golden' },
   { id: 'crawlers', name: 'Night Crawlers, a tin', blurb: 'Dug them myself. Do not ask where.', price: 90, gives: { bait: { id: 'bait-crawler', count: 8 } }, icon: 'bait-crawler' },
 ];
 
-/** What is on the stall on a day: the two things to set down, the pearl, and two of the baits. */
+/** How many of the wares are on the stall every visit (the rest are bait, two a day). */
+const ALWAYS = 4;
+
+/** What is on the stall on a day: the two things to set down, the pearl, the chart, and two of the baits. */
 export function stock(day: number): Ware[] {
-  const baits = WARES.slice(3);
+  const baits = WARES.slice(ALWAYS);
   const first = stir(day * 7 + 1) % baits.length;
   const second = (first + 1 + (stir(day * 7 + 2) % (baits.length - 1))) % baits.length;
-  return [WARES[0], WARES[1], WARES[2], baits[first], baits[second]];
+  return [...WARES.slice(0, ALWAYS), baits[first], baits[second]];
 }
 
 /** Whether a ware has been bought on this visit: each is sold once a visit. */
-export const sold = (save: Save, day: number, ware: Ware): boolean => save.trader.day === day && save.trader.bought.includes(ware.id);
+export const sold = (save: Save, day: number, ware: Ware): boolean => (ware.gives.chart && save.seaChart) || (save.trader.day === day && save.trader.bought.includes(ware.id));
 
 /** Buy a ware. False if it was bought already this visit or there are not the coins. */
 export function buyWare(save: Save, day: number, ware: Ware): boolean {
@@ -67,6 +71,7 @@ export function buyWare(save: Save, day: number, ware: Ware): boolean {
   if (ware.gives.furniture) save.furniture[ware.gives.furniture] = (save.furniture[ware.gives.furniture] ?? 0) + 1;
   if (ware.gives.bait) save.baits[ware.gives.bait.id] = (save.baits[ware.gives.bait.id] ?? 0) + ware.gives.bait.count;
   if (ware.gives.pearls) save.tokens += ware.gives.pearls;
+  if (ware.gives.chart) save.seaChart = true;
   return true;
 }
 

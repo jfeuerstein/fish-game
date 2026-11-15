@@ -3,7 +3,13 @@
 // Coordinates: +x east, +z south, +y up, metres. The island is centred on the origin; the sea
 // surface is y = 0.
 
+import { HOME } from './isle';
+import { KETTLE, POOLS as KETTLE_POOLS, SPRING_AT, type Pool } from './kettle';
+
 export type V2 = readonly [number, number];
+
+/** Somewhere off the map, for a thing an island does not have: nothing is ever near it. */
+const NOWHERE = 900;
 
 export const SEA_LEVEL = 0;
 /** The square of world the ground covers, centred on the origin. */
@@ -12,41 +18,64 @@ export const WORLD_SIZE = 240;
 export const STEP = 1;
 
 /** The freshwater pond, in a hollow in the north-west woods. */
-export const POND = { x: -26, z: -24, r: 11, level: 2.6 } as const;
+/** (On Kettle Isle the "pond" is the crater lake: the same kind of thing, much bigger and higher up.) */
+export const POND: { readonly x: number; readonly z: number; readonly r: number; readonly level: number } = HOME ? { x: -26, z: -24, r: 11, level: 2.6 } : { x: KETTLE.x, z: KETTLE.z, r: KETTLE.lake, level: KETTLE.level };
+
+/** Small waters cut into the ground: Kettle Isle's tide pools and its hot spring. The cove has none. */
+export const POOLS: readonly Pool[] = HOME ? [] : KETTLE_POOLS;
 
 /** The creek: out of the pond's west side, down to the sea. Water level falls along it. */
-export const CREEK: readonly V2[] = [
-  [-35, -26],
-  [-41, -30],
-  [-47, -30],
-  [-53, -33],
-  [-59, -37],
-  [-66, -40],
-  [-80, -44],
-];
+export const CREEK: readonly V2[] = HOME
+  ? [
+      [-35, -26],
+      [-41, -30],
+      [-47, -30],
+      [-53, -33],
+      [-59, -37],
+      [-66, -40],
+      [-80, -44],
+    ]
+  : // Kettle Isle has no creek.
+    [
+      [NOWHERE, NOWHERE],
+      [NOWHERE + 1, NOWHERE],
+    ];
 export const CREEK_WIDTH = 2.6;
 
 /** The village square, in front of the shop. */
-export const PLAZA = { x: 0, z: 14, r: 12, h: 2.2 } as const;
+export const PLAZA: { readonly x: number; readonly z: number; readonly r: number; readonly h: number } = HOME ? { x: 0, z: 14, r: 12, h: 2.2 } : { x: NOWHERE, z: NOWHERE, r: 12, h: 2.2 };
 
 /** The lighthouse hill, north-east. */
 export const HILL = { x: 30, z: -36, r: 20, h: 8.5 } as const;
 
 /** The camp in the western meadow. */
-export const CAMP = { x: -38, z: 18 } as const;
+/** (On Kettle Isle: an old fire ring by the cannery.) */
+export const CAMP: { readonly x: number; readonly z: number } = HOME ? { x: -38, z: 18 } : { x: 63, z: 30 };
 
 /** The pier: east from the shore along z, with a wider head at the end. */
 /** The pier: whole 3 m sections of deck, so the boards cover every metre that can be walked on. */
-export const PIER = { x0: 59, x1: 104, z: 14, width: 3, deck: 2.4, head: { x0: 98, x1: 104, z0: 7, z1: 22 } } as const;
+export interface Pier {
+  readonly x0: number;
+  readonly x1: number;
+  readonly z: number;
+  readonly width: number;
+  readonly deck: number;
+  readonly head: { readonly x0: number; readonly x1: number; readonly z0: number; readonly z1: number };
+}
+/** (Kettle Isle's is a short jetty, where the boat lands.) */
+export const PIER: Pier = HOME ? { x0: 59, x1: 104, z: 14, width: 3, deck: 2.4, head: { x0: 98, x1: 104, z0: 7, z1: 22 } } : { x0: 76, x1: 100, z: 18, width: 3, deck: 2.0, head: { x0: 94, x1: 100, z0: 13.5, z1: 22.5 } };
 
 /** Where the rowboat ties up, beside the pier. */
-export const BOAT_MOORING = { x: 80, z: 17.6, yaw: Math.PI / 2 } as const;
+export const BOAT_MOORING: { readonly x: number; readonly z: number; readonly yaw: number } = HOME ? { x: 80, z: 17.6, yaw: Math.PI / 2 } : { x: 88, z: 21.6, yaw: Math.PI / 2 };
+
+/** The buoy that marks the way across to the other island: a boat beside it may row out. */
+export const CROSSING: { readonly x: number; readonly z: number; readonly reach: number } = HOME ? { x: 104, z: 36, reach: 9 } : { x: 108, z: 32, reach: 9 };
 
 /** The patch of the square that takes chalk. */
-export const CHALK = { x: -5, z: 19, size: 8 } as const;
+export const CHALK: { readonly x: number; readonly z: number; readonly size: number } = HOME ? { x: -5, z: 19, size: 8 } : { x: NOWHERE, z: NOWHERE, size: 8 };
 
 /** Footpaths, as polylines. */
-export const PATHS: readonly (readonly V2[])[] = [
+const COVE_PATHS: readonly (readonly V2[])[] = [
   // Square to pier
   [[9, 13], [22, 11], [38, 12], [50, 13], [60, 14]],
   // Square to pond
@@ -62,6 +91,20 @@ export const PATHS: readonly (readonly V2[])[] = [
   // Square down to the beach
   [[2, 25], [4, 36], [6, 47]],
 ];
+/** Kettle Isle's: from the jetty past the cannery, up through the notch to the lake, to the hot spring and the tide pools, and along the south shore to the reef. */
+const KETTLE_PATHS: readonly (readonly V2[])[] = [
+  // Jetty to the cannery's yard
+  [[77, 18], [70, 17], [62, 15]],
+  // Up through the notch to the lake's shore
+  [[62, 15], [50, 11], [38, 6], [27, 2], [19, -1], [13, -4.5]],
+  // Round the mountain's foot to the hot spring
+  [[38, 6], [44, -6], [44, -20], [SPRING_AT.x + 4.5, SPRING_AT.z + 2]],
+  // On to the shelf and its pools
+  [[SPRING_AT.x + 4.5, SPRING_AT.z + 2], [46, -35], [51, -37]],
+  // Along the south shore to the reef flat
+  [[62, 15], [52, 28], [36, 40], [14, 48], [-10, 50], [-34, 44], [-50, 34]],
+];
+export const PATHS: readonly (readonly V2[])[] = HOME ? COVE_PATHS : KETTLE_PATHS;
 export const PATH_WIDTH = 1.7;
 
 /** Where the beach is widest: the south shore. */
@@ -71,7 +114,7 @@ export const BEACH_ANGLE = Math.PI / 2;
  * The footbridge over the creek: it stands on the creek's surface (not its bed) and spans it the
  * short way, with an arched deck that can be walked on (see floorAt).
  */
-const BRIDGE_AT = { x: -50.2, z: -31.0 };
+const BRIDGE_AT = HOME ? { x: -50.2, z: -31.0 } : { x: NOWHERE, z: NOWHERE };
 const CREEK_DIR = Math.atan2(-3, -6);
 export const BRIDGE = {
   ...BRIDGE_AT,
@@ -103,7 +146,7 @@ function creekLevelAt(x: number, z: number): number {
  * the water with its back in the hill. It can only be come at by boat. The water before the
  * mouth, within `r` of the middle given here, is the cave's own (zone `cave`).
  */
-export const CAVE = { x: -24.3, z: -60.3, r: 5.5, mouth: { x: -22.7, z: -56.1, yaw: -2.757 } } as const;
+export const CAVE: { readonly x: number; readonly z: number; readonly r: number; readonly mouth: { readonly x: number; readonly z: number; readonly yaw: number } } = HOME ? { x: -24.3, z: -60.3, r: 5.5, mouth: { x: -22.7, z: -56.1, yaw: -2.757 } } : { x: NOWHERE, z: -NOWHERE, r: 5.5, mouth: { x: NOWHERE, z: -NOWHERE, yaw: 0 } };
 
 export type PropId = string;
 
@@ -119,7 +162,7 @@ export interface Placed {
 }
 
 /** The buildings, landmarks and village things, placed by hand. Trees, rocks and flowers are scattered (see scatter.ts). */
-export const PLACED: readonly Placed[] = [
+const COVE_PLACED: readonly Placed[] = [
   { id: 'shop', x: 0, z: 2.5, yaw: 0 },
   /** The Lucky Gull arcade, on the west side of the plaza, facing into it. */
   { id: 'arcade', x: -17, z: 8, yaw: 1.2 },
@@ -171,6 +214,35 @@ export const PLACED: readonly Placed[] = [
   { id: 'cliff', x: 52, z: -42, yaw: 1.6 },
   { id: 'cave-mouth', x: CAVE.mouth.x, z: CAVE.mouth.z, yaw: CAVE.mouth.yaw, y: -0.7 },
 ];
+
+/** Where the cannery stands on Kettle Isle, and which way its door faces. */
+export const CANNERY = { x: 58, z: 5, yaw: 0.55 } as const;
+/** The wreck on the reef. */
+export const WRECK = { x: -73, z: 58, yaw: 0.8 } as const;
+
+/** Kettle Isle's: a jetty with a lamp, a ruined cannery, an old fire ring, a wreck out on the reef, and the buoy home. */
+const KETTLE_PLACED: readonly Placed[] = [
+  { id: 'cannery', x: CANNERY.x, z: CANNERY.z, yaw: CANNERY.yaw },
+  { id: 'lamp-post', x: 79, z: 16.8, y: PIER.deck },
+  { id: 'lamp-post', x: 97, z: 14.1, y: PIER.deck },
+  { id: 'crates', x: 83, z: 17.2, y: PIER.deck, yaw: 0.4 },
+  { id: 'barrel', x: 66, z: 9 },
+  { id: 'barrel', x: 67.2, z: 10.2 },
+  { id: 'crates', x: 52, z: 12, yaw: 2.1 },
+  { id: 'campfire', x: CAMP.x, z: CAMP.z },
+  { id: 'log', x: CAMP.x, z: CAMP.z - 3.3, yaw: 0 },
+  { id: 'log', x: CAMP.x + 3.4, z: CAMP.z + 1.4, yaw: -Math.PI / 2 + 0.2 },
+  { id: 'signpost', x: 64, z: 17.5, yaw: 1.2 },
+  { id: 'bench', x: 16.5, z: -6.5, yaw: -1.1 },
+  { id: 'wreck', x: WRECK.x, z: WRECK.z, yaw: WRECK.yaw, y: -0.9 },
+  { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
+  { id: 'buoy', x: -100, z: 20 },
+  { id: 'driftwood', x: 20, z: 54, yaw: 0.4 },
+  { id: 'driftwood', x: -40, z: 50, yaw: 2.1 },
+  { id: 'shell', x: 2, z: 56, yaw: 0.7 },
+  { id: 'shell', x: -24, z: 55, yaw: 2.7 },
+];
+export const PLACED: readonly Placed[] = HOME ? COVE_PLACED : KETTLE_PLACED;
 
 /** Where the pier's deck sections go (each model is a square section about three metres across). */
 export function pierSections(): Placed[] {
@@ -283,7 +355,7 @@ export function creekLevel(t: number): number {
 }
 
 /** Named places, for the address bar (`at=`) and the tools. Each is where to stand and which way to face. */
-export const PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+const COVE_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
   // The day begins here, looking up the square at the shop.
   plaza: { x: 3, z: 20, yaw: Math.PI },
   shop: { x: 0, z: 9, yaw: Math.PI },
@@ -298,3 +370,19 @@ export const PLACES: Record<string, { x: number; z: number; yaw: number }> = {
   chalk: { x: -5, z: 22, yaw: Math.PI },
   arcade: { x: -11.5, z: 10.5, yaw: -1.94 },
 };
+
+const KETTLE_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+  // The boat lands here.
+  jetty: { x: 84, z: 18, yaw: -Math.PI / 2 },
+  cannery: { x: 62, z: 13, yaw: -2.6 },
+  notch: { x: 24, z: 1, yaw: -1.9 },
+  lake: { x: 12.5, z: -5, yaw: -2.1 },
+  spring: { x: SPRING_AT.x + 5, z: SPRING_AT.z + 2, yaw: -1.9 },
+  pools: { x: 50.5, z: -38, yaw: 2.4 },
+  reef: { x: -50, z: 36, yaw: -0.9 },
+  camp: { x: CAMP.x - 3, z: CAMP.z + 3, yaw: 2.4 },
+  boat: { x: BOAT_MOORING.x, z: BOAT_MOORING.z - 2.4, yaw: 0 },
+};
+export const PLACES: Record<string, { x: number; z: number; yaw: number }> = HOME ? COVE_PLACES : KETTLE_PLACES;
+/** Where a visit begins, when the address does not say. */
+export const START = HOME ? 'plaza' : 'jetty';

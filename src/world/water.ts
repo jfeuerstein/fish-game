@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import type { Look } from '../look/look';
 import { Heightfield } from './island';
-import { CREEK, CREEK_WIDTH, PIER, POND, creekLevel } from './layout';
+import { CREEK, CREEK_WIDTH, PIER, POND, creekLevel, POOLS } from './layout';
 
 export interface WaterLook {
   deep: THREE.Color;
@@ -204,6 +204,14 @@ export class Water {
     pond.position.set(POND.x, POND.level, POND.z);
     pond.renderOrder = 1;
     this.group.add(pond);
+
+    // Kettle Isle's tide pools and its hot spring: a disc of water each, at its own level.
+    for (const p of POOLS) {
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(p.r + 0.9, 24).rotateX(-Math.PI / 2), this.material);
+      disc.position.set(p.x, p.level, p.z);
+      disc.renderOrder = 1;
+      this.group.add(disc);
+    }
 
     this.group.add(this.creek(field));
   }

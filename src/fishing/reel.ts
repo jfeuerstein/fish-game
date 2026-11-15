@@ -58,6 +58,8 @@ const FIGHTS: Record<string, FightStyle> = {
   flounder: 'diver', catfish: 'diver', eel: 'diver', carp: 'diver', sturgeon: 'diver', lobster: 'diver', octopus: 'diver', anglerfish: 'diver', 'giant-squid': 'diver', 'thunder-eel': 'diver', 'ghost-carp': 'diver', 'crystal-crab': 'diver',
   trout: 'jumper', salmon: 'jumper', grayling: 'jumper', 'sea-bass': 'jumper', bluegill: 'jumper', 'golden-trout': 'jumper', 'spark-bass': 'jumper', 'maple-salmon': 'jumper', 'frost-char': 'jumper',
   'whale-shark': 'sulker', oarfish: 'sulker', coelacanth: 'sulker', axolotl: 'sulker', sunfish: 'sulker', turtle: 'sulker',
+  // Kettle Isle: the lake's fish sit and sulk, the reef's run.
+  'door-carp': 'sulker', 'the-lid': 'sulker', 'steam-pike': 'runner', 'reef-moray': 'diver', parrotfish: 'runner', lionfish: 'jumper',
 };
 export const styleOf = (species: string): FightStyle => FIGHTS[species] ?? 'steady';
 

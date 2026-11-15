@@ -153,8 +153,8 @@ export class Wildlife {
   }
 
   /** Stand gulls on the tops of things (given as places), and the one that can be tamed at the end of the pier. */
-  async perch(tops: THREE.Vector3[]): Promise<void> {
-    for (const at of [...tops, PIER_GULL]) {
+  async perch(tops: THREE.Vector3[], withOwn = true): Promise<void> {
+    for (const at of withOwn ? [...tops, PIER_GULL] : tops) {
       const sitting = await model('gull', 0.5);
       const flying = flapper(this.wings);
       flying.body.scale.setScalar(1.1);
