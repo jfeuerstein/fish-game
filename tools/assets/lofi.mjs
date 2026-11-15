@@ -37,7 +37,16 @@ const CUT = {
   big: { tris: 1400, tex: 256, colours: 16 },
   // The four buildings fill the screen when stood beside: a finer texture, so the pixels along
   // the edge of a plank or a stripe are near the size of the screen's own.
-  house: { tris: 1600, tex: 512, colours: 18 },
+  //
+  // Things people have built (the buildings, and `made` below: benches, tables, lamp-posts,
+  // the well, the furniture) are flat boards and straight edges, and those do not survive being
+  // cut to a few hundred triangles: a plank's corners are pulled together and it comes out
+  // warped, a wall bows, a stripe smears. The owner saw the shop and the bench looking odd. So
+  // these keep nearly all of their shape: triangles are only taken where taking them moves
+  // nothing by more than `error` of the model's size. What makes them lo-fi is the small
+  // picture, the inks and the stepped light, not a bent bench.
+  house: { tris: 8000, tex: 512, colours: 18, error: 0.002 },
+  made: { tris: 3200, tex: 256, colours: 14, error: 0.002 },
   prop: { tris: 420, tex: 64, colours: 10 },
   plant: { tris: 220, tex: 64, colours: 8 },
   hat: { tris: 380, tex: 64, colours: 10 },
@@ -46,11 +55,14 @@ const CUT = {
 };
 /** The buildings, which fill the screen, and the small growing things, which are everywhere. */
 const BIG = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'cliff']);
+/** Things people have built, which keep their shape (see `made` above); anything set down from the bag (`f-`) is one too. */
+const MADE = new Set(['bridge', 'rowboat', 'tent', 'well', 'notice-board', 'bench', 'picnic-table', 'lamp-post', 'signpost', 'mailbox', 'fence', 'crates', 'barrel', 'campfire', 'buoy', 'pier']);
+const isMade = (id) => MADE.has(id) || id.startsWith('f-');
 const PLANT = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm', 'bush', 'flowers', 'grass-tuft', 'mushrooms', 'cattails', 'lilypad', 'rock-a', 'rock-b', 'shell', 'cloud']);
 
 const index = JSON.parse(readFileSync(`${ROOT}public/models/index.json`, 'utf8'));
 const HOUSES = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut']);
-const cutFor = (id) => CUT[HOUSES.has(id) ? 'house' : BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
+const cutFor = (id) => CUT[HOUSES.has(id) ? 'house' : isMade(id) ? 'made' : BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
 
 /** A primitive's triangles, as three corner numbers each. */
 function trisOf(prim) {
@@ -152,7 +164,7 @@ export async function lofiModel(id) {
   const extras = { ...(eyes.length === 2 ? { eyes } : {}), ...(BIG.has(id) ? { walls: true } : {}) };
   if (Object.keys(extras).length) root.listScenes()[0]?.setExtras(extras);
   const ratio = Math.min(1, cut.tris / tris);
-  await doc.transform(dedup(), weld(), ...(ratio < 1 ? [simplify({ simplifier: MeshoptSimplifier, ratio, error: 0.08, lockBorder: false })] : []), prune());
+  await doc.transform(dedup(), weld(), ...(ratio < 1 ? [simplify({ simplifier: MeshoptSimplifier, ratio, error: cut.error ?? 0.08, lockBorder: false })] : []), prune());
   for (const tex of root.listTextures()) {
     const t = whole.get(tex);
     if (!t) continue;

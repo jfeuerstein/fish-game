@@ -132,8 +132,9 @@ the owner's: do not route a deploy round it.
   movement stick; anywhere higher turns the camera. A thumb lands on the canvas, not on `#app`
   under it: `Controls.onGame` takes both, and the touch check drags a thumb to hold it to that.
   Which way a push or a drag goes is `src/player/steer.ts` (pure, tested): the stick pushed right
-  walks (or rows) to the right of the screen, and a finger dragged right above it carries the
-  world with it. The owner asked for both that way round; the touch check holds them.
+  walks (or rows) to the right of the screen, and a finger dragged right above it turns the
+  view to the right. The owner tried the camera both ways and chose this; the touch check
+  holds both.
 - **Trees are never taken away, and the player is always seen.** The owner did not want trees
   vanishing as the player came near, nor a whole tree thinned: where a tree (or the cliff) comes
   between the camera and the player, a round window is opened in it over the player, clear in
@@ -171,6 +172,9 @@ the other players, and how each point shows up here. Keep to it when adding thin
 
 Generated characters may have their rig's left and right swapped. `Character.faceForward` looks
 at the head from both ways (the snout or beak sticks out) and turns the model to face +z.
+A prop that came back facing +x without the index saying it is Tripo's is listed in `FACES_X`
+(`src/assets/models.ts`) and turned the same quarter: the bench was one, and stood sideways
+with whoever sat on it sitting sideways.
 
 ## Assets
 
@@ -181,7 +185,14 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
   `tools/assets/lofi.mjs` cuts each down to what the game draws, in `public/`: a model to a few
   hundred triangles (`CUT`, by kind) with a 64 to 512 pixel texture in the island's inks (the
   four buildings get the finest, since they fill the screen when stood beside; a
-  character's painted eyes found and painted out on the way: see The look); an
+  character's painted eyes found and painted out on the way: see The look). **Things people
+  have built keep their shape** (`house` and `made` in `CUT`, `MADE`: the buildings, benches,
+  tables, lamp-posts, the well, the tent, the furniture set down from the bag): cut to a few
+  hundred triangles a plank came out warped, a wall bowed and a stripe smeared, and the owner
+  saw the shop and the bench looking odd. They lose a triangle only where that moves nothing
+  by more than `error` of their size, and wear a 256 pixel texture. What makes them lo-fi is
+  the small picture, the inks and the stepped light, not a bent bench. It costs about 120,000
+  triangles at the plaza (some 720,000 in view). An
   icon to a 48-pixel sprite with a dark line round it; the title picture to 256 pixels across
   (it is pixel art already, four of its file's pixels to one of its own, so every fourth is
   taken as it is) and the Home Screen icon to 64.

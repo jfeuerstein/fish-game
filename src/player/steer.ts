@@ -18,11 +18,13 @@ export function heading(stick: { x: number; y: number }, cameraYaw: number): num
 }
 
 /**
- * The camera's yaw after a finger is dragged `dx` points to the right. The world goes with the
- * finger, as if it were taken hold of: dragged right, what was on the left comes into view.
+ * The camera's yaw after a finger is dragged `dx` points to the right. The view goes the way
+ * the finger does: dragged right, the camera looks further right, and what was ahead slides
+ * off to the left. (The owner tried it the other way round, the world carried with the finger,
+ * and asked for this.)
  */
 export function turned(yaw: number, dx: number): number {
-  return yaw + dx * TURN;
+  return yaw - dx * TURN;
 }
 
 /** Where on the screen, to the right (+) or left (-), a point lies for a camera at `cameraYaw` looking at `focus`. */

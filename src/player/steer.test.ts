@@ -22,12 +22,12 @@ describe('steering', () => {
     }
   });
 
-  it('carries the world with a dragging finger', () => {
-    // Something straight ahead of the player; the finger goes right; it should end up to the right.
+  it('looks the way a dragging finger goes', () => {
+    // Something straight ahead of the player; the finger goes right; the view turns right, so it ends up to the left.
     const yaw = 0.4;
     const ahead = { x: -Math.sin(yaw) * 5, z: -Math.cos(yaw) * 5 };
     expect(screenRight(yaw, here, ahead)).toBeCloseTo(0, 6);
-    expect(screenRight(turned(yaw, 40), here, ahead)).toBeGreaterThan(0.5);
-    expect(screenRight(turned(yaw, -40), here, ahead)).toBeLessThan(-0.5);
+    expect(screenRight(turned(yaw, 40), here, ahead)).toBeLessThan(-0.5);
+    expect(screenRight(turned(yaw, -40), here, ahead)).toBeGreaterThan(0.5);
   });
 });

@@ -19,6 +19,13 @@ const base = import.meta.env.BASE_URL;
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
+/**
+ * Models that came back facing +x though the index does not say they are Tripo's own: they are
+ * turned to face +z like the rest. The bench is one: its back was along the wrong edge, so it
+ * stood sideways wherever it was put and whoever sat on it sat sideways.
+ */
+const FACES_X = new Set(['bench']);
+
 let index: Record<string, ModelInfo> = {};
 const loaded = new Map<string, Promise<THREE.Object3D | null>>();
 
@@ -91,7 +98,7 @@ export async function model(id: string, height?: number): Promise<THREE.Object3D
   const proto = await loaded.get(id)!;
   if (!proto) return null;
   const copy = index[id]?.rig ? (SkeletonUtils.clone(proto) as THREE.Object3D) : proto.clone(true);
-  if (index[id]?.source === 'tripo') copy.rotation.y -= Math.PI / 2;
+  if (index[id]?.source === 'tripo' || FACES_X.has(id)) copy.rotation.y -= Math.PI / 2;
   return fit(copy, height ?? index[id]?.h ?? 1);
 }
 
