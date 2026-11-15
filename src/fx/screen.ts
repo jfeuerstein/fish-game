@@ -52,11 +52,17 @@ export class Screen {
       this.target = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true, magFilter: THREE.NearestFilter, minFilter: THREE.NearestFilter });
       // Kept as the screen keeps colour, so its eight bits are spent where the eye can tell.
       this.target.texture.colorSpace = THREE.SRGBColorSpace;
-      const material = new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: fragment, depthTest: false, depthWrite: false, toneMapped: false, uniforms: { tScene: { value: this.target.texture }, uLevels: { value: look.levels || 255 }, uDither: { value: look.dither } } });
+      const material = new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: fragment, depthTest: false, depthWrite: false, toneMapped: false, uniforms: { tScene: { value: this.target.texture }, uLevels: { value: look.levels || 255 }, uDither: { value: look.dither[1] } } });
       this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
       this.quad.frustumCulled = false;
       this.flat.add(this.quad);
     }
+  }
+
+  /** How strongly the picture is dithered: 0, 1 or 2 (Settings > Grain). */
+  setGrain(grain: 0 | 1 | 2): void {
+    const m = this.quad?.material as THREE.ShaderMaterial | undefined;
+    if (m) m.uniforms.uDither.value = this.look.dither[grain];
   }
 
   /** Fit the picture to a screen of this many points. */

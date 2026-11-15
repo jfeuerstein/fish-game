@@ -275,7 +275,8 @@ export function creekLevel(t: number): number {
 
 /** Named places, for the address bar (`at=`) and the tools. Each is where to stand and which way to face. */
 export const PLACES: Record<string, { x: number; z: number; yaw: number }> = {
-  plaza: { x: 3, z: 20, yaw: 0 },
+  // The day begins here, looking up the square at the shop.
+  plaza: { x: 3, z: 20, yaw: Math.PI },
   shop: { x: 0, z: 9, yaw: Math.PI },
   pier: { x: 90, z: 14, yaw: 0 },
   pierhead: { x: 101, z: 14, yaw: Math.PI / 2 },

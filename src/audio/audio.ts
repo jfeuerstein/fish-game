@@ -1,9 +1,26 @@
 // Sound: the effects, the ambience of wherever the player stands, and the music, all from the
 // MP3s made through fal (public/audio/). Web Audio starts on the first touch, as browsers require.
+//
+// The recordings are clean; the island is not. In the lo-fi look everything is played as an old
+// handheld would play it: through a small speaker's narrow band with a little tape saturation,
+// the effects cut to a few dozen levels so they crunch, and the music wavering slightly in pitch
+// like a worn cassette. (The crunch is on the effects alone: on something as quiet as the waves
+// it would be a crackle.)
 
 const base = import.meta.env.BASE_URL;
 
 type Loop = { src: AudioBufferSourceNode; gain: GainNode };
+
+/** How many levels each half of an effect's wave is cut to. */
+const CRUSH = 28;
+
+/** A wave-shaper's curve from a function of -1 to 1. */
+function curve(f: (x: number) => number): Float32Array<ArrayBuffer> {
+  const n = 4096;
+  const c = new Float32Array(n);
+  for (let i = 0; i < n; i++) c[i] = f((i / (n - 1)) * 2 - 1);
+  return c;
+}
 
 export class Audio {
   private ctx: AudioContext | null = null;
@@ -16,6 +33,8 @@ export class Audio {
   private music: { name: string; loop: Loop } | null = null;
   private musicWanted = '';
   muted = false;
+  /** Play everything the lo-fi way (set before the first touch). */
+  lofi = false;
   volumes = { sfx: 0.8, ambience: 0.7, music: 0.6 };
 
   /** Call from a touch: makes the audio context and starts whatever was asked for. */
@@ -25,8 +44,29 @@ export class Audio {
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new Ctx();
       this.master = this.ctx.createGain();
-      this.master.connect(this.ctx.destination);
+      if (this.lofi) {
+        const low = this.ctx.createBiquadFilter();
+        low.type = 'highpass';
+        low.frequency.value = 150;
+        const high = this.ctx.createBiquadFilter();
+        high.type = 'lowpass';
+        high.frequency.value = 4600;
+        high.Q.value = 0.6;
+        const tape = this.ctx.createWaveShaper();
+        tape.curve = curve((x) => Math.tanh(1.7 * x) / Math.tanh(1.7));
+        // The saturation makes it louder; brought back down.
+        const trim = this.ctx.createGain();
+        trim.gain.value = 0.8;
+        this.master.connect(low).connect(high).connect(tape).connect(trim).connect(this.ctx.destination);
+      } else this.master.connect(this.ctx.destination);
       this.sfxBus = this.bus(this.volumes.sfx);
+      if (this.lofi) {
+        // The effects alone are cut to a few dozen levels.
+        const crush = this.ctx.createWaveShaper();
+        crush.curve = curve((x) => Math.round(x * CRUSH) / CRUSH);
+        this.sfxBus.disconnect();
+        this.sfxBus.connect(crush).connect(this.master);
+      }
       this.ambBus = this.bus(this.volumes.ambience);
       this.musicBus = this.bus(this.volumes.music * 0.55);
       // Fetch the effects up front so the first cast is not silent.
@@ -227,6 +267,18 @@ export class Audio {
       const src = this.ctx.createBufferSource();
       src.buffer = buf;
       src.connect(g);
+      if (this.lofi) {
+        // A worn tape: the pitch wavers a little, quickly and slowly at once.
+        for (const [hz, depth] of [[0.55, 0.0022], [0.13, 0.004]] as const) {
+          const wobble = this.ctx.createOscillator();
+          const amount = this.ctx.createGain();
+          wobble.frequency.value = hz;
+          amount.gain.value = depth;
+          wobble.connect(amount).connect(src.playbackRate);
+          wobble.start();
+          src.addEventListener('ended', () => wobble.stop());
+        }
+      }
       src.start();
       g.gain.setTargetAtTime(1, this.ctx.currentTime, 2.5);
       // Fade out over the last few seconds.

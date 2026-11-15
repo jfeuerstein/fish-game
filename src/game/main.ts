@@ -223,6 +223,7 @@ export class Game implements Session {
     this.controls = new Controls(this.app);
     this.controls.onPush = () => this.stopActivity();
     this.audio.muted = this.cfg.mute;
+    this.audio.lofi = look.lofi;
     this.hud = new Hud(document.getElementById('hud')!, () => this.audio.unlock());
     if (!this.cfg.hud) this.hud.show(false);
     this.fishing = new Fishing(this.world.field, this.body, this.fx, this.fishingHooks(), this.scene);
@@ -590,6 +591,7 @@ export class Game implements Session {
 
   applySettings(): void {
     Character.bigHeads = this.save.settings.bigHeads;
+    this.screen.setGrain(this.save.settings.grain);
     this.audio.setVolumes({ sfx: this.save.settings.sfx, ambience: this.save.settings.ambience, music: this.save.settings.music });
   }
 
@@ -851,7 +853,7 @@ export class Game implements Session {
     if (this.fishing.state === 'aiming' || this.fishing.state === 'flying') this.player.yaw = this.rig.yaw + Math.PI;
     this.body.update(dt);
     for (const n of this.npcs) n.update(dt, this.player.pos);
-    this.gus.update(dt);
+    this.gus.update(dt, this.player.pos);
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
     this.world.update(dt, this.hour, this.rain, this.player.pos);

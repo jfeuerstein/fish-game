@@ -98,6 +98,7 @@ export class Npc {
 
   constructor(readonly def: NpcDef, private field: Heightfield, private scene: THREE.Scene) {
     this.body = new Character(def.id, def.id === 'npc-bear' ? 1.2 : 1.05);
+    this.body.fidgets = true;
     this.rand = rng(def.id.length * 977);
     this.bobber = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), lit({ color: 0xd65a3c }));
     this.string = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xf3f0ea }));
@@ -215,6 +216,8 @@ export class Npc {
     }
     this.body.group.position.copy(this.pos);
     this.body.group.rotation.y = this.yaw;
+    // Everyone keeps an eye on the player.
+    this.body.watching = player;
     this.body.update(dt);
   }
 
@@ -242,6 +245,7 @@ export class Shopkeeper {
     this.scene.add(this.body.group);
     await this.body.load();
     this.body.rodOut = false;
+    this.body.fidgets = true;
     this.body.group.position.copy(at);
     this.body.group.rotation.y = yaw;
   }
@@ -252,7 +256,8 @@ export class Shopkeeper {
     setTimeout(() => (this.body.action = 'idle'), 2000);
     return text;
   }
-  update(dt: number): void {
+  update(dt: number, player: THREE.Vector3): void {
+    this.body.watching = player;
     this.body.update(dt);
   }
 }

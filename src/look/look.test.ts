@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EXPRESSIONS, EYE_MAX, EYE_MIN, type Expression, GROW, SHAPE, blinking, eyeAt, eyeHeight, eyeShader, faceFor, readEyes } from '../player/face';
 import { INKS } from './inks';
+import { GAZE, Gaze, fidgetAt, lookToward } from '../player/gaze';
 import { lookFor, pictureSize, poseDue } from './look';
 
 describe('the look', () => {
@@ -146,5 +147,44 @@ describe('drawn eyes', () => {
     expect(faceFor('show')).toBe('happy');
     expect(faceFor('flop')).toBe('closed');
     expect(faceFor('idle')).toBe('open');
+  });
+});
+
+describe('islanders', () => {
+  it('turn their heads to watch someone near, as far as a neck goes, and give up on someone behind', () => {
+    // Facing south (+z): someone to the east is to the left.
+    expect(lookToward(0, 3, 3)).toBeCloseTo(Math.PI / 4);
+    expect(lookToward(0, -3, 3)).toBeCloseTo(-Math.PI / 4);
+    expect(lookToward(0, 5, -1)).toBe(GAZE.neck);
+    expect(lookToward(0, 0.2, -5)).toBeNull();
+    expect(lookToward(0, 0, GAZE.reach + 1)).toBeNull();
+    // Facing east, someone to the south is to the right.
+    expect(lookToward(Math.PI / 2, 0, 4)).toBeCloseTo(-Math.PI / 2 > -GAZE.neck ? -Math.PI / 2 : -GAZE.neck);
+  });
+
+  it('keep looking a beat after there is nobody to look at', () => {
+    const g = new Gaze();
+    expect(g.update(0.1, 0.5)).toBe(0.5);
+    expect(g.update(GAZE.hold * 0.5, null)).toBe(0.5);
+    expect(g.update(GAZE.hold, null)).toBeNull();
+  });
+
+  it('fidget now and then, each to a rhythm of its own', () => {
+    let busy = 0;
+    let together = 0;
+    const kinds = new Set<string>();
+    for (let t = 0; t < 600; t += 0.1) {
+      const a = fidgetAt(t, 3);
+      if (!a) continue;
+      busy++;
+      kinds.add(a.kind);
+      expect(a.k).toBeGreaterThanOrEqual(0);
+      expect(a.k).toBeLessThan(1);
+      if (fidgetAt(t, 5)) together++;
+    }
+    expect(busy / 6000).toBeGreaterThan(0.1);
+    expect(busy / 6000).toBeLessThan(0.35);
+    expect(together).toBeLessThan(busy * 0.6);
+    expect(kinds.size).toBe(4);
   });
 });

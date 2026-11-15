@@ -27,6 +27,8 @@ export interface Settings {
   pixels: boolean;
   /** Everyone's heads much bigger. */
   bigHeads: boolean;
+  /** How strongly the picture is dithered: 0 none, 1 a little, 2 fully. */
+  grain: 0 | 1 | 2;
 }
 
 export interface Save {
@@ -116,7 +118,7 @@ export function newSave(): Save {
     questsDone: 0,
     boat: false,
     stats: { caught: 0, earned: 0, snapped: 0, played: 0 },
-    settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high', pixels: false, bigHeads: false },
+    settings: { music: 0.6, sfx: 0.8, ambience: 0.7, clock: 'island', quality: 'high', pixels: false, bigHeads: false, grain: 1 },
     hints: [],
     lure: 'lure-none',
     lures: ['lure-none'],
@@ -204,6 +206,7 @@ export function parseSave(text: string | null): Save {
       quality: s.quality === 'low' ? 'low' : 'high',
       pixels: s.pixels === true,
       bigHeads: s.bigHeads === true,
+      grain: s.grain === 0 || s.grain === 2 ? s.grain : 1,
     },
     hints: strs(o.hints),
     lure: str(o.lure, 'lure-none'),

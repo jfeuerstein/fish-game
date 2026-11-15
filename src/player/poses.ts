@@ -71,6 +71,44 @@ export function idle(t: number): Pose {
   return p;
 }
 
+/**
+ * A small thing done while standing about, laid over a standing pose: `k` runs 0 to 1 through
+ * it. The right hand is left alone, since it may be holding a rod.
+ */
+export function fidget(p: Pose, kind: 'glance' | 'scratch' | 'shift' | 'yawn', k: number): Pose {
+  // In, hold, out.
+  const w = Math.min(1, k / 0.2, (1 - k) / 0.25);
+  switch (kind) {
+    case 'glance':
+      // A look one way, then the other.
+      p.look = (k < 0.5 ? 0.85 : -0.85) * w;
+      p.turn += (k < 0.5 ? 0.12 : -0.12) * w;
+      break;
+    case 'scratch':
+      // The left hand up to the head, scratching.
+      p.armL = limb(0.5 * w + p.armL.swing * (1 - w), 2.2 * w + p.armL.out * (1 - w), 0);
+      p.elbowL = p.elbowL * (1 - w) + (2.1 + Math.sin(k * 60) * 0.25) * w;
+      p.side += 0.08 * w;
+      p.nod += 0.12 * w;
+      break;
+    case 'shift':
+      // From one foot to the other and back.
+      p.side += Math.sin(k * Math.PI * 2) * 0.12 * w;
+      p.bob -= 0.012 * w;
+      p.kneeL += Math.max(0, Math.sin(k * Math.PI * 2)) * 0.35 * w;
+      p.kneeR += Math.max(0, -Math.sin(k * Math.PI * 2)) * 0.35 * w;
+      break;
+    case 'yawn':
+      // Head back, left arm stretched out.
+      p.nod -= 0.4 * w;
+      p.lean -= 0.1 * w;
+      p.armL = limb(p.armL.swing * (1 - w) + 0.2 * w, p.armL.out * (1 - w) + 1.5 * w, 0);
+      p.elbowL = p.elbowL * (1 - w) + 0.2 * w;
+      break;
+  }
+  return p;
+}
+
 /** A waddling walk. `phase` runs 0..1 per stride pair; `speed` 0 (stroll) to 1 (run). */
 export function walk(phase: number, speed: number): Pose {
   const p = neutral();

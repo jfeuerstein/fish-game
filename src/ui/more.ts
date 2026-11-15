@@ -116,6 +116,20 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
       };
       toggle('Real clock', 'Follow the time where you are, instead of a 24-minute island day.', save.settings.clock === 'real', () => (save.settings.clock = save.settings.clock === 'real' ? 'island' : 'real'));
       toggle('Chunkier pixels', 'The island is drawn small and blown up. This draws it smaller still. Easier on the battery too. Takes effect when the game is next opened.', save.settings.pixels, () => (save.settings.pixels = !save.settings.pixels));
+      const grains = ['None', 'A little', 'Full'];
+      {
+        const row = el('div', 'row');
+        row.innerHTML = '<div class="grow"><div class="title">Grain</div><div class="sub">How much the picture is speckled between its colours, as an old console’s was. None is flat and clean; full is busiest.</div></div>';
+        const b = el('button', 'btn plain', grains[save.settings.grain]);
+        b.onclick = () => {
+          save.settings.grain = ((save.settings.grain + 1) % 3) as 0 | 1 | 2;
+          s.applySettings();
+          s.changed();
+          sheet.refresh();
+        };
+        row.append(b);
+        body.append(row);
+      }
       toggle('Shadows', 'Softer on the battery when off. Takes effect when the game is next opened.', save.settings.quality === 'high', () => (save.settings.quality = save.settings.quality === 'high' ? 'low' : 'high'));
       body.append(el('div', 'section', 'Silly'));
       toggle('Big heads', 'Everyone on the island gets a much bigger head. Hats too.', save.settings.bigHeads, () => (save.settings.bigHeads = !save.settings.bigHeads));

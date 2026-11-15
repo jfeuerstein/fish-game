@@ -6,6 +6,7 @@ import { fit, model } from '../assets/models';
 import * as P from './poses';
 import { Rig } from './rig';
 import { type Look, poseDue } from '../look/look';
+import { FIDGETS, Gaze, fidgetAt, lookToward } from './gaze';
 import { INK } from '../look/inks';
 import { DARK_FUR, EXPRESSIONS, type Expression, GUESS, type PaintedEye, blinking, eyeHeight, eyeShader, faceFor, readEyes } from './face';
 import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headOf, measureHat, placeHat, placeFor } from './fit';
@@ -133,6 +134,11 @@ export class Character {
   private facePut: { face: Expression; until: number } | null = null;
   /** Whether anyone is given eyes (`eyes=0` in the address goes without). */
   static eyes = true;
+  /** Someone to keep an eye on as they go by (the player, for an islander). */
+  watching: THREE.Vector3 | null = null;
+  /** Whether this character fidgets when it has nothing to do (islanders do; the player is busy). */
+  fidgets = false;
+  private gaze = new Gaze();
   /** Everyone's heads, much bigger (a setting). */
   static bigHeads = false;
   /** Whether the rod is out. */
@@ -736,11 +742,31 @@ export class Character {
     this.placeHeld();
   }
 
+  /** While standing about: a fidget now and then, and the head turned to whoever is being watched. */
+  private idling(p: P.Pose, dt: number): void {
+    const still = this.action === 'idle' || this.action === 'hold';
+    const from = this.group.position;
+    const toward = this.watching && (still || this.action === 'walk' || this.action === 'reel') ? lookToward(this.group.rotation.y, this.watching.x - from.x, this.watching.z - from.z) : null;
+    const look = this.gaze.update(dt, toward);
+    const f = this.fidgets && still && look === null ? fidgetAt(this.t, this.faceSeed) : null;
+    if (f) {
+      P.fidget(p, f.kind, f.k);
+      // A yawn shuts the eyes.
+      if (f.kind === FIDGETS[3]) this.express('closed', 0.2);
+    }
+    if (look !== null) {
+      p.look = look;
+      // Looking over a shoulder, the shoulders come round a little too.
+      p.turn += look * 0.18;
+    }
+  }
+
   /** Move the body on toward the pose it is after, by `dt` seconds' worth. */
   private repose(dt: number): void {
     this.sincePose = 0;
     this.posedAs = this.action;
     const target = this.targetPose();
+    this.idling(target, dt);
     // Ease toward the pose; quick for snappy actions.
     const quick = this.action === 'walk' || this.action === 'jump' || this.action === 'castThrow' || this.action === 'castBack' ? 18 : 9;
     this.pose = P.blend(this.pose, target, 1 - Math.exp(-dt * quick));
