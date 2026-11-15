@@ -102,7 +102,8 @@ export class Effects {
       r.life += dt;
       const k = r.life / r.max;
       r.mesh.scale.setScalar(0.2 + k * r.size);
-      (r.mesh.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - k);
+      // Fades in three steps, not smoothly.
+      (r.mesh.material as THREE.MeshBasicMaterial).opacity = (Math.ceil((1 - k) * 3) / 3) * 0.8;
       if (k >= 1) {
         this.group.remove(r.mesh);
         (r.mesh.material as THREE.Material).dispose();

@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { currentLook, lit, pixelled } from '../look/material';
 
@@ -41,9 +42,17 @@ function soften(root: THREE.Object3D): void {
     const old = mesh.material as THREE.MeshStandardMaterial;
     // Lo-fi: every face its own flat tone. The models are cut down to a few hundred triangles,
     // and the toon material has no facets of its own, so each face is given its own corners.
+    // A building is different: its walls are flat but cut into many triangles that do not lie
+    // quite level, and lit face by face a wall breaks into jagged patches of two tones. So a
+    // building (`walls` in its file) is lit smoothly across faces that nearly agree and sharply
+    // where they meet at a corner.
     if (currentLook()?.lofi) {
-      const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
-      g.computeVertexNormals();
+      let g: THREE.BufferGeometry;
+      if (root.userData.walls) g = toCreasedNormals(mesh.geometry, 0.75);
+      else {
+        g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+        g.computeVertexNormals();
+      }
       mesh.geometry = g;
     }
     const painted = !!mesh.geometry.getAttribute('color');

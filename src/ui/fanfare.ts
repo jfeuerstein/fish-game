@@ -5,7 +5,7 @@ import type { Audio } from '../audio/audio';
 import type { Grandness } from '../game/arcade';
 import { el } from './hud';
 
-const CONFETTI = ['#d65a3c', '#ecc77d', '#c8963e', '#2c6b78', '#7cc2c6', '#f4eee3', '#7a5aa6', '#8cc882'];
+const CONFETTI = ['#d65a3c', '#ecc77d', '#c8963e', '#2c8a8a', '#62c0b0', '#f4eee3', '#8f74ba', '#93b85a'];
 const quiet = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 interface Bit {
@@ -125,9 +125,10 @@ export class Fanfare {
       this.app.append(this.canvas);
     }
     const c = this.canvas;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    c.width = this.app.clientWidth * dpr;
-    c.height = this.app.clientHeight * dpr;
+    // Drawn small and blown up with hard pixels, like the island: one pixel of it is three points.
+    const PX = 3;
+    c.width = Math.ceil(this.app.clientWidth / PX);
+    c.height = Math.ceil(this.app.clientHeight / PX);
     if (this.running) return;
     this.running = true;
     const ctx = c.getContext('2d')!;
@@ -135,7 +136,6 @@ export class Fanfare {
     const step = (now: number): void => {
       const dt = Math.min(2.5, (now - last) / 16.7);
       last = now;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, c.width, c.height);
       const H = this.app.clientHeight;
       for (const b of this.bits) {
@@ -146,26 +146,23 @@ export class Fanfare {
         b.y += b.vy * dt;
         b.r += b.vr * dt;
         if (b.y > H + 40) b.life = 0;
-        ctx.save();
-        ctx.translate(b.x, b.y);
-        ctx.rotate(b.r);
+        const x = Math.round(b.x / PX);
+        const y = Math.round(b.y / PX);
         if (b.coin) {
-          // A pearl falling: a soft round with a sheen (prizes are things, not coins).
-          const r = b.w / 2.6;
-          const g = ctx.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r);
-          g.addColorStop(0, '#ffffff');
-          g.addColorStop(0.45, '#f1e8ff');
-          g.addColorStop(1, '#a690d8');
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(0, 0, r, 0, Math.PI * 2);
-          ctx.fill();
+          // A pearl falling: a little block of lilac with a white corner (prizes are things, not coins).
+          const r = Math.max(2, Math.round(b.w / PX / 2.2));
+          ctx.fillStyle = '#c6b4e2';
+          ctx.fillRect(x - r, y - r + 1, r * 2, r * 2 - 2);
+          ctx.fillRect(x - r + 1, y - r, r * 2 - 2, r * 2);
+          ctx.fillStyle = '#fffdf6';
+          ctx.fillRect(x - r + 1, y - r + 1, Math.max(1, r - 1), Math.max(1, r - 1));
         } else {
-          ctx.scale(1, Math.cos(b.r * 2.3));
+          // A scrap of paper turning over: a block that goes thin and wide again.
+          const w = Math.max(1, Math.round(b.w / PX));
+          const h = Math.max(1, Math.round((b.h / PX) * Math.abs(Math.cos(b.r * 2.3))));
           ctx.fillStyle = b.c;
-          ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+          ctx.fillRect(x - (w >> 1), y - (h >> 1), w, h);
         }
-        ctx.restore();
       }
       this.bits = this.bits.filter((b) => b.life > 0);
       if (this.bits.length) requestAnimationFrame(step);

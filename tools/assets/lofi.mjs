@@ -10,7 +10,8 @@
 //   inks (palette.mjs), with pixels meant to be seen: public/models/<id>.glb;
 // - an icon becomes a little pixel sprite with a dark line round it: public/icons/<id>.webp;
 // - the ground is drawn here as small repeating tiles of pixel art: public/textures/;
-// - the picture on the way in becomes a small one in the same inks: public/art/title.webp.
+// - the picture on the way in and the Home Screen icon become small pictures blown up:
+//   public/art/title.webp, public/art/icon-*.png.
 //
 // It reads nothing from the network and costs nothing; run it again after any asset tool.
 import { Logger, NodeIO } from '@gltf-transform/core';
@@ -34,6 +35,9 @@ const CUT = {
   // A character is looked at more closely than anything else: a finer texture keeps its face clean.
   char: { tris: 1500, tex: 256, colours: 16 },
   big: { tris: 1400, tex: 256, colours: 16 },
+  // The four buildings fill the screen when stood beside: a finer texture, so the pixels along
+  // the edge of a plank or a stripe are near the size of the screen's own.
+  house: { tris: 1600, tex: 512, colours: 18 },
   prop: { tris: 420, tex: 64, colours: 10 },
   plant: { tris: 220, tex: 64, colours: 8 },
   hat: { tris: 380, tex: 64, colours: 10 },
@@ -45,7 +49,8 @@ const BIG = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'bridge', 'r
 const PLANT = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm', 'bush', 'flowers', 'grass-tuft', 'mushrooms', 'cattails', 'lilypad', 'rock-a', 'rock-b', 'shell', 'cloud']);
 
 const index = JSON.parse(readFileSync(`${ROOT}public/models/index.json`, 'utf8'));
-const cutFor = (id) => CUT[BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
+const HOUSES = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut']);
+const cutFor = (id) => CUT[HOUSES.has(id) ? 'house' : BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
 
 /** A primitive's triangles, as three corner numbers each. */
 function trisOf(prim) {
@@ -142,7 +147,10 @@ export async function lofiModel(id) {
     eyes = eyesOnTexture(body, t.data, t.width, t.height);
   } else if (body) eyes = eyesOnCorners(body);
   if (body && eyes.length !== 2) console.warn(`${id}: no painted eyes found; the game will guess where they go`);
-  if (eyes.length === 2) root.listScenes()[0]?.setExtras({ eyes });
+  // What the game is told about the model, in its scene's extras: where a character's eyes were,
+  // and that a building's walls are to be lit as flat walls (see `soften` in src/assets/models.ts).
+  const extras = { ...(eyes.length === 2 ? { eyes } : {}), ...(BIG.has(id) ? { walls: true } : {}) };
+  if (Object.keys(extras).length) root.listScenes()[0]?.setExtras(extras);
   const ratio = Math.min(1, cut.tris / tris);
   await doc.transform(dedup(), weld(), ...(ratio < 1 ? [simplify({ simplifier: MeshoptSimplifier, ratio, error: 0.08, lockBorder: false })] : []), prune());
   for (const tex of root.listTextures()) {
@@ -440,6 +448,13 @@ export async function lofiTitle() {
   const small = await sharp(`${ROOT}art/title.webp`).resize(width, height, { kernel: 'lanczos3' }).modulate({ saturation: 1.15 }).png().toBuffer();
   const few = await sharp(small).png({ palette: true, colours: 28, dither: 0, effort: 10 }).toBuffer();
   await sharp(few).webp({ lossless: true }).toFile(`${ROOT}public/art/title.webp`);
+  // The Home Screen icon the same way: drawn 60 or 64 pixels square and blown up a whole number
+  // of times, so every pixel of it is a square.
+  for (const [size, small] of [[180, 60], [192, 64], [512, 64]]) {
+    const tiny = await sharp(`${ROOT}art/icon.png`).resize(small, small, { kernel: 'lanczos3' }).modulate({ saturation: 1.15 }).png().toBuffer();
+    const inks = await sharp(tiny).png({ palette: true, colours: 24, dither: 0, effort: 10 }).toBuffer();
+    await sharp(inks).resize(size, size, { kernel: 'nearest' }).png({ palette: true, colours: 24, dither: 0 }).toFile(`${ROOT}public/art/icon-${size}.png`);
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

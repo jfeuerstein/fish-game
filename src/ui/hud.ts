@@ -12,6 +12,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: 
   if (html !== undefined) e.innerHTML = html;
   return e;
 }
+import { pixelGlyph } from './pixels';
 export { el };
 
 /** Small line drawings for the sky beside the clock (no emoji: they are cartoonish and differ by phone). */
@@ -58,7 +59,7 @@ export class Hud {
   private powerFill = el('i');
   private bubble = el('div', 'bubble');
   private bang = el('div', 'bang', '!');
-  private jumpBtn = el('button', 'act-jump', '⤒');
+  private jumpBtn = el('button', 'act-jump');
   private blip = el('div', 'blip');
   private tag = el('div', 'name-tag');
   private shoutEl = el('div', 'shout');
@@ -105,6 +106,7 @@ export class Hud {
     this.tag.hidden = true;
     this.shoutEl.hidden = true;
     this.jumpBtn.setAttribute('aria-label', 'Jump');
+    this.jumpBtn.append(pixelGlyph('<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2.5h10M8 14V6M4 9.5l4-4 4 4"/></svg>', 16));
     this.jumpBtn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -176,7 +178,8 @@ export class Hud {
     const t = `${sky} ${text}`;
     if (this.sky === t) return;
     this.sky = t;
-    this.clock.innerHTML = `${SKY_ICON[sky]}<span>${text}</span>`;
+    this.clock.innerHTML = `<span>${text}</span>`;
+    this.clock.prepend(pixelGlyph(SKY_ICON[sky], 14, '#96691f'));
   }
 
   /** What the main button does here. `onUp` makes it a hold-and-release button. */

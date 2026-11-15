@@ -15,6 +15,7 @@ const GLYPH: Record<Emote, string> = {
   slap: svg('<path d="M8 20c4-5 10-5 14 0-4 4-10 4-14 0z"/><path d="M22 20l5-3v6z"/><circle cx="12" cy="19" r="1" fill="currentColor"/><path d="M4 9l5 3M7 5l4 4M12 3l2 5"/>'),
 };
 import { el, icon } from './hud';
+import { pixelGlyph } from './pixels';
 import { Sheet } from './sheet';
 
 export function funSheet(app: HTMLElement, s: Session, chalk: () => boolean): Sheet {
@@ -32,7 +33,10 @@ export function funSheet(app: HTMLElement, s: Session, chalk: () => boolean): Sh
       ['slap', 'Fish slap'],
     ];
     for (const [id, label] of emotes) {
-      const t = el('button', 'tile emote', `<span class="glyph">${GLYPH[id]}</span>${label}`);
+      const t = el('button', 'tile emote', label);
+      const glyph = el('span', 'glyph');
+      glyph.append(pixelGlyph(GLYPH[id], 20, '#1b5a66'));
+      t.prepend(glyph);
       t.onclick = () => {
         s.emote(id);
         sheet.close();

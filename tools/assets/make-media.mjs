@@ -56,7 +56,8 @@ async function picture(id, { size, prompt }) {
     console.log(`painted picture ${id}`);
   }
   if (id === 'icon') {
-    for (const s of [180, 192, 512]) await sharp(raw).resize(s, s).png().toFile(`${ROOT}public/art/icon-${s}.png`);
+    // The Home Screen icon, full size; tools/assets/lofi.mjs title makes the pixelled ones the game ships.
+    await sharp(raw).resize(512, 512).png().toFile(`${ROOT}art/icon.png`);
   } else {
     await sharp(raw).resize(720).webp({ quality: 80 }).toFile(`${ROOT}art/${id}.webp`);
   }
