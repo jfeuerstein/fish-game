@@ -1,6 +1,7 @@
 // The journal: every fish there is, silhouettes until caught, with where and when to look.
+import { SETS, setProgress } from '../game/sets';
 import { RARITIES, RARITY_LABEL } from '../game/crates';
-import { BY_ID, JOURNAL_SPECIES as SPECIES, TIER_COLOR, TIER_LABEL, VARIANTS, VARIANT_LABEL, WATCH_LABEL, ZONE_LABEL, sayLength, stars } from '../fishing/fish';
+import { BY_ID, JOURNAL_SPECIES as SPECIES, TIER_COLOR, TIER_LABEL, VARIANTS, VARIANT_LABEL, ZONE_LABEL, sayLength, sayWhen, stars } from '../fishing/fish';
 import { candidates } from '../fishing/roll';
 import { baitById, lureById, rodById } from '../game/economy';
 import type { Zone } from '../world/island';
@@ -23,7 +24,7 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
         const sp = BY_ID[detail];
         const j = save.journal[sp.id];
         const card = el('div', 'row');
-        card.innerHTML = `<img src="${icon(`fish-${sp.id}`)}" alt="" class="${j ? '' : 'locked'}" style="${j ? '' : 'filter:brightness(0) opacity(.2)'};width:84px;height:84px"><div class="grow"><div class="title">${j ? sp.name : '???'} <small style="color:${TIER_COLOR[sp.tier]}">${TIER_LABEL[sp.tier]}</small></div><div class="sub">${sp.zones.map((z) => ZONE_LABEL[z]).join(', ')} · ${WATCH_LABEL[sp.watch]}${sp.rain ? ' · only in the rain' : ''}</div>${j ? `<div class="sub">Caught ${j.count} · best ${sayLength(j.best)}</div><div class="sub">${sp.tier === 'junk' ? '' : VARIANTS.filter((v) => v !== 'normal').map((v) => `${j.variants.includes(v) ? '✓' : '·'} ${stars(v)} ${VARIANT_LABEL[v]}`).join('<br>')}</div><div class="sub"><i>${sp.note}</i></div>` : '<div class="sub">Not caught yet.</div>'}</div>`;
+        card.innerHTML = `<img src="${icon(`fish-${sp.id}`)}" alt="" class="${j ? '' : 'locked'}" style="${j ? '' : 'filter:brightness(0) opacity(.2)'};width:84px;height:84px"><div class="grow"><div class="title">${j ? sp.name : '???'} <small style="color:${TIER_COLOR[sp.tier]}">${TIER_LABEL[sp.tier]}</small></div><div class="sub">${sp.zones.map((z) => ZONE_LABEL[z]).join(', ')} · ${sayWhen(sp)}</div>${j ? `<div class="sub">Caught ${j.count} · best ${sayLength(j.best)}</div><div class="sub">${sp.tier === 'junk' ? '' : VARIANTS.filter((v) => v !== 'normal').map((v) => `${j.variants.includes(v) ? '✓' : '·'} ${stars(v)} ${VARIANT_LABEL[v]}`).join('<br>')}</div><div class="sub"><i>${sp.note}</i></div>` : '<div class="sub">Not caught yet.</div>'}</div>`;
         body.append(card);
       }
       const grid = el('div', 'grid');
@@ -40,6 +41,16 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
         grid.append(t);
       }
       body.append(grid);
+    } else if (tab === 'Sets') {
+      body.append(el('p', '', 'Find every fish of a kind and its set is stamped, with a small prize.'));
+      for (const set of SETS) {
+        const p = setProgress(save, set);
+        if (!p.of) continue;
+        const done = save.sets.includes(set.id);
+        const row = el('div', `row set${done ? ' stamped' : ''}`);
+        row.innerHTML = `<div class="grow"><div class="title">${set.name}${done ? ' <b class="stamp">Stamped</b>' : ''}</div><div class="sub">${set.what}</div><div class="set-fish">${p.members.map((m) => `<img src="${icon(`fish-${m.id}`)}" alt="" class="${save.journal[m.id] ? '' : 'locked'}">`).join('')}</div><div class="sub">${p.have} of ${p.of} · ${set.coins} coins${set.pearl ? ' and a pearl' : ''}</div></div>`;
+        body.append(row);
+      }
     } else if (tab === 'Biting now') {
       body.append(el('p', '', `What bites right now${s.raining ? ', in the rain' : ''}, with your bait and lure. Unknown ones show as shadows.`));
       for (const zone of ['ocean', 'deep', 'pond', 'creek'] as Zone[]) {
@@ -79,6 +90,6 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
         body.append(r);
       }
     }
-  }, ['Fish', 'Biting now', 'Odds & ends', 'Stats']);
+  }, ['Fish', 'Biting now', 'Sets', 'Odds & ends', 'Stats']);
   return sheet;
 }

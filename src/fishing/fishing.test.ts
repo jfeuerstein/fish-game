@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { rng } from '../core/rng';
 import { BAITS, RODS } from '../game/economy';
+import { SEASONS } from '../look/season';
 import type { Zone } from '../world/island';
 import { BY_ID, JOURNAL_SPECIES as SPECIES, valueOf } from './fish';
 import { type Conditions, candidates, rollCatch } from './roll';
 import { type Fighter, startReel, stepReel } from './reel';
 
-const zones: Zone[] = ['ocean', 'deep', 'pond', 'creek'];
+const zones: Zone[] = ['ocean', 'deep', 'pond', 'creek', 'cave'];
 
 describe('fish', () => {
   it('has unique ids and sensible numbers', () => {
@@ -22,9 +23,26 @@ describe('fish', () => {
     const seen = new Set<string>();
     for (const zone of zones)
       for (let hour = 0; hour < 24; hour += 0.5)
-        for (const raining of [false, true])
-          for (const c of candidates({ zone, hour, raining, rod: RODS[0], bait: BAITS[0] })) seen.add(c.species.id);
+        for (const weather of ['clear', 'rain', 'fog', 'storm'] as const)
+          for (const season of SEASONS)
+            for (const c of candidates({ zone, hour, raining: weather === 'rain' || weather === 'storm', weather, season, rod: RODS[0], bait: BAITS[0] })) seen.add(c.species.id);
     expect([...seen].sort()).toEqual(SPECIES.map((s) => s.id).sort());
+  });
+
+  it('keeps fog, storm and season fish to their own', () => {
+    const at = (more: Partial<Conditions>): string[] => candidates({ zone: 'creek', hour: 12, raining: false, weather: 'clear', season: 'summer', rod: RODS[0], bait: BAITS[0], ...more }).map((c) => c.species.id);
+    expect(at({ season: 'winter' })).toContain('frost-char');
+    expect(at({ season: 'summer' })).not.toContain('frost-char');
+    expect(at({ season: 'fall', hour: 19 })).toContain('maple-salmon');
+    expect(at({ season: 'spring', hour: 19 })).not.toContain('maple-salmon');
+    expect(at({ zone: 'pond', weather: 'fog' })).toContain('ghost-carp');
+    expect(at({ zone: 'pond', weather: 'rain', raining: true })).not.toContain('ghost-carp');
+    expect(at({ zone: 'deep', weather: 'storm', raining: true })).toContain('thunder-eel');
+    expect(at({ zone: 'deep', weather: 'rain', raining: true })).not.toContain('thunder-eel');
+    // A storm is rain too: what bites only in rain bites in a storm.
+    expect(at({ zone: 'creek', weather: 'storm', raining: true })).toContain('golden-trout');
+    expect(at({ zone: 'cave' })).toEqual(expect.arrayContaining(['cave-fish', 'lantern-shrimp', 'crystal-crab']));
+    expect(at({ zone: 'cave' })).not.toContain('sardine');
   });
 
   it('always has something to bite in every water at every hour', () => {

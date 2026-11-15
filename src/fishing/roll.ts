@@ -1,5 +1,6 @@
 // What bites, how big it is, and how long the wait is. Pure: everything random comes from `rand`.
-import { bitesAt } from '../game/clock';
+import { bitesAt, type Weather } from '../game/clock';
+import type { Season } from '../look/season';
 import { type Bait, type Lure, LURES, type Rod } from '../game/economy';
 import type { Zone } from '../world/island';
 import { type Catch, SPECIES, type Species, type Tier, type Variant, BY_ID } from './fish';
@@ -12,6 +13,10 @@ export interface Conditions {
   bait: Bait;
   /** The lure on the line (a plain hook when not given). */
   lure?: Lure;
+  /** The season (when not given, a fish that keeps to seasons bites all year: for the tests). */
+  season?: Season;
+  /** The weather: fog and storms have fish of their own. */
+  weather?: Weather;
 }
 
 /** How often each tier bites, before bait and rod have their say. */
@@ -25,12 +30,15 @@ export function candidates(c: Conditions): { species: Species; weight: number }[
     if (!s.zones.includes(c.zone)) continue;
     if (!bitesAt(s.watch, c.hour)) continue;
     if (s.rain && !c.raining) continue;
+    if (s.weather && s.weather !== c.weather) continue;
+    if (s.seasons && c.season && !s.seasons.includes(c.season)) continue;
     let w = TIER_WEIGHT[s.tier] * (c.bait.boost[s.tier] ?? 1);
     if (s.tier === 'rare' || s.tier === 'epic' || s.tier === 'legendary') w *= 1 + c.rod.luck;
     if (night && c.bait.night && s.tier !== 'junk' && s.tier !== 'common') w *= c.bait.night;
     // A fish that keeps to a particular hour or weather is easier to find in it.
     if (s.watch !== 'any') w *= 1.25;
-    if (s.rain) w *= 1.6;
+    if (s.rain || s.weather) w *= 1.6;
+    if (s.seasons) w *= 1.3;
     // Something that lives in several kinds of water is spread thinner in each.
     w /= Math.sqrt(s.zones.length);
     out.push({ species: s, weight: w });

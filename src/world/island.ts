@@ -119,7 +119,8 @@ export class Heightfield {
   }
 }
 
-export type Zone = 'ocean' | 'deep' | 'pond' | 'creek';
+/** The kinds of water. `cave` is the sea cave's pool, which is a place of its own (see src/world/rooms.ts), not on the island's ground. */
+export type Zone = 'ocean' | 'deep' | 'pond' | 'creek' | 'cave';
 
 /** The surface of whatever water is at a point, or null where it is dry. */
 export function waterAt(field: Heightfield, x: number, z: number): { level: number; zone: Zone; depth: number } | null {

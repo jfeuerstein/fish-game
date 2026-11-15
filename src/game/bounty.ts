@@ -2,7 +2,7 @@
 // and a bounty on top for the first: something to set out for each time the game is opened.
 // It goes by the calendar where the player is, not the island's own short day, so it is the
 // same fish all day and a new one tomorrow. Pure.
-import { BY_ID, SPECIES, WATCH_LABEL, ZONE_LABEL, type Catch, type Species } from '../fishing/fish';
+import { BY_ID, SPECIES, WATCH_LABEL, ZONE_LABEL, everyDay, type Catch, type Species } from '../fishing/fish';
 import { chance } from '../look/skylife';
 
 /** What the day's fish sells for, against its usual price. */
@@ -18,7 +18,7 @@ export function calendarDay(nowMs: number, tzOffsetMin: number): number {
  * never a legend (those are a long hunt, not a day's errand), and never one that only bites in
  * rain, which a dry day would make impossible.
  */
-export const BOUNTY_FISH: readonly Species[] = SPECIES.filter((s) => s.tier !== 'junk' && s.tier !== 'legendary' && !s.rain);
+export const BOUNTY_FISH: readonly Species[] = SPECIES.filter((s) => s.tier !== 'junk' && s.tier !== 'legendary' && everyDay(s));
 
 const rounds = new Map<number, number[]>();
 

@@ -55,6 +55,10 @@ const ITEM_SHEETS = [
   ['coin', 'detector', 'upgrade-cooler', 'ukulele', 'ticket-lucky', 'gull', 'boat-ticket'],
   // The camp catalogue.
   ['f-tent', 'f-firepit', 'f-bedroll', 'f-stump', 'f-table', 'f-stove', 'f-woodpile', 'f-lights', 'f-washline'],
+  // Line, hooks and the bait that is only found.
+  ['line-1', 'line-2', 'line-3', 'line-4', 'hook-1', 'hook-2', 'hook-3', 'hook-4', 'bait-crawler'],
+  // Charms for the rod, and the last things to set down.
+  ['charm-bell', 'charm-feather', 'charm-shell', 'charm-star', 'charm-fish', 'charm-moon', 'f-chest', 'f-chime', 'f-shipbottle'],
 ];
 /** What an item is, as its model or picture was asked for, without the words about how a model wants it posed. */
 const itemSays = (id) => {

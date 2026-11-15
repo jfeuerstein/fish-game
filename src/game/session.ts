@@ -41,5 +41,5 @@ export interface Session {
   hour: number;
   raining: boolean;
   /** Pin the hour or weather from Settings (null to follow the clock). */
-  pin: { time: string | null; weather: 'clear' | 'rain' | null };
+  pin: { time: string | null; weather: 'clear' | 'rain' | 'fog' | 'storm' | null; season: string | null };
 }

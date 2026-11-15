@@ -118,6 +118,19 @@ export const MODELS = {
   'f-lights': { kind: 'prop', what: 'a string of round warm yellow bulb lights hung in a swag between two wooden poles', h: 2.0, faces: 3000, item: true },
   'f-washline': { kind: 'prop', what: 'a clothes line between two wooden posts with a red and white striped towel and two socks pegged on it', h: 1.6, faces: 3000, item: true },
 
+  // --- More to set down: a chest for the camp, and what only the visiting trader sells ---
+  'f-chest': { kind: 'prop', what: 'a sturdy wooden camp chest with iron bands and rope handles, its lid shut', h: 0.7, faces: 3000, item: true },
+  'f-chime': { kind: 'prop', what: 'a wind chime of sea shells and bits of driftwood hanging from the arm of a short wooden post', h: 1.6, faces: 3000, item: true },
+  'f-shipbottle': { kind: 'prop', what: 'a model sailing ship inside a big glass bottle lying on a little wooden stand', h: 0.5, faces: 3000, item: true },
+  'stall': { kind: 'prop', what: "a travelling trader's stall: a striped blanket spread on the ground with a few crates, jars and baskets on it, and a lantern hanging from a crooked pole at one corner", h: 1.9, faces: 5000 },
+
+  // --- Places to go into: each a room like a dolls' house, open at the front and the top, that the player walks about in ---
+  'room-shop': { kind: 'prop', what: 'a dolls house room with no front wall and no ceiling, seen from its open front: the inside of a small bait and tackle shop, a plank floor and three plank walls, shelves of jars and tackle boxes along the back wall, a wooden counter with a brass till against the left wall, fishing rods in a rack against the right wall, a round rug in the middle of the bare floor', h: 3.4, faces: 9000 },
+  'room-hut': { kind: 'prop', what: "a dolls house room with no front wall and no ceiling, seen from its open front: the inside of a fisherman's hut, a plank floor and three plank walls, a workbench with tools along the back wall, nets and buoys hung on the left wall, a pot-bellied stove and a stack of crab pots against the right wall, the middle of the floor left bare", h: 3.4, faces: 9000 },
+  'room-aquarium': { kind: 'prop', what: 'a dolls house room with no front wall and no ceiling, seen from its open front: a small aquarium, a stone floor and three stone walls, two big glass fish tanks full of plain blue water set into each wall, a wooden bench in the middle of the floor', h: 3.6, faces: 9000 },
+  'room-cave': { kind: 'prop', what: 'a sea cave cut open at the front and the top, seen from its open front: a horseshoe of dark grey rock walls with stalactites hanging along their tops, a wide flat rock ledge along the back wall, and in the middle a shallow empty stone basin', h: 4.5, faces: 9000 },
+  'cave-mouth': { kind: 'prop', what: 'a tall arch of dark grey sea rock, the mouth of a cave, black inside, with barnacles and seaweed at its foot', h: 5.5, faces: 5000 },
+
   // --- Things held ---
   'rod-1': { kind: 'prop', what: 'a simple wooden fishing rod made from a stick, with a little reel, as a chunky toy, lying diagonally', h: 1.6, faces: 2000 },
   'rod-2': { kind: 'prop', what: 'a fishing rod with a blue fibreglass pole, a cork handle and a silver reel, as a chunky toy, lying diagonally', h: 1.6, faces: 2000 },
@@ -220,6 +233,16 @@ export const FISH_ART = {
   'whale-shark': 'a big blue-grey whale shark covered in white spots with a wide flat mouth',
   'giant-squid': 'a big red giant squid with huge eyes and long curling tentacles, lying sideways',
   'treasure': 'a small wooden treasure chest with gold bands and a gold lock, closed',
+  // Fog, storms, the sea cave and the seasons (added last, so they are a sheet of their own)
+  'ghost-carp': 'a pale ghostly white carp with long trailing fins and faint grey scales',
+  'mist-ray': 'a pale grey stingray with soft white edges to its wings and a long thin tail, seen from above',
+  'spark-bass': 'a dark blue bass with bright yellow zigzag lightning stripes down its side',
+  'thunder-eel': 'a long fat storm-grey eel with a row of glowing yellow spots along its side',
+  'cave-fish': 'a small pale pink cave fish with no eyes and see-through fins',
+  'lantern-shrimp': 'a little red shrimp with a glowing yellow lantern-like belly and long feelers',
+  'crystal-crab': 'a crab with a shell of pale blue crystal spikes and purple claws, seen from above',
+  'frost-char': 'an icy blue char fish with a white belly and pale frosty spots',
+  'maple-salmon': 'a salmon coloured like autumn leaves, deep red with orange and gold patches',
 };
 
 /** Pictures only (no model): icons for things in the shop and the game's own art. */
@@ -249,6 +272,23 @@ export const ICONS = {
   'lure-twin': 'a fishing line with two hooks side by side, each with a little red bead',
   'lure-lucky': 'a green four leaf clover charm on a little fishing hook',
   'lure-rain': 'a little charm shaped like a blue rain cloud with a raindrop on a fishing hook',
+  // Line and hooks
+  'line-1': 'a small wooden spool of plain white cotton fishing line',
+  'line-2': 'a spool of green braided fishing line',
+  'line-3': 'a big brass reel spool of dark blue sea fishing line',
+  'line-4': 'a silver spool of fine shimmering spider silk thread',
+  'hook-1': 'a bent steel pin used as a fishing hook',
+  'hook-2': 'a steel fishing hook with a sharp barb',
+  'hook-3': 'a round bronze circle fishing hook',
+  'hook-4': 'a golden fishing hook with a tiny green clover charm on it',
+  'bait-crawler': 'a little tin of fat pink night crawler worms in dark earth',
+  // Charms for the rod
+  'charm-bell': 'a tiny brass bell on a loop of red string',
+  'charm-feather': 'a blue and white feather tied to a loop of string',
+  'charm-shell': 'a small pink spiral sea shell on a loop of string',
+  'charm-star': 'a little golden star charm on a loop of string',
+  'charm-fish': 'a tiny carved wooden fish charm on a loop of string',
+  'charm-moon': 'a little silver crescent moon charm on a loop of string',
 };
 
 /**

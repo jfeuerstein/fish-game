@@ -5,7 +5,9 @@ export interface Config {
   /** Pin the hour: dawn, day, dusk, night or a number. */
   time: string | null;
   /** Pin the weather. */
-  weather: 'clear' | 'rain' | null;
+  weather: 'clear' | 'rain' | 'fog' | 'storm' | null;
+  /** Pin the season: spring, summer, fall or winter. */
+  season: string | null;
   /** Hide the controls, for clean pictures. */
   hud: boolean;
   /** Skip the title card. */
@@ -46,7 +48,8 @@ export function parseConfig(search: string): Config {
   return {
     at: p.get('at'),
     time: p.get('time'),
-    weather: w === 'rain' || w === 'clear' ? w : null,
+    weather: w === 'rain' || w === 'clear' || w === 'fog' || w === 'storm' ? w : null,
+    season: p.get('season'),
     hud: p.get('hud') !== '0',
     title: p.get('title') !== '0',
     fresh: p.get('fresh') === '1',

@@ -36,6 +36,8 @@ export class Effects {
   private ringGeo = new THREE.RingGeometry(0.82, 1, 32).rotateX(-Math.PI / 2);
   private rain: THREE.InstancedMesh;
   private rainOn = 0;
+  private snowing = false;
+  private snow: THREE.InstancedMesh;
   private marks: THREE.InstancedMesh;
   private markAt: { x: number; y: number; z: number; born: number }[] = [];
   private markNext = 0;
@@ -66,6 +68,15 @@ export class Effects {
     this.rain.frustumCulled = false;
     this.rain.visible = false;
     this.group.add(this.rain);
+    // Snow: square flakes in the same box, that fall slowly and drift.
+    this.snow = new THREE.InstancedMesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), new THREE.MeshBasicMaterial({ color: 0xfffdf6 }), STREAKS);
+    for (let i = 0; i < STREAKS; i++) {
+      this.m.makeTranslation((Math.random() - 0.5) * RAIN_WIDE, Math.random() * RAIN_TALL, (Math.random() - 0.5) * RAIN_WIDE);
+      this.snow.setMatrixAt(i, this.m);
+    }
+    this.snow.frustumCulled = false;
+    this.snow.visible = false;
+    this.group.add(this.snow);
     // Where a drop lands: a pale pixel on the ground that widens once and goes.
     this.marks = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xc6e4f4 }), MARKS);
     this.marks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -148,8 +159,10 @@ export class Effects {
     this.rings.push({ mesh, life: 0, max: 1.1, size });
   }
 
-  setRain(amount: number): void {
+  /** How hard it is coming down, and whether it comes down as snow. */
+  setRain(amount: number, snow = false): void {
     this.rainOn = amount;
+    this.snowing = snow;
   }
 
   /** `focus` is what the camera is looking at (the player): rain is seen to land round there. */
@@ -192,7 +205,15 @@ export class Effects {
       }
     }
     if (gone) this.prints.instanceMatrix.needsUpdate = true;
-    this.rain.visible = this.rainOn > 0.05;
+    this.snow.visible = this.snowing && this.rainOn > 0.05;
+    if (this.snow.visible) {
+      this.snow.count = Math.round(STREAKS * Math.min(1, this.rainOn));
+      const p = focus ?? camera.position;
+      const t = performance.now() / 1000;
+      // Falling a tenth as fast as rain, and swung a little from side to side, in steps.
+      this.snow.position.set(Math.round(p.x / 2) * 2 + Math.round(Math.sin(t * 0.8) * 4) / 8, p.y - 3 - ((t * 1.6) % 1.4), Math.round(p.z / 2) * 2);
+    }
+    this.rain.visible = !this.snowing && this.rainOn > 0.05;
     if (this.rain.visible) {
       this.rain.count = Math.round(STREAKS * Math.min(1, this.rainOn));
       const p = focus ?? camera.position;
@@ -205,7 +226,7 @@ export class Effects {
   /** Rain landing: new marks round the focus while it rains, each a small pixel, then a wider one, then gone. */
   private land(dt: number, focus?: THREE.Vector3): void {
     const LIFE = 0.22;
-    if (focus && this.ground && this.rainOn > 0.05) {
+    if (focus && this.ground && this.rainOn > 0.05 && !this.snowing) {
       this.markDue += dt * 260 * this.rainOn;
       while (this.markDue >= 1) {
         this.markDue -= 1;

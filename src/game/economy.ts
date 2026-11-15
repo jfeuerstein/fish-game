@@ -14,6 +14,8 @@ export interface Rod {
   control: number;
   /** Raises the odds of rare fish and special variants. */
   luck: number;
+  /** How well the hook holds a fish that is getting away (1 when not given: set by `rigged`). */
+  hold?: number;
   /** Seconds to hook a fish once it bites. */
   hook: number;
   blurb: string;
@@ -44,6 +46,8 @@ export interface Bait {
   size?: number;
   /** Chances of a fine, shiny, golden or prismatic catch. */
   quality: [number, number, number, number];
+  /** Never sold: found on the island (see src/game/forage.ts). */
+  found?: boolean;
   blurb: string;
 }
 
@@ -54,7 +58,51 @@ export const BAITS: readonly Bait[] = [
   { id: 'bait-glow', name: 'Glow Worms', price: 160, pack: 10, level: 8, boost: { rare: 1.6, epic: 1.6, legendary: 1.3, junk: 0.4 }, speed: 0.85, night: 2, quality: [0.2, 0.09, 0.025, 0.005], blurb: 'They shine in the dark water. Night fish love them, and shinier fish too.' },
   { id: 'bait-lure', name: 'Shrimp Paste', price: 300, pack: 10, level: 10, boost: { rare: 1.5, epic: 1.8 }, speed: 0.8, size: 0.35, quality: [0.24, 0.12, 0.035, 0.008], blurb: 'Smelly. Pulls in the biggest of each kind.' },
   { id: 'bait-golden', name: 'Gold Flakes', price: 900, pack: 5, level: 15, boost: { common: 0.5, rare: 2.4, epic: 3, legendary: 4, junk: 0.1 }, speed: 0.75, size: 0.2, quality: [0.28, 0.16, 0.07, 0.02], blurb: 'Legends rise for it, and so do the finest fish.' },
+  { id: 'bait-crawler', name: 'Night Crawlers', price: 0, pack: 0, level: 1, found: true, boost: { uncommon: 1.5, rare: 1.5, junk: 0.5 }, speed: 0.8, size: 0.1, quality: [0.16, 0.06, 0.012, 0.003], blurb: 'Fat worms that come up after rain. Never sold: dig them up yourself.' },
 ];
+
+/**
+ * Line and hooks: the second thing to upgrade beside the rod. A stronger line takes more strain
+ * before it snaps; a finer hook holds a fish that is getting away for longer, loses less line
+ * to a leaping one, and gives a little longer to strike at a bite.
+ */
+export interface Line {
+  id: string;
+  name: string;
+  price: number;
+  level: number;
+  /** Multiplies how much strain the line takes. */
+  strength: number;
+  blurb: string;
+}
+export interface Hook {
+  id: string;
+  name: string;
+  price: number;
+  level: number;
+  /** Multiplies how well a fish is held. */
+  hold: number;
+  blurb: string;
+}
+export const LINES: readonly Line[] = [
+  { id: 'line-1', name: 'Cotton Line', price: 0, level: 1, strength: 1, blurb: 'It came with the stick.' },
+  { id: 'line-2', name: 'Braided Line', price: 380, level: 4, strength: 1.15, blurb: 'Three strands are stronger than one.' },
+  { id: 'line-3', name: 'Sea Line', price: 1500, level: 9, strength: 1.3, blurb: 'What the trawlers use. Smells of it, too.' },
+  { id: 'line-4', name: 'Spider Silk', price: 5400, level: 15, strength: 1.5, blurb: 'Almost nothing, and almost nothing breaks it.' },
+];
+export const HOOKS: readonly Hook[] = [
+  { id: 'hook-1', name: 'Bent Pin', price: 0, level: 1, hold: 1, blurb: 'A pin, bent. It mostly works.' },
+  { id: 'hook-2', name: 'Barbed Hook', price: 320, level: 3, hold: 1.25, blurb: 'What goes on stays on a little longer.' },
+  { id: 'hook-3', name: 'Circle Hook', price: 1300, level: 8, hold: 1.5, blurb: 'Sets itself in the corner of the mouth.' },
+  { id: 'hook-4', name: 'Lucky Hook', price: 4800, level: 14, hold: 1.8, blurb: 'Has never let one go. So Gus says.' },
+];
+export const lineById = (id: string): Line => LINES.find((l) => l.id === id) ?? LINES[0];
+export const hookById = (id: string): Hook => HOOKS.find((h) => h.id === id) ?? HOOKS[0];
+
+/** A rod as it is rigged: with its line's strength and its hook's hold. */
+export function rigged(rod: Rod, line: Line, hook: Hook): Rod {
+  return { ...rod, control: rod.control * line.strength, hook: rod.hook * (1 + (hook.hold - 1) * 0.35), hold: hook.hold };
+}
 
 /** Lures change how a catch is chosen. One at a time, never used up. */
 export type LureEffect = 'none' | 'big' | 'small' | 'sparkle' | 'magnet' | 'twin' | 'lucky' | 'rain';

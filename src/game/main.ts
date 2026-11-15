@@ -28,6 +28,12 @@ import { journalSheet } from '../ui/journal';
 import { moreSheet } from '../ui/more';
 import { Sheet } from '../ui/sheet';
 import { Coach } from '../ui/coach';
+import { tackleSheet } from '../ui/tackle';
+import { newSets } from './sets';
+import { FORAGE_GIVES, forageNow, type ForageSpot } from './forage';
+import { Foraging } from '../world/forage';
+import { floorAt } from '../world/layout';
+import { MS_PER_HOUR } from './clock';
 import { NAMES, doFavour, favourInBag, talk, type Who } from '../npc/talk';
 import { bountyFilled, bountyFor, calendarDay, isBounty } from './bounty';
 import { coachDue, coachNext, type CoachStep } from './coach';
@@ -42,8 +48,10 @@ import { CAMP, PIER, PLACES, PLACED } from '../world/layout';
 import { PlacedThings } from '../world/placed';
 import type { Seat } from '../world/props';
 import { World } from '../world/world';
-import { bitesAt, dayNumber, hourAt, pinnedHour, rainingAt, sayHour } from './clock';
-import { HATS, baitById, levelFor, lureById, rodById } from './economy';
+import { bitesAt, dayNumber, hourAt, pinnedHour, sayHour, weatherAt, type Weather } from './clock';
+import { HATS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
+import { SEASON_LOOK, pinnedSeason, seasonAt, type Season } from '../look/season';
+import { STYLE_SAYS } from '../fishing/reel';
 import { newTitles } from './titles';
 import { buriedToday, digUp, SHROOMS, SEA_GLASS } from '../world/secrets';
 import { Finds } from '../world/finds';
@@ -93,7 +101,7 @@ export class Game implements Session {
   private frames = 0;
   private dirty = false;
   private savedAt = 0;
-  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade', Sheet>;
+  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade' | 'tackle', Sheet>;
   fanfare!: Fanfare;
   /** The arcade's counter, and its gull: what it is feeling, and for how much longer. */
   private arcadeFront = new THREE.Vector3(-14, 0, 9);
@@ -136,7 +144,7 @@ export class Game implements Session {
       /* No storage: the game plays and forgets. */
     }
     this.save = parseSave(text);
-    this.pin = { time: this.cfg.time, weather: this.cfg.weather };
+    this.pin = { time: this.cfg.time, weather: this.cfg.weather, season: this.cfg.season };
   }
 
   async boot(): Promise<void> {
@@ -168,6 +176,7 @@ export class Game implements Session {
 
     await loadIndex();
     this.world = new World(this.scene, !low, look);
+    this.world.onLightning = () => this.audio.thunder(Math.random());
     this.scene.add(this.fx.group);
     // Rain lands on the ground, or on the water where there is water.
     this.fx.ground = (x, z) => waterAt(this.world.field, x, z)?.level ?? this.world.field.heightAt(x, z);
@@ -241,6 +250,8 @@ export class Game implements Session {
     this.placed = new PlacedThings(this.world, this.world.field);
     for (const p of this.save.placed) await this.placed.add(p);
     this.finds = new Finds(this.world.field);
+    this.forage = new Foraging(this.world.field, (x, z) => this.openGround(x, z));
+    this.scene.add(this.forage.group);
     this.world.group.add(this.finds.group);
     if (models) {
       await this.finds.load(this.save.glass);
@@ -280,6 +291,7 @@ export class Game implements Session {
       journal: journalSheet(this.app, this),
       bag: bagSheet(this.app, this),
       board: boardSheet(this.app, this),
+      tackle: tackleSheet(this.app, this),
       more: moreSheet(this.app, this, openChests),
       fun: funSheet(this.app, this, () => Chalk.near(this.player.pos)),
     };
@@ -368,6 +380,16 @@ export class Game implements Session {
     this.changed();
   }
 
+  /** The rod as it is rigged: with the line and the hook that are on it. */
+  get rod(): Rod {
+    return rigged(rodById(this.save.rod), lineById(this.save.line), hookById(this.save.hook));
+  }
+
+  /** The weather now (rain and storm both count as raining), and the season. */
+  weather: Weather = 'clear';
+  season: Season = 'summer';
+  private dressed = false;
+
   /** The calendar day where the player is: the day's bounty goes by it. */
   get today(): number {
     return calendarDay(Date.now(), new Date().getTimezoneOffset());
@@ -425,7 +447,7 @@ export class Game implements Session {
 
   private fishingHooks(): ConstructorParameters<typeof Fishing>[3] {
     return {
-      conditions: (zone) => ({ zone, hour: this.hour, raining: this.raining, rod: rodById(this.save.rod), bait: baitById(this.save.bait), lure: lureById(this.save.lure) }),
+      conditions: (zone) => ({ zone, hour: this.hour, raining: this.raining, weather: this.weather, season: this.season, rod: this.rod, bait: baitById(this.save.bait), lure: lureById(this.save.lure) }),
       tip: (id) => this.tip(id),
       landed: (c, zone) => this.landed(c, zone),
       snapped: () => {
@@ -536,6 +558,50 @@ export class Game implements Session {
       setTimeout(() => this.hud.toast(`New title: ${t}! Show it from More › Wardrobe.`, 'gold'), 2400);
       this.changed();
     }
+    // A set of fish finished: stamped in the journal, and its prize paid.
+    for (const set of newSets(this.save)) {
+      setTimeout(() => {
+        this.hud.toast(`Set complete: ${set.name}! +${set.coins} coins${set.pearl ? ' and a pearl' : ''}.`, 'gold');
+        this.audio.play('quest');
+      }, 3400);
+      this.changed();
+    }
+  }
+
+  // ---------- Bait to be found ----------
+
+  private forage!: Foraging;
+  /** How wet the ground is, 0 to 1: it rises in rain and dries over a few island hours. */
+  private wet = 0;
+
+  /** Whether a place is open grass or earth where a worm or a cricket might be. */
+  private openGround(x: number, z: number): boolean {
+    const f = this.world.field;
+    if (f.heightAt(x, z) < 0.5 || waterAt(f, x, z) || floorAt(x, z) !== null) return false;
+    const [sand, , rock, cobble] = splatAt(f, x, z);
+    if (sand > 0.4 || rock > 0.4 || cobble > 0.2) return false;
+    // Nothing standing there: a body set down on the spot is not pushed off it.
+    const [px, pz] = this.player.solid.resolve(x, z, 0.5);
+    return Math.hypot(px - x, pz - z) < 0.01;
+  }
+
+  private forageUpdate(dt: number, now: number): void {
+    const raining = this.weather === 'rain' || this.weather === 'storm';
+    this.wet = raining ? Math.min(1, this.wet + dt / 20) : Math.max(0, this.wet - dt / 150);
+    const kind = this.started ? forageNow(this.hour, this.wet) : null;
+    // Worms have new places each spell of rain; crickets each evening.
+    const turn = kind === 'worms' ? Math.floor(now / (MS_PER_HOUR * 4)) : dayNumber(now, 'island');
+    this.forage.set(kind, turn);
+    this.forage.update(dt, this.player.pos);
+  }
+
+  private takeForage(spot: ForageSpot): void {
+    const gives = FORAGE_GIVES[spot.kind];
+    this.forage.take(spot);
+    this.save.baits[gives.bait] = (this.save.baits[gives.bait] ?? 0) + gives.count;
+    this.hud.toast(gives.says, 'good');
+    this.audio.play('plop', { volume: 0.5 });
+    this.changed();
   }
 
   private stepSide = 1;
@@ -809,7 +875,7 @@ export class Game implements Session {
   /** Is there water to cast into, out ahead of the camera? */
   private waterAhead(): boolean {
     const f = this.rig.forward();
-    const reach = rodById(this.save.rod).reach;
+    const reach = this.rod.reach;
     for (let d = 3; d <= reach; d += 1.5) {
       if (fishingZone(this.world.field, this.player.pos.x + f.x * d, this.player.pos.z + f.z * d)) return true;
     }
@@ -832,7 +898,7 @@ export class Game implements Session {
   /** What the two buttons offer here and now. */
   private context(): void {
     const hud = this.hud;
-    const rod = rodById(this.save.rod);
+    const rod = this.rod;
     const f = this.fishing;
     const p = this.player.pos;
     const sheetOpen = !!Sheet.current;
@@ -873,6 +939,7 @@ export class Game implements Session {
     const seat = this.mode === 'walk' ? this.nearSeat() : null;
     const thing = this.mode === 'walk' ? this.placed.near(p) : null;
     const dig = this.nearBuried;
+    const found = this.forage.near(p);
     if (this.mode === 'dig') hud.setSecond(null);
     else if (dig && this.detecting && this.mode === 'walk') hud.setSecond('Dig', () => this.startDig(dig));
     else if (this.mode === 'boat') hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
@@ -883,6 +950,7 @@ export class Game implements Session {
       const ready = favourInBag(this.save, who);
       hud.setSecond(ready >= 0 ? `Give ${BY_ID[this.save.bag[ready].species]?.name ?? 'fish'}` : 'Chat', () => this.speakTo(who, (words) => npc.chat(performance.now(), words), npc.def.lines));
     } else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.speakTo('npc-pelican', (words) => this.gus.chat(performance.now(), words), GUS_LINES));
+    else if (found && this.mode === 'walk') hud.setSecond(found.kind === 'worms' ? 'Dig up' : 'Catch', () => this.takeForage(found));
     else if (seat) hud.setSecond('Sit', () => this.sitOn(seat));
     else if (this.boat.nearMooring(p) && p.y > 2) hud.setSecond(this.save.boat ? 'Row' : 'Boat', () => (this.save.boat ? this.boardBoat() : this.hud.toast('The rowboat needs a licence. Gus sells them (Upgrades).')));
     else if (Chalk.near(p)) hud.setSecond('Draw', () => this.startChalk());
@@ -1054,7 +1122,15 @@ export class Game implements Session {
     const mode = this.save.settings.clock;
     const tz = new Date().getTimezoneOffset();
     this.hour = pinnedHour(this.pin.time) ?? hourAt(now, mode, tz);
-    const skyRain = this.pin.weather ? this.pin.weather === 'rain' : rainingAt(now, mode);
+    this.weather = this.pin.weather ?? weatherAt(now, mode, tz);
+    const skyRain = this.weather === 'rain' || this.weather === 'storm';
+    // The season, by the calendar (or pinned): the island is dressed for it when it changes.
+    const season = pinnedSeason(this.pin.season) ?? seasonAt(now, tz);
+    if (season !== this.season || !this.dressed) {
+      this.season = season;
+      this.dressed = true;
+      this.world.setSeason(season);
+    }
     const cloud = performance.now() < this.cloudUntil;
     this.raining = skyRain || cloud;
     this.rain += ((skyRain ? 1 : 0) - this.rain) * (1 - Math.exp(-dt * 0.4));
@@ -1094,7 +1170,7 @@ export class Game implements Session {
       if (this.emoteTimer <= 0) this.stopActivity();
     }
 
-    const rod = rodById(this.save.rod);
+    const rod = this.rod;
     this.fishing.update(dt, this.hud.held, rod, baitById(this.save.bait));
     this.fishing.setCamera(this.camera.position);
     // While casting or reeling, the camera swings round behind the line.
@@ -1106,22 +1182,24 @@ export class Game implements Session {
     this.gus.update(dt, this.player.pos);
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
-    this.world.update(dt, this.hour, this.rain, this.player.pos);
+    this.world.update(dt, this.hour, this.rain, this.player.pos, this.weather);
     this.animateGull(dt);
     this.viewClock -= dt;
     if (this.viewClock <= 0) {
       this.viewClock = 0.15;
       this.world.props.clearView(this.rig.override ? this.rig.override.pos : this.player.pos);
     }
-    this.fx.setRain(Math.max(this.rain, cloud ? 0.7 : 0));
+    // In winter what falls is snow.
+    this.fx.setRain(Math.max(this.rain, cloud ? 0.7 : 0), SEASON_LOOK[this.season].snow);
     this.finds.update(dt);
+    this.forageUpdate(dt, now);
     this.finds.setCloud(cloud, this.player.pos);
     if (this.started) this.secrets(dt, now);
     this.fx.update(dt, this.camera, this.player.pos);
 
     if (this.started) {
       this.context();
-      this.hud.setReel(this.fishing.reelState ? this.fishing.reelState.progress : null, this.fishing.reelState?.tension ?? 0, this.fishing.reelState?.thrashing ?? false, this.fishing.fishIcon);
+      this.hud.setReel(this.fishing.reelState ? this.fishing.reelState.progress : null, this.fishing.reelState?.tension ?? 0, this.fishing.reelState?.thrashing ?? false, this.fishing.fishIcon, this.fishing.reelState?.sulking ? 'It sulks on the bottom. Keep winding…' : this.fishing.fighting ? STYLE_SAYS[this.fishing.fighting] : undefined);
       this.hud.setPower(this.fishing.castPower);
       this.overheads();
       this.hud.setJump(this.mode === 'walk' && !this.fishing.busy && !Sheet.current && !this.detecting);
@@ -1134,6 +1212,11 @@ export class Game implements Session {
       this.hud?.setStats(this.save.coins, this.save.tokens, lv.level, lv.into / lv.need);
     }
     this.hud?.setClock(sayHour(this.hour), this.raining, this.world.sky.palette.night > 0.5);
+    // The bait on the line, by the Cast key: tap it to change bait or lure on the spot.
+    if (this.hud) {
+      const fishingNow = this.mode === 'walk' && this.started && !this.coach && !Sheet.current && this.cfg.hud;
+      this.hud.setBait(fishingNow ? this.save.bait : null, this.save.bait === 'bait-worm' ? '∞' : String(this.save.baits[this.save.bait] ?? 0));
+    }
     // The day's bounty, under the clock. (Not while the first minute is being taught: one thing at a time.)
     if (this.hud && this.started && !this.coach) {
       const wanted = bountyFor(this.today);

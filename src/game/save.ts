@@ -42,6 +42,13 @@ export interface Save {
   characters: string[];
   rod: string;
   rods: string[];
+  /** The line and the hook on the rod, and those owned. */
+  line: string;
+  lines: string[];
+  hook: string;
+  hooks: string[];
+  /** Sets finished (see src/game/sets.ts). */
+  sets: string[];
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -115,6 +122,11 @@ export function newSave(): Save {
     characters: ['char-otter'],
     rod: 'rod-1',
     rods: ['rod-1'],
+    line: 'line-1',
+    lines: ['line-1'],
+    hook: 'hook-1',
+    hooks: ['hook-1'],
+    sets: [],
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -255,6 +267,11 @@ export function parseSave(text: string | null): Save {
     characters: [...new Set(['char-otter', ...strs(o.characters)])],
     rod: str(o.rod, 'rod-1'),
     rods: rods.includes('rod-1') ? rods : ['rod-1', ...rods],
+    line: str(o.line, 'line-1'),
+    lines: [...new Set(['line-1', ...strs(o.lines)])],
+    hook: str(o.hook, 'hook-1'),
+    hooks: [...new Set(['hook-1', ...strs(o.hooks)])],
+    sets: strs(o.sets),
     bait: str(o.bait, 'bait-worm'),
     baits,
     bag: (Array.isArray(o.bag) ? o.bag : []).map(readCatch).filter((c): c is Catch => c !== null),

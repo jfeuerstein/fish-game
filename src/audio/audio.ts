@@ -199,6 +199,31 @@ export class Audio {
     }
   }
 
+  /** Thunder: a crack and a long low roll, made of noise. `far` (0 to 1) is how far off, which makes it later, duller and quieter. */
+  thunder(far = 0.5): void {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx;
+    const secs = 3.2;
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * secs), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let low = 0;
+    for (let i = 0; i < d.length; i++) {
+      const t = i / ctx.sampleRate;
+      // Brown noise, loud at once and dying away in lumps.
+      low = (low + (Math.random() * 2 - 1) * 0.08) * 0.985;
+      d[i] = low * 6 * Math.exp(-t * 1.1) * (0.6 + 0.4 * Math.sin(t * 9 + Math.sin(t * 3) * 2));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const tone = ctx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 900 - far * 600;
+    const g = ctx.createGain();
+    g.gain.value = 0.9 - far * 0.5;
+    src.connect(tone).connect(g).connect(this.ambBus ?? this.sfxBus);
+    src.start(ctx.currentTime + 0.3 + far * 2.2);
+  }
+
   /** A sound that keeps going while wanted (reeling, the ambience). Volume 0 lets it fade and stop. */
   loop(name: string, volume: number, bus: 'sfx' | 'ambience' = 'ambience', rate = 1): void {
     if (!this.ctx || this.muted) return;

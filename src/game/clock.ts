@@ -43,6 +43,23 @@ export function rainingAt(nowMs: number, mode: ClockMode): boolean {
   return (hash(`rain-${spell}`) % 1000) / 1000 < 0.24;
 }
 
+/** The weather: `storm` is rain with thunder, `fog` a still grey morning. */
+export type Weather = 'clear' | 'rain' | 'fog' | 'storm';
+
+/**
+ * The weather at a moment. Rain comes in spells as `rainingAt` says; one spell of rain in four
+ * is a thunderstorm. On about one morning in three (the island's own, or the real one), when it
+ * is not raining, fog lies until mid-morning.
+ */
+export function weatherAt(nowMs: number, mode: ClockMode, tzOffsetMin = 0): Weather {
+  const hours = mode === 'real' ? nowMs / 3_600_000 : nowMs / MS_PER_HOUR;
+  const spell = Math.floor(hours / SPELL_HOURS);
+  if (rainingAt(nowMs, mode)) return (hash(`storm-${spell}`) % 1000) / 1000 < 0.25 ? 'storm' : 'rain';
+  const hour = hourAt(nowMs, mode, tzOffsetMin);
+  const day = dayNumber(nowMs, mode, tzOffsetMin);
+  return hour >= 4.5 && hour < 9.5 && (hash(`fog-${day}`) % 1000) / 1000 < 0.34 ? 'fog' : 'clear';
+}
+
 /** A pinned time, from the address or Settings, as an hour. */
 export function pinnedHour(name: string | null): number | null {
   if (name === null || name === '') return null;

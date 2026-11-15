@@ -1,7 +1,7 @@
 // The bait shop: sell fish, buy rods, bait, hats, things for around the island, upgrades.
 import { bountyCard, todaysPrice } from './bountyCard';
 import { valueOf, BY_ID, sayLength, stars } from '../fishing/fish';
-import { BAITS, BOAT_LICENCE, COOLERS, DETECTOR, EXTRAS, FURNITURE, HATS, LURES, RODS, levelFor } from '../game/economy';
+import { BAITS, BOAT_LICENCE, COOLERS, DETECTOR, EXTRAS, FURNITURE, HATS, HOOKS, LINES, LURES, RODS, hookById, levelFor, lineById } from '../game/economy';
 import { sell, spend } from '../game/progress';
 import type { Session } from '../game/session';
 import { el, icon } from './hud';
@@ -84,9 +84,44 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         row.append(b);
         body.append(row);
       }
+    } else if (tab === 'Tackle') {
+      body.append(el('p', '', 'What goes on the rod. A stronger line takes more strain before it snaps; a finer hook holds a fish that is getting away, and gives a moment longer to strike.'));
+      const rows = (title: string, things: readonly { id: string; name: string; price: number; level: number; blurb: string }[], says: (id: string) => string, using: () => string, owned: string[], use: (id: string) => void): void => {
+        body.append(el('div', 'section', title));
+        for (const t of things) {
+          const has = owned.includes(t.id);
+          const row = el('div', 'row');
+          row.innerHTML = `<img src="${icon(t.id)}" alt=""><div class="grow"><div class="title">${t.name}</div><div class="sub">${t.blurb}</div><div class="sub">${says(t.id)}</div></div>`;
+          const b = el('button', `btn ${has ? (using() === t.id ? 'plain' : 'green') : ''}`);
+          if (has) {
+            b.textContent = using() === t.id ? 'Using' : 'Use';
+            b.onclick = () => {
+              use(t.id);
+              s.changed();
+              sheet.refresh();
+            };
+          } else if (level < t.level) {
+            b.textContent = `Lv ${t.level}`;
+            b.disabled = true;
+          } else {
+            b.innerHTML = coin(t.price);
+            b.onclick = () => buy(t.price, () => {
+              owned.push(t.id);
+              use(t.id);
+              s.hud.toast(`${t.name} is on your rod.`, 'good');
+            });
+          }
+          row.append(b);
+          body.append(row);
+        }
+      };
+      rows('Line', LINES, (id) => `Takes ${Math.round(lineById(id).strength * 100)}% of the strain a cotton line does before it snaps`.replace('Takes 100% of the strain a cotton line does before it snaps', 'Snaps when it snaps'), () => save.line, save.lines, (id) => (save.line = id));
+      rows('Hooks', HOOKS, (id) => (hookById(id).hold > 1 ? `Holds ${Math.round((hookById(id).hold - 1) * 100)}% better` : 'Holds, mostly'), () => save.hook, save.hooks, (id) => (save.hook = id));
     } else if (tab === 'Bait') {
       body.append(el('p', '', 'Bait decides how fine your fish are (★ fine, ★★ shiny, ★★★ golden, ★★★★ prismatic) and which fussy fish bite. One is used up with each catch; worms never run out.'));
       for (const b of BAITS) {
+        // What is only found is shown once some has been found.
+        if (b.found && !(save.baits[b.id] > 0)) continue;
         const have = b.id === 'bait-worm' ? '∞' : String(save.baits[b.id] ?? 0);
         const row = el('div', 'row');
         const finer = Math.round(b.quality.reduce((a, q) => a + q, 0) * 1000) / 10;
@@ -252,6 +287,6 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       det.append(d);
       body.append(det);
     }
-  }, ['Sell', 'Rods', 'Lures', 'Bait', 'Hats', 'Wear', 'Camp', 'Things', 'Upgrades', 'Pearls']);
+  }, ['Sell', 'Rods', 'Tackle', 'Lures', 'Bait', 'Hats', 'Wear', 'Camp', 'Things', 'Upgrades', 'Pearls']);
   return sheet;
 }

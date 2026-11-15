@@ -29,7 +29,7 @@ export class Player {
   /** Called on landing, with how hard. */
   onLand: ((speed: number) => void) | null = null;
 
-  constructor(readonly body: Character, private field: Heightfield, private solid: Colliders) {}
+  constructor(readonly body: Character, private field: Heightfield, readonly solid: Colliders) {}
 
   /** Hop. */
   jump(): void {

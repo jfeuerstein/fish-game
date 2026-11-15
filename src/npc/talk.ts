@@ -3,7 +3,7 @@
 // or the hat being worn, where the day's bounty might be found, a favour to ask (a fish they
 // would like), and a boast to beat (the size of something they say they caught today). Pure:
 // which thing is said next and what it does to the save.
-import { BY_ID, SPECIES, VARIANT_LABEL, sayLength, valueOf, type Catch, type Species } from '../fishing/fish';
+import { BY_ID, SPECIES, VARIANT_LABEL, everyDay, sayLength, valueOf, type Catch, type Species } from '../fishing/fish';
 import { bountyFilled, bountyFor } from '../game/bounty';
 import { EXTRAS, HATS } from '../game/economy';
 import type { Save } from '../game/save';
@@ -34,14 +34,14 @@ const A = (name: string): string => {
 
 /** Where to try for a fish, as someone would say it. */
 export function spotWords(s: Species): string {
-  const where: Record<string, string> = { ocean: 'off the beach or the pier', deep: 'off the end of the pier', pond: 'in the pond', creek: 'in the creek' };
+  const where: Record<string, string> = { ocean: 'off the beach or the pier', deep: 'off the end of the pier', pond: 'in the pond', creek: 'in the creek', cave: 'in the sea cave' };
   const when: Record<string, string> = { any: '', day: ' by day', night: ' after dark', twilight: ' at dawn or dusk' };
   return `${where[s.zones[0]] ?? 'somewhere wet'}${when[s.watch] ?? ''}`;
 }
 
 /** The fish a neighbour may ask for: ordinary ones from their own waters, that bite on any day. */
 function askable(who: Exclude<Who, 'npc-pelican'>): Species[] {
-  return SPECIES.filter((s) => (s.tier === 'common' || s.tier === 'uncommon') && !s.rain && s.zones.some((z) => WATERS[who].includes(z)));
+  return SPECIES.filter((s) => (s.tier === 'common' || s.tier === 'uncommon') && everyDay(s) && s.zones.some((z) => WATERS[who].includes(z)));
 }
 
 /** The fish a neighbour would like next: it changes each time a favour is done, never to the same fish. */

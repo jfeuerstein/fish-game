@@ -162,7 +162,8 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         body.append(row);
       }
       pinRow('Time', [null, 'dawn', 'day', 'dusk', 'night'], () => s.pin.time, (v) => (s.pin.time = v));
-      pinRow('Weather', [null, 'clear', 'rain'], () => s.pin.weather, (v) => (s.pin.weather = v as 'clear' | 'rain' | null));
+      pinRow('Weather', [null, 'clear', 'rain', 'fog', 'storm'], () => s.pin.weather, (v) => (s.pin.weather = v as Session['pin']['weather']));
+      pinRow('Season', [null, 'spring', 'summer', 'fall', 'winter'], () => s.pin.season, (v) => (s.pin.season = v));
       const go = el('div', 'row');
       go.style.flexWrap = 'wrap';
       go.innerHTML = '<div class="grow" style="flex-basis:100%"><div class="title">Go to</div></div>';

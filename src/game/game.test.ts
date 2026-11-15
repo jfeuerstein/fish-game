@@ -12,7 +12,9 @@ describe('economy', () => {
       expect(RODS[i].price).toBeGreaterThan(RODS[i - 1].price);
       expect(RODS[i].power).toBeGreaterThan(RODS[i - 1].power);
     }
-    for (let i = 1; i < BAITS.length; i++) expect(BAITS[i].level).toBeGreaterThanOrEqual(BAITS[i - 1].level);
+    // What is sold, that is: bait that is only found has no price or level to climb.
+    const sold = BAITS.filter((b) => !b.found);
+    for (let i = 1; i < sold.length; i++) expect(sold[i].level).toBeGreaterThanOrEqual(sold[i - 1].level);
   });
   it('turns experience into levels', () => {
     expect(levelFor(0).level).toBe(1);

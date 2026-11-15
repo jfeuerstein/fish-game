@@ -64,6 +64,10 @@ export class Hud {
   private tag = el('div', 'name-tag');
   private shoutEl = el('div', 'shout');
   private bountyChip = el('div', 'chip bounty-chip');
+  private baitChip = el('button', 'bait-chip');
+  private baitKey = '';
+  /** Called when the bait chip is tapped. */
+  onBait: (() => void) | null = null;
   private bountyKey = '';
   onJump: (() => void) | null = null;
   private onAction: (() => void) | null = null;
@@ -120,6 +124,10 @@ export class Hud {
 
     this.action.hidden = true;
     this.second.hidden = true;
+    this.baitChip.hidden = true;
+    this.baitChip.setAttribute('aria-label', 'Change bait');
+    this.baitChip.addEventListener('pointerdown', (e) => e.stopPropagation());
+    this.baitChip.addEventListener('click', () => this.onBait?.());
     const press = (e: PointerEvent): void => {
       e.preventDefault();
       e.stopPropagation();
@@ -162,7 +170,7 @@ export class Hud {
       return b;
     };
     this.menu = { bag: make('bag', 'Bag', 'f-cooler'), journal: make('journal', 'Journal', 'fish-bluegill'), fun: make('fun', 'Fun', 'ukulele'), more: make('more', 'More', 'hat-captain') };
-    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.shoutEl, this.bang, this.blip, this.second, this.jumpBtn, this.action, row);
+    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.shoutEl, this.bang, this.blip, this.second, this.jumpBtn, this.baitChip, this.action, row);
   }
 
   /** While a prize is being revealed, the counters wait, so they don't give it away. */
@@ -184,6 +192,15 @@ export class Hud {
     this.sky = t;
     this.clock.innerHTML = `<span>${text}</span>`;
     this.clock.prepend(pixelGlyph(SKY_ICON[sky], 14, '#96691f'));
+  }
+
+  /** The bait on the line, by the Cast key (hidden when `id` is null). */
+  setBait(id: string | null, count: string): void {
+    const key = `${id}|${count}`;
+    if (key === this.baitKey) return;
+    this.baitKey = key;
+    this.baitChip.hidden = id === null;
+    if (id) this.baitChip.innerHTML = `<img src="${icon(id)}" alt="Bait"><span>${count}</span>`;
   }
 
   /** The day's bounty, under the clock: the fish Gus wants, ticked once it has been brought to him. */
@@ -250,7 +267,8 @@ export class Hud {
   }
 
   /** The reeling meter: how far in, and the strain on the line. */
-  setReel(progress: number | null, tension = 0, thrashing = false, fishIcon = ''): void {
+  /** `says`: what this kind of fish is doing, said in place of the usual words while it thrashes or sulks. */
+  setReel(progress: number | null, tension = 0, thrashing = false, fishIcon = '', says?: string): void {
     this.root.classList.toggle('reeling', progress !== null);
     if (progress === null) {
       this.meter.hidden = true;
@@ -266,7 +284,8 @@ export class Hud {
     this.meterFish.classList.toggle('thrash', thrashing);
     this.tension.style.width = `${Math.min(1, tension) * 100}%`;
     this.tension.className = `tension-fill ${tension > 0.75 ? 'hot' : tension > 0.45 ? 'warm' : ''}`;
-    const hint = thrashing ? 'It’s fighting! Ease off…' : tension > 0.75 ? 'Careful, the line!' : 'Hold to reel';
+    const sulk = !thrashing && says?.startsWith('It sulks');
+    const hint = thrashing ? `${says ?? 'It’s fighting!'} Ease off…` : tension > 0.75 ? 'Careful, the line!' : sulk ? says! : 'Hold to reel';
     if (this.meterHint.textContent !== hint) this.meterHint.textContent = hint;
   }
 

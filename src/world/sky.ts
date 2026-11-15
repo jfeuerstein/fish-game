@@ -143,6 +143,16 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+/** The air besides rain: how foggy and how stormy it is (0 to 1), a flash of lightning, and what the season does to the light. */
+export interface Air {
+  fog: number;
+  storm: number;
+  flash: number;
+  sun: THREE.Color;
+  fill: THREE.Color;
+}
+const STILL: Air = { fog: 0, storm: 0, flash: 0, sun: new THREE.Color(0xffffff), fill: new THREE.Color(0xffffff) };
+
 export class Sky {
   readonly group = new THREE.Group();
   readonly sun = new THREE.DirectionalLight(0xffffff, 2);
@@ -202,8 +212,27 @@ export class Sky {
   }
 
   /** Paint the moment onto the scene. `focus` is where the player is, which the shadows follow. */
-  update(dt: number, hour: number, rain: number, focus: THREE.Vector3): WaterLook {
+  update(dt: number, hour: number, rain: number, focus: THREE.Vector3, air: Air = STILL): WaterLook {
     const p = (this.palette = paletteAt(hour, rain));
+    // A storm is darker than rain; fog is pale and close; lightning whitens everything for a moment.
+    if (air.storm > 0) {
+      for (const col of [p.top, p.horizon, p.hemiSky]) col.multiplyScalar(1 - air.storm * 0.35);
+      p.sunI *= 1 - air.storm * 0.4;
+      p.hemiI *= 1 - air.storm * 0.25;
+    }
+    if (air.fog > 0) {
+      const pale = new THREE.Color('#c9d3d4').multiplyScalar(1 - p.night * 0.72);
+      for (const col of [p.top, p.horizon, p.hemiSky]) col.lerp(pale, air.fog * 0.9);
+      p.sunI *= 1 - air.fog * 0.55;
+    }
+    if (air.flash > 0) {
+      const white = new THREE.Color('#e8f0ff');
+      for (const col of [p.top, p.horizon]) col.lerp(white, air.flash * 0.8);
+      p.hemiI += air.flash * 2.2;
+    }
+    // The season's light.
+    p.sun.multiply(air.sun);
+    p.hemiSky.multiply(air.fill);
     const u = this.domeMat.uniforms;
     u.uTop.value.copy(p.top);
     u.uHorizon.value.copy(p.horizon);
@@ -227,8 +256,8 @@ export class Sky {
     this.hemi.intensity = p.hemiI;
     this.fog.color.copy(p.horizon).lerp(p.top, 0.15);
     this.cloudInk.set(0xffffff).lerp(p.top, p.night * 0.72).lerp(p.horizon, rain * 0.5);
-    this.fog.near = lerp(120, 40, rain);
-    this.fog.far = lerp(520, 230, rain);
+    this.fog.near = lerp(lerp(120, 40, rain), 6, air.fog);
+    this.fog.far = lerp(lerp(520, 230, rain), 58, air.fog);
     for (const [i, cl] of this.clouds.entries()) {
       cl.position.x += dt * (0.8 + (i % 3) * 0.3);
       if (cl.position.x > 340) cl.position.x -= 680;

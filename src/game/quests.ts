@@ -1,6 +1,6 @@
 // The notice board's errands. Pure.
 import { rng } from '../core/rng';
-import { BY_ID, type Catch, SPECIES, type Tier } from '../fishing/fish';
+import { everyDay, BY_ID, type Catch, SPECIES, type Tier } from '../fishing/fish';
 import type { Zone } from '../world/island';
 
 export type QuestKind = 'count' | 'zone' | 'species' | 'size' | 'shiny' | 'night' | 'tier' | 'sell' | 'rain';
@@ -42,7 +42,7 @@ export function makeQuest(n: number, level: number): Quest {
       return { ...base, zone, goal, reward: { coins: Math.round(goal * 26 * scale), xp: goal * 8 } };
     }
     case 'species': {
-      const pool = SPECIES.filter((s) => (s.tier === 'common' || s.tier === 'uncommon' || (level >= 6 && s.tier === 'rare')) && !s.rain && (level >= 4 || !s.zones.every((z) => z === 'deep')));
+      const pool = SPECIES.filter((s) => (s.tier === 'common' || s.tier === 'uncommon' || (level >= 6 && s.tier === 'rare')) && everyDay(s) && (level >= 4 || !s.zones.every((z) => z === 'deep')));
       const s = pool[Math.floor(r() * pool.length)];
       const mult = s.tier === 'common' ? 1 : s.tier === 'uncommon' ? 2 : 4;
       return { ...base, species: s.id, goal: 1, reward: { coins: Math.round(60 * mult * scale), xp: 20 * mult } };
@@ -102,7 +102,7 @@ export function advance(q: Quest, e: QuestEvent): Quest {
 
 export const done = (q: Quest): boolean => q.progress >= q.goal;
 
-const ZONE_WORDS: Record<Zone, string> = { ocean: 'in the sea', deep: 'out in deep water', pond: 'in the pond', creek: 'in the creek' };
+const ZONE_WORDS: Record<Zone, string> = { ocean: 'in the sea', deep: 'out in deep water', pond: 'in the pond', creek: 'in the creek', cave: 'in the sea cave' };
 
 /** What the note on the board says. */
 export function describe(q: Quest): string {

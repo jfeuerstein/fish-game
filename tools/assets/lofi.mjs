@@ -33,7 +33,9 @@ const io = new NodeIO().setLogger(new Logger(Logger.Verbosity.WARN)).registerExt
  */
 const CUT = {
   // A character is looked at more closely than anything else: a finer texture keeps its face clean.
-  char: { tris: 1500, tex: 256, colours: 16 },
+  // It keeps most of its shape too: cut to 1,500 triangles a snout went blunt and a paw lost
+  // its fingers. It still loses triangles only where that moves little.
+  char: { tris: 5000, tex: 256, colours: 16, error: 0.003 },
   big: { tris: 1400, tex: 256, colours: 16 },
   // The four buildings fill the screen when stood beside: a finer texture, so the pixels along
   // the edge of a plank or a stripe are near the size of the screen's own.
@@ -49,6 +51,13 @@ const CUT = {
   made: { tris: 3200, tex: 256, colours: 14, error: 0.002 },
   prop: { tris: 420, tex: 64, colours: 10 },
   plant: { tris: 220, tex: 64, colours: 8 },
+  // There are hundreds of these and each is a few pixels of the picture.
+  sprig: { tris: 120, tex: 64, colours: 8 },
+  // A tree is looked at from under and beside as often as anything: it keeps its shape near to,
+  // and has a second file (`<id>.far.glb`) of a few flat shapes for when it is far off, which
+  // the game draws beyond about forty metres (see `Props` in src/world/props.ts).
+  tree: { tris: 2400, tex: 128, colours: 10, error: 0.003 },
+  far: { tris: 70, tex: 32, colours: 6, error: 1 },
   hat: { tris: 380, tex: 64, colours: 10 },
   extra: { tris: 320, tex: 64, colours: 8 },
   fish: { tris: 300, tex: 64, colours: 10 },
@@ -56,13 +65,16 @@ const CUT = {
 /** The buildings, which fill the screen, and the small growing things, which are everywhere. */
 const BIG = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'cliff']);
 /** Things people have built, which keep their shape (see `made` above); anything set down from the bag (`f-`) is one too. */
-const MADE = new Set(['bridge', 'rowboat', 'tent', 'well', 'notice-board', 'bench', 'picnic-table', 'lamp-post', 'signpost', 'mailbox', 'fence', 'crates', 'barrel', 'campfire', 'buoy', 'pier']);
+const MADE = new Set(['stall', 'cave-mouth', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'bench', 'picnic-table', 'lamp-post', 'signpost', 'mailbox', 'fence', 'crates', 'barrel', 'campfire', 'buoy', 'pier']);
 const isMade = (id) => MADE.has(id) || id.startsWith('f-');
-const PLANT = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm', 'bush', 'flowers', 'grass-tuft', 'mushrooms', 'cattails', 'lilypad', 'rock-a', 'rock-b', 'shell', 'cloud']);
+/** The trees: each is cut twice, once to be seen near and once far (see `tree` and `far` above). */
+export const TREES = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm']);
+const PLANT = new Set(['bush', 'flowers', 'grass-tuft', 'mushrooms', 'cattails', 'lilypad', 'rock-a', 'rock-b', 'shell', 'cloud']);
 
 const index = JSON.parse(readFileSync(`${ROOT}public/models/index.json`, 'utf8'));
-const HOUSES = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut']);
-const cutFor = (id) => CUT[HOUSES.has(id) ? 'house' : isMade(id) ? 'made' : BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
+const HOUSES = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'room-shop', 'room-hut', 'room-aquarium', 'room-cave']);
+const SPRIGS = new Set(['flowers', 'grass-tuft']);
+const cutFor = (id) => CUT[SPRIGS.has(id) ? 'sprig' : HOUSES.has(id) ? 'house' : TREES.has(id) ? 'tree' : isMade(id) ? 'made' : BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
 
 /** A primitive's triangles, as three corner numbers each. */
 function trisOf(prim) {
@@ -129,8 +141,8 @@ async function shrunk(raw, width, height, used, size) {
   return sharp(out, { raw: { width: size, height: size, channels: 4 } }).png().toBuffer();
 }
 
-export async function lofiModel(id) {
-  const cut = cutFor(id);
+export async function lofiModel(id, far = false) {
+  const cut = far ? CUT.far : cutFor(id);
   const doc = await io.read(`${ROOT}art/models/${id}.glb`);
   doc.setLogger(new Logger(Logger.Verbosity.WARN));
   const root = doc.getRoot();
@@ -192,7 +204,7 @@ export async function lofiModel(id) {
     }
   for (const ext of root.listExtensionsUsed()) if (ext.extensionName === 'EXT_texture_webp') ext.dispose();
   await doc.transform(prune(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
-  await io.write(`${ROOT}public/models/${id}.glb`, doc);
+  await io.write(`${ROOT}public/models/${id}${far ? '.far' : ''}.glb`, doc);
   return { tris, now: Math.round(tris * ratio), eyes: eyes.length };
 }
 
@@ -489,11 +501,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const r = await lofiModel(id);
       before += r.tris;
       after += r.now;
+      if (TREES.has(id)) await lofiModel(id, true);
     }
     console.log(`models: ${before} triangles cut to about ${after}`);
   }
   if (all.includes('icons')) {
-    const ids = stems('icons', '.webp');
+    // Everything with a picture its model was shaped from, and everything with only a sprite drawn for it.
+    const ids = [...new Set([...stems('icons', '.webp'), ...stems('sprites', '.png')])];
     for (const id of ids) await lofiIcon(id);
     console.log(`icons: ${ids.length}`);
   }

@@ -13,7 +13,7 @@ import { floorAt } from '../world/layout';
 import type { Heightfield } from '../world/island';
 import { BY_ID, type Catch, VARIANT_STARS } from './fish';
 import { type Conditions, biteDelay, nibbles, rollCatch } from './roll';
-import { type ReelState, fighterFor, startReel, stepReel } from './reel';
+import { type FightStyle, type ReelState, fighterFor, startReel, stepReel, styleOf } from './reel';
 
 export type FishState = 'ready' | 'aiming' | 'flying' | 'waiting' | 'bite' | 'reeling' | 'landing' | 'returning';
 
@@ -61,6 +61,10 @@ export class Fishing {
   private hookWindow = 1;
   /** For the HUD. */
   fishIcon = '';
+  /** The way the fish on the line fights, while there is one. */
+  get fighting(): FightStyle | null {
+    return this.state === 'reeling' && this.fish ? styleOf(this.fish.species) : null;
+  }
   /** Whatever is under the bobber: a dark shape in the water that comes closer as a bite nears. */
   private shade: THREE.Mesh;
   private shadeTurn = Math.random() * 6;
@@ -198,7 +202,7 @@ export class Fishing {
     this.hooks.bump(0.12);
     this.fx.splash(this.bobber.position, 0.6);
     // A finer fish fights a little harder.
-    const f = fighterFor(s.fight, frac);
+    const f = fighterFor(s.fight, frac, this.fish.species);
     f.fight *= 1 + VARIANT_STARS[this.fish.variant] * 0.07;
     (this.reel as ReelState & { fighter?: ReturnType<typeof fighterFor> }).fighter = f;
     this.hooks.tip?.('reel');

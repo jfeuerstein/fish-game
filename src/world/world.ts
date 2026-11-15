@@ -7,6 +7,9 @@ import { Heightfield } from './island';
 import { PLACED, type Placed, pierSections, railPosts } from './layout';
 import { Props } from './props';
 import { FLOWER_RULES, RULES, lilypads, scatter } from './scatter';
+import type { Weather } from '../game/clock';
+import { SEASON_LOOK, type Season } from '../look/season';
+import type { Air } from './sky';
 import { SkyLife } from './skyLife';
 import { Sky } from './sky';
 import { buildTerrain } from './terrain';
@@ -114,9 +117,9 @@ export class World {
   addFlame(at: THREE.Vector3, height: number): THREE.Object3D {
     const flame = new THREE.Group();
     for (const [colour, wide, tall, up] of [
-      [0xd65a3c, 0.36, 1, 0],
-      [0xf08c62, 0.26, 0.78, 0.02],
-      [0xf8e6b0, 0.14, 0.48, 0.04],
+      [0xf08c62, 0.3, 0.85, 0],
+      [0xecc77d, 0.21, 0.64, 0.02],
+      [0xfffdf6, 0.11, 0.38, 0.04],
     ] as const) {
       const tongue = new THREE.Mesh(new THREE.ConeGeometry(wide * height, tall * height, 5).translate(0, (tall * height) / 2 + up * height, 0), new THREE.MeshBasicMaterial({ color: colour, fog: false }));
       flame.add(tongue);
@@ -231,8 +234,38 @@ export class World {
     this.glows = this.glows.filter((g) => g !== s);
   }
 
-  update(dt: number, hour: number, rain: number, focus: THREE.Vector3): void {
-    const look = this.sky.update(dt, hour, rain, focus);
+  /** Dress the island for a season: the leaves, the grass and the light. */
+  setSeason(season: Season): void {
+    const look = SEASON_LOOK[season];
+    this.props.tint(look.leaves, look.rime);
+    (this.terrain.userData.grass as { value: THREE.Color }).value.set(look.grass);
+    (this.terrain.userData.frost as { value: number }).value = look.frost;
+    this.air.sun.set(look.sun);
+    this.air.fill.set(look.fill);
+  }
+
+  /** The air: fog and storm are eased toward what the weather is; lightning comes and goes by itself in a storm. */
+  readonly air: Air = { fog: 0, storm: 0, flash: 0, sun: new THREE.Color(0xffffff), fill: new THREE.Color(0xffffff) };
+  private strikeIn = 6;
+  private aired = 0;
+  /** Called when lightning strikes, for the thunder. */
+  onLightning: (() => void) | null = null;
+
+  update(dt: number, hour: number, rain: number, focus: THREE.Vector3, weather: Weather = 'clear'): void {
+    // The first frames take the weather as it is; after that it comes and goes slowly.
+    const ease = this.aired++ < 3 ? 1 : 1 - Math.exp(-dt * 0.5);
+    this.air.fog += ((weather === 'fog' ? 1 : 0) - this.air.fog) * ease;
+    this.air.storm += ((weather === 'storm' ? 1 : 0) - this.air.storm) * ease;
+    this.air.flash = Math.max(0, this.air.flash - dt * 5);
+    if (this.air.storm > 0.6) {
+      this.strikeIn -= dt;
+      if (this.strikeIn <= 0) {
+        this.strikeIn = 5 + Math.random() * 11;
+        this.air.flash = 1;
+        this.onLightning?.();
+      }
+    }
+    const look = this.sky.update(dt, hour, rain, focus, this.air);
     this.props.blow(dt * (1 + rain * 0.8), this.lofi ? 6 : 0);
     (this.terrain.userData.wet as { value: number }).value = rain;
     this.water.update(dt, look, rain);

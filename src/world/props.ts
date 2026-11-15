@@ -3,7 +3,7 @@
 // be used.
 import * as THREE from 'three';
 import { spotFragmentBody, spotFragmentHead, spotVertexBody, spotVertexHead } from '../look/spotlight';
-import { model } from '../assets/models';
+import { infoOf, model } from '../assets/models';
 import { Colliders } from './colliders';
 import { Heightfield } from './island';
 import type { Placed } from './layout';
@@ -62,6 +62,13 @@ const SWAY: Record<string, { bend: number; power: number }> = {
   cattails: { bend: 0.1, power: 1 },
 };
 
+/** The side of the squares that many of a kind are split into, metres. */
+const SQUARE = 20;
+/** How far off a square of trees is drawn from its simpler file, metres from whoever the camera watches. */
+const FAR_FROM = 30;
+/** How far off small things are drawn at all, metres: beyond it they are less than a pixel of the small picture. */
+const REACH: Record<string, number> = { flowers: 40, 'grass-tuft': 40, mushrooms: 40, shell: 50, lilypad: 70, cattails: 60, bush: 100, 'rock-b': 140 };
+
 /** Things too small to bother casting shadows. */
 /** What else is big enough to hide the player and so is opened over them like a tree (see src/look/spotlight.ts). */
 const WINDOWED = new Set(['cliff', 'shop', 'arcade', 'lighthouse', 'fishing-hut', 'tent', 'well', 'notice-board', 'rock-a']);
@@ -74,6 +81,9 @@ export class Props {
   readonly glows: THREE.Vector3[] = [];
   /** The size of each kind, as loaded. */
   readonly sizes = new Map<string, THREE.Vector3>();
+
+  /** Many of a kind, split by where they stand (see `add`). */
+  private squares: { x: number; z: number; radius: number; near: THREE.InstancedMesh[]; far: THREE.InstancedMesh[]; reach: number; isFar: boolean }[] = [];
 
   /** Where the player is, for the window opened in any tree (or cliff) that comes between them and the camera. */
   private spot = { value: new THREE.Vector3() };
@@ -128,6 +138,23 @@ export class Props {
   clearView(target: THREE.Vector3): void {
     // The middle of the player, not their feet.
     this.spot.value.set(target.x, target.y + 0.7, target.z);
+    this.drawNear(target);
+  }
+
+  /**
+   * Draw what is near whoever the camera is watching, and only that: a square of small things
+   * beyond their reach is not drawn, and a square of trees far off is drawn from the simpler
+   * file. A square changes over a few metres further out than it changes back, so that nothing
+   * flickers at the line.
+   */
+  private drawNear(at: THREE.Vector3): void {
+    for (const sq of this.squares) {
+      const d = Math.hypot(sq.x - at.x, sq.z - at.z) - sq.radius;
+      const seen = d < sq.reach;
+      if (sq.far.length) sq.isFar = d > FAR_FROM + (sq.isFar ? -4 : 4);
+      for (const m of sq.near) m.visible = seen && !sq.isFar;
+      for (const m of sq.far) m.visible = seen && sq.isFar;
+    }
   }
 
   /** Give a material the spotlight: what it draws nearer the camera than the player is opened round them. */
@@ -142,6 +169,18 @@ export class Props {
       shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>${spotFragmentHead}`).replace('void main() {', `void main() {${spotFragmentBody}`);
     };
     material.needsUpdate = true;
+  }
+
+  /** Multiply what grows by a colour for each kind (the season's): the whole of each, trunk and all. */
+  tint(by: Record<string, string>, rime = '#000000'): void {
+    for (const o of this.group.children) {
+      const colour = by[o.name];
+      const m = (o as THREE.Mesh).material as THREE.MeshToonMaterial | undefined;
+      if (!colour || !m?.color) continue;
+      m.color.set(colour);
+      // Rime: a pale colour laid over the whole of it, in winter.
+      m.emissive?.set(rime);
+    }
   }
 
   /** Stand a thing's feet on the ground: the lowest point under its footprint, so nothing floats on a slope. */
@@ -169,26 +208,59 @@ export class Props {
         m.traverse((o) => {
           if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh);
         });
-        const mat = new THREE.Matrix4();
         const q = new THREE.Quaternion();
         const up = new THREE.Vector3(0, 1, 0);
-        for (const mesh of meshes) {
-          const geo = toFloat(mesh.geometry.clone()).applyMatrix4(mesh.matrixWorld);
-          if (SWAY[id]) this.sway(mesh.material as THREE.Material, SWAY[id]);
-          const inst = new THREE.InstancedMesh(geo, mesh.material, list.length);
-          inst.castShadow = !NO_SHADOW.has(id);
-          inst.receiveShadow = true;
-          list.forEach((p, i) => {
-            const s = p.scale ?? 1;
-            const y = p.y ?? this.groundUnder(p.x, p.z, Math.min(size.x, size.z) * 0.3 * s);
-            q.setFromAxisAngle(up, p.yaw ?? 0);
-            mat.compose(new THREE.Vector3(p.x, y - 0.03 * s, p.z), q, new THREE.Vector3(s, s, s));
-            inst.setMatrixAt(i, mat);
+        // Where each one stands, worked out once.
+        const stand = list.map((p) => {
+          const s = p.scale ?? 1;
+          const y = p.y ?? this.groundUnder(p.x, p.z, Math.min(size.x, size.z) * 0.3 * s);
+          q.setFromAxisAngle(up, p.yaw ?? 0);
+          return new THREE.Matrix4().compose(new THREE.Vector3(p.x, y - 0.03 * s, p.z), q, new THREE.Vector3(s, s, s));
+        });
+        /** One instanced mesh of some of them (by their places in the list), for each mesh of a model. */
+        const draw = (from: THREE.Mesh[], which: number[], shadow: boolean): THREE.InstancedMesh[] =>
+          from.map((mesh) => {
+            const geo = toFloat(mesh.geometry.clone()).applyMatrix4(mesh.matrixWorld);
+            const inst = new THREE.InstancedMesh(geo, mesh.material, which.length);
+            inst.castShadow = shadow;
+            inst.receiveShadow = true;
+            which.forEach((n, i) => inst.setMatrixAt(i, stand[n]));
+            inst.computeBoundingSphere();
+            inst.name = id;
+            this.group.add(inst);
+            return inst;
           });
-          inst.computeBoundingSphere();
-          inst.name = id;
-          this.group.add(inst);
+        for (const mesh of meshes) {
+          if (SWAY[id]) this.sway(mesh.material as THREE.Material, SWAY[id]);
           if (id.startsWith('tree-') || WINDOWED.has(id)) this.spotlit(mesh.material as THREE.Material);
+        }
+        // A few of a kind are one mesh. Many of a kind are split by where they stand, a mesh to
+        // each square of the island, so that what is behind the camera or beyond the shadow's
+        // reach is not drawn at all; small things are not drawn far off (`REACH`); and a tree
+        // far off is drawn from its second, simpler file (`FAR_FROM`).
+        const far = id.startsWith('tree-') ? await model(`${id}.far`, infoOf(id)?.h ?? 1) : null;
+        if (list.length <= 8 && !far && !REACH[id]) draw(meshes, list.map((_, i) => i), !NO_SHADOW.has(id));
+        else {
+          const farMeshes: THREE.Mesh[] = [];
+          far?.updateMatrixWorld(true);
+          far?.traverse((o) => {
+            if ((o as THREE.Mesh).isMesh) farMeshes.push(o as THREE.Mesh);
+          });
+          const squares = new Map<string, number[]>();
+          list.forEach((p, i) => {
+            const key = `${Math.floor(p.x / SQUARE)},${Math.floor(p.z / SQUARE)}`;
+            if (!squares.has(key)) squares.set(key, []);
+            squares.get(key)!.push(i);
+          });
+          for (const which of squares.values()) {
+            const cx = which.reduce((a, n) => a + list[n].x, 0) / which.length;
+            const cz = which.reduce((a, n) => a + list[n].z, 0) / which.length;
+            const radius = Math.max(...which.map((n) => Math.hypot(list[n].x - cx, list[n].z - cz)));
+            const near = draw(meshes, which, !NO_SHADOW.has(id));
+            const farOff = farMeshes.length ? draw(farMeshes, which, false) : [];
+            for (const m of farOff) m.visible = false;
+            this.squares.push({ x: cx, z: cz, radius, near, far: farOff, reach: REACH[id] ?? Infinity, isFar: false });
+          }
         }
         for (const p of list) this.record(id, p, size);
       }),

@@ -71,6 +71,9 @@ vec3 dirt = kindA < 0.47 ? texture2D(tDirtB, tile).rgb : texture2D(tDirt, tile).
 vec3 rock = texture2D(tRock, tile * 0.5).rgb;
 vec3 cob = texture2D(tPlaza, tile * 0.5).rgb;
 vec4 w = texture2D(tSplat, (cell + uHalf) / (uHalf * 2.0) * uSplatScale + uSplatBias);
+grass *= uGrass;
+// Frost: the paler patches of the grass go white, in the ground's own pixels.
+grass = mix(grass, vec3(0.86, 0.92, 0.95), step(1.0 - uFrost, patchy * 0.5 + fbm(cell / 37.0) * 0.6));
 vec3 ground = grass;
 ground = mix(ground, sand, step(0.5, w.x + (mid - 0.5) * 0.7));
 ground = mix(ground, dirt, step(0.5, w.y + (mid - 0.5) * 0.7));
@@ -119,6 +122,9 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
   const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   // How hard it is raining, 0 to 1 (set through the mesh: `userData.wet.value`).
   const wet = { value: 0 };
+  // What the grass is multiplied by: the season's (`userData.grass.value`, a colour).
+  const grassTint = { value: new THREE.Color(0xffffff) };
+  const frost = { value: 0 };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.tGrass = { value: tex.grass };
     shader.uniforms.tSand = { value: tex.sand };
@@ -131,6 +137,8 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
     shader.uniforms.tSplat = { value: look?.lofi ? splatTexture(field, splat) : null };
     shader.uniforms.uHalf = { value: half };
     shader.uniforms.uWet = wet;
+    shader.uniforms.uGrass = grassTint;
+    shader.uniforms.uFrost = frost;
     // Texel centres: the splat's first sample is at the island's edge, half a texel in.
     shader.uniforms.uSplatScale = { value: (n - 1) / n };
     shader.uniforms.uSplatBias = { value: 0.5 / n };
@@ -143,6 +151,8 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
         `#include <common>
 uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza, tSplat, tGrassB, tSandB, tDirtB;
 uniform float uHalf, uSplatScale, uSplatBias, uWet;
+uniform vec3 uGrass;
+uniform float uFrost;
 varying vec4 vSplat;
 varying vec3 vGround;
 float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -179,6 +189,7 @@ vec3 rock = untiled(tRock, wuv / 6.0, big);
 vec3 cob = texture2D(tPlaza, wuv / 3.4).rgb * 0.9;
 vec4 w = vSplat;
 vec4 e = vec4(edge(w.x, mid), edge(w.y, mid), edge(w.z, big), edge(w.w, mid * 0.5 + 0.25));
+grass *= uGrass;
 vec3 ground = grass;
 ground = mix(ground, sand, e.x);
 ground = mix(ground, dirt, e.y);
@@ -193,5 +204,7 @@ diffuseColor.rgb *= ground;`,
   mesh.receiveShadow = true;
   mesh.name = 'terrain';
   mesh.userData.wet = wet;
+  mesh.userData.grass = grassTint;
+  mesh.userData.frost = frost;
   return mesh;
 }
