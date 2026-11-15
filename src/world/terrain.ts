@@ -81,6 +81,17 @@ ground = mix(ground, rock, step(0.5, w.z + (big - 0.5) * 0.7));
 ground = mix(ground, cob, step(0.5, w.w + (mid * 0.5 - 0.25) * 0.7));
 // Wet in the rain: darker, a little bluer, in two steps as the rain comes on.
 ground *= uWet > 0.66 ? vec3(0.74, 0.78, 0.84) : (uWet > 0.25 ? vec3(0.87, 0.89, 0.92) : vec3(1.0));
+// Surf: every few seconds a wave runs up the sand, quickly, and slides back slowly, leaving it
+// dark and wet. Only at the sea's edge; in steps, as the water moves.
+float surfBeat = fract(floor(uSurf * 5.0) / 5.0 * 0.17 + vnoise(cell * 0.12) * 1.3);
+float runUp = 0.34 * (surfBeat < 0.3 ? surfBeat / 0.3 : 1.0 - (surfBeat - 0.3) / 0.7);
+float sandy = step(0.5, w.x + (mid - 0.5) * 0.7);
+if (vGround.y > -0.06 && vGround.y < 0.4 && sandy > 0.5) {
+  float highWater = surfBeat < 0.3 ? runUp : 0.34 - 0.12 * step(0.75, surfBeat);
+  if (vGround.y < highWater) ground *= vec3(0.78, 0.8, 0.8);
+  if (vGround.y < runUp) ground = mix(ground, vec3(0.6, 0.88, 0.86), 0.68);
+  if (abs(vGround.y - runUp) < 0.028 && runUp > 0.03) ground = vec3(1.25);
+}
 // Darker and greener under the water, in two steps.
 ground *= vGround.y < -1.6 ? vec3(0.6, 0.76, 0.74) : (vGround.y < -0.25 ? vec3(0.8, 0.89, 0.86) : vec3(1.0));
 diffuseColor.rgb *= ground;`;
@@ -122,6 +133,8 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
   const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   // How hard it is raining, 0 to 1 (set through the mesh: `userData.wet.value`).
   const wet = { value: 0 };
+  // The water's clock, for the surf running up the sand (`userData.surf.value`).
+  const surf = { value: 0 };
   // What the grass is multiplied by: the season's (`userData.grass.value`, a colour).
   const grassTint = { value: new THREE.Color(0xffffff) };
   const frost = { value: 0 };
@@ -137,6 +150,7 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
     shader.uniforms.tSplat = { value: look?.lofi ? splatTexture(field, splat) : null };
     shader.uniforms.uHalf = { value: half };
     shader.uniforms.uWet = wet;
+    shader.uniforms.uSurf = surf;
     shader.uniforms.uGrass = grassTint;
     shader.uniforms.uFrost = frost;
     // Texel centres: the splat's first sample is at the island's edge, half a texel in.
@@ -150,7 +164,7 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
         '#include <common>',
         `#include <common>
 uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza, tSplat, tGrassB, tSandB, tDirtB;
-uniform float uHalf, uSplatScale, uSplatBias, uWet;
+uniform float uHalf, uSplatScale, uSplatBias, uWet, uSurf;
 uniform vec3 uGrass;
 uniform float uFrost;
 varying vec4 vSplat;
@@ -204,6 +218,7 @@ diffuseColor.rgb *= ground;`,
   mesh.receiveShadow = true;
   mesh.name = 'terrain';
   mesh.userData.wet = wet;
+  mesh.userData.surf = surf;
   mesh.userData.grass = grassTint;
   mesh.userData.frost = frost;
   return mesh;

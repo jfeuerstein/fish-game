@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { clamp, lerp, smoothstep } from '../core/rng';
 import type { Look } from '../look/look';
+import type { RareSky } from '../look/rare';
 import type { WaterLook } from './water';
 
 interface Moment {
@@ -110,7 +111,10 @@ const skyFragment = /* glsl */ `
 uniform vec3 uTop, uHorizon, uSun, uSunDir;
 uniform float uMoon;
 uniform float uNight;
+uniform float uAurora, uBlood, uDawn, uTime;
 varying vec3 vDir;
+float hash1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+float wave(float x) { float i = floor(x); float f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(hash1(i), hash1(i + 1.0), f); }
 float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 void main() {
   vec3 d = normalize(vDir);
@@ -124,8 +128,30 @@ void main() {
   float disc = step(mix(0.9968, 0.9974, moon), s);
   vec3 sd = normalize(uSunDir);
   vec3 bite = normalize(sd + normalize(cross(sd, vec3(0.0, 1.0, 0.0))) * 0.036 + vec3(0.0, 0.014, 0.0));
-  disc *= 1.0 - moon * step(0.998, dot(d, bite));
-  col += uSun * (disc * 1.6 + (step(0.989, s) * 0.1 + step(0.965, s) * 0.06) * (1.0 - uNight * 0.6));
+  // A great sunrise: bands of rose and gold climb the sky, streaked with lit cloud, round a bigger sun.
+  float glow = uDawn * (1.0 - step(0.62, h));
+  vec3 fire = h < 0.1 ? vec3(1.0, 0.72, 0.36) : (h < 0.24 ? vec3(0.98, 0.5, 0.36) : (h < 0.42 ? vec3(0.86, 0.42, 0.52) : vec3(0.56, 0.36, 0.62)));
+  col = mix(col, fire, glow * 0.85);
+  float az = atan(d.x, -d.z);
+  float streak = step(0.62, wave(az * 5.0 + floor(h * 46.0) * 3.7)) * step(0.5, wave(floor(h * 46.0) * 1.3)) * step(0.03, h) * (1.0 - step(0.36, h));
+  col = mix(col, vec3(1.0, 0.86, 0.66), streak * uDawn * 0.7);
+  disc = max(disc, uDawn * step(0.9925, s));
+  // A blood moon is whole, bigger and red.
+  disc = mix(disc, step(0.9966, s), uBlood * moon);
+  disc *= 1.0 - moon * (1.0 - uBlood) * step(0.998, dot(d, bite));
+  vec3 lamp = mix(uSun, vec3(0.92, 0.3, 0.2), uBlood * moon);
+  col += lamp * (disc * 1.6 + (step(0.989, s) * 0.1 + step(0.965, s) * 0.06 + uDawn * step(0.93, s) * 0.08) * (1.0 - uNight * 0.6));
+  col = mix(col, vec3(0.8, 0.22, 0.14), disc * uBlood * moon);
+  col += vec3(0.42, 0.06, 0.05) * uBlood * moon * (1.0 - disc) * (step(0.9925, s) * 0.5 + step(0.984, s) * 0.3);
+  // The northern lights: curtains in the north, green at the foot and violet above, that shift a few times a second.
+  float tA = floor(uTime * 3.0) / 3.0;
+  float foot = 0.2 + 0.09 * sin(az * 2.3 + tA * 0.21) + 0.05 * sin(az * 5.1 - tA * 0.13);
+  float up = (d.y - foot) / 0.34;
+  float ray = wave(az * 34.0 + tA * 0.9) * 0.6 + wave(az * 7.0 - tA * 0.4) * 0.4;
+  float north = smoothstep(0.15, 0.6, -d.z + 0.25);
+  float curtain = step(0.0, up) * step(up, 1.0) * step(0.42 + up * 0.35, ray) * north;
+  vec3 lights = up < 0.3 ? vec3(0.38, 0.92, 0.62) : (up < 0.62 ? vec3(0.3, 0.72, 0.7) : vec3(0.56, 0.42, 0.78));
+  col = mix(col, lights, curtain * uAurora * (up < 0.62 ? 0.8 : 0.5));
   #else
   vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.05, 0.75, h), 0.8));
   // The sun's (or moon's) disc and glow.
@@ -136,7 +162,7 @@ void main() {
   float star = step(0.9975, hash(cell)) * smoothstep(0.05, 0.3, d.y);
   #ifdef LOFI
   // None inside the moon's round, lit or dark.
-  star *= 1.0 - uMoon * step(0.9974, s);
+  star *= 1.0 - uMoon * step(mix(0.9974, 0.9966, uBlood), s);
   #endif
   col += vec3(star) * uNight * 0.9;
   gl_FragColor = vec4(col, 1.0);
@@ -150,6 +176,10 @@ export interface Air {
   flash: number;
   sun: THREE.Color;
   fill: THREE.Color;
+  /** A sky that is not there every day (src/look/rare.ts), if one is. */
+  rare?: RareSky | null;
+  /** Show it at once, not eased in (when it is pinned from the address). */
+  rareNow?: boolean;
 }
 const STILL: Air = { fog: 0, storm: 0, flash: 0, sun: new THREE.Color(0xffffff), fill: new THREE.Color(0xffffff) };
 
@@ -164,6 +194,8 @@ export class Sky {
   readonly cloudInk = new THREE.Color(0xffffff);
   readonly fog: THREE.Fog;
   palette: Palette = paletteAt(12, 0);
+  /** How much of each rare sky is showing, 0 to 1. */
+  private rare = { aurora: 0, bloodmoon: 0, sunrise: 0 };
 
   constructor(scene: THREE.Scene, shadows: boolean, private look?: Look) {
     this.domeMat = new THREE.ShaderMaterial({
@@ -172,7 +204,7 @@ export class Sky {
       fragmentShader: skyFragment,
       side: THREE.BackSide,
       depthWrite: false,
-      uniforms: { uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uSun: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3() }, uNight: { value: 0 }, uMoon: { value: 0 } },
+      uniforms: { uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uSun: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3() }, uNight: { value: 0 }, uMoon: { value: 0 }, uAurora: { value: 0 }, uBlood: { value: 0 }, uDawn: { value: 0 }, uTime: { value: 0 } },
     });
     this.dome = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), this.domeMat);
     this.dome.renderOrder = -1;
@@ -230,6 +262,20 @@ export class Sky {
       for (const col of [p.top, p.horizon]) col.lerp(white, air.flash * 0.8);
       p.hemiI += air.flash * 2.2;
     }
+    // The rare skies come and go slowly. A blood moon reddens the night; the sunrise warms the dawn.
+    const ease = air.rareNow ? 1 : Math.min(1, dt * 0.6);
+    for (const k of ['aurora', 'bloodmoon', 'sunrise'] as const) this.rare[k] += ((air.rare === k ? 1 : 0) - this.rare[k]) * ease;
+    if (this.rare.bloodmoon > 0.01) {
+      p.sun.lerp(new THREE.Color('#ff8a70'), this.rare.bloodmoon * 0.55 * p.night);
+      p.hemiSky.lerp(new THREE.Color('#7a4a6a'), this.rare.bloodmoon * 0.4 * p.night);
+      p.horizon.lerp(new THREE.Color('#4a2440'), this.rare.bloodmoon * 0.45 * p.night);
+    }
+    if (this.rare.sunrise > 0.01) {
+      p.sun.lerp(new THREE.Color('#ffb070'), this.rare.sunrise * 0.5);
+      p.hemiSky.lerp(new THREE.Color('#e8a8b0'), this.rare.sunrise * 0.4);
+      p.horizon.lerp(new THREE.Color('#ffb86a'), this.rare.sunrise * 0.6);
+    }
+    if (this.rare.aurora > 0.01) p.hemiSky.lerp(new THREE.Color('#58b89a'), this.rare.aurora * 0.25 * p.night);
     // The season's light.
     p.sun.multiply(air.sun);
     p.hemiSky.multiply(air.fill);
@@ -243,6 +289,10 @@ export class Sky {
     u.uSunDir.value.copy(moon ? MOON_SEEN : p.dir);
     u.uMoon.value = moon ? 1 : 0;
     u.uNight.value = p.night * (1 - rain);
+    u.uTime.value += dt;
+    u.uAurora.value = this.rare.aurora * p.night;
+    u.uBlood.value = this.rare.bloodmoon;
+    u.uDawn.value = this.rare.sunrise;
     this.dome.position.copy(focus);
     this.sun.color.copy(p.sun);
     this.sun.intensity = p.sunI;

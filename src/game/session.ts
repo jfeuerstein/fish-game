@@ -4,7 +4,7 @@ import type { Hud } from '../ui/hud';
 import type { Save } from './save';
 
 /** Things to do on the spot, from the Fun menu. */
-export type Emote = 'wave' | 'dance' | 'cheer' | 'clap' | 'sit' | 'flop' | 'spin' | 'honk' | 'slap';
+export type Emote = 'wave' | 'dance' | 'cheer' | 'clap' | 'sit' | 'flop' | 'spin' | 'honk' | 'slap' | 'stretch' | 'skip' | 'warm' | 'lean';
 
 export interface Session {
   save: Save;

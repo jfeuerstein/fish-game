@@ -394,3 +394,66 @@ export function slap(t: number): Pose {
   p.armL = limb(0.3, 0.4);
   return p;
 }
+
+/** A long stretch: arms up and back, onto the toes, then down. */
+export function stretch(t: number): Pose {
+  const p = neutral();
+  const k = Math.min(1, Math.max(0, Math.sin((t % 3) / 3 * Math.PI) * 1.4));
+  p.armL = limb(2.9 * k, 0.5 * k);
+  p.armR = limb(2.9 * k, 0.5 * k);
+  p.elbowL = 0.1;
+  p.elbowR = 0.1;
+  p.lean = -0.18 * k;
+  p.nod = -0.35 * k;
+  p.bob = 0.04 * k;
+  return p;
+}
+
+/** Skipping a stone: a wind-up low on one side, and a flat flick across the body. `k` runs 0 to 1 over the throw. */
+export function skipStone(k: number): Pose {
+  const p = neutral();
+  const wind = Math.min(1, k / 0.45);
+  const flick = Math.min(1, Math.max(0, (k - 0.45) / 0.2));
+  p.lean = 0.25;
+  p.side = -0.3 * wind + 0.35 * flick;
+  p.turn = -0.7 * wind + 1.2 * flick;
+  p.armR = limb(-0.6 * wind + 1.5 * flick, 0.9 - 0.3 * flick);
+  p.elbowR = 0.9 * wind * (1 - flick);
+  p.armL = limb(0.4, 0.5);
+  p.kneeL = 0.35;
+  p.kneeR = 0.35;
+  p.legL = 0.25;
+  p.legR = -0.2;
+  return p;
+}
+
+/** Warming the hands at a fire: both held out low in front, palms to it, rubbed together now and then. */
+export function warm(t: number): Pose {
+  const p = neutral();
+  const rub = Math.floor(t / 2.4) % 3 === 2 ? Math.sin(t * 16) * 0.12 : 0;
+  p.lean = 0.2;
+  p.armL = limb(1.15 + rub, 0.18);
+  p.armR = limb(1.15 - rub, 0.18);
+  p.elbowL = 0.5;
+  p.elbowR = 0.5;
+  p.kneeL = 0.2;
+  p.kneeR = 0.2;
+  p.nod = 0.15;
+  p.bob = -0.01;
+  return p;
+}
+
+/** Leaning on a rail (or on nothing in particular): bent forward on the forearms, one foot crossed behind, looking out. */
+export function leanOn(t: number): Pose {
+  const p = neutral();
+  p.lean = 0.5;
+  p.armL = limb(1.0, 0.35);
+  p.armR = limb(1.0, 0.35);
+  p.elbowL = 1.3;
+  p.elbowR = 1.3;
+  p.legR = -0.25;
+  p.kneeR = 0.5;
+  p.nod = -0.3 + Math.sin(t * 0.7) * 0.04;
+  p.look = Math.sin(t * 0.3) * 0.3;
+  return p;
+}

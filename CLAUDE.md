@@ -45,7 +45,7 @@ the owner's: do not route a deploy round it.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes). `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
   the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
@@ -194,6 +194,59 @@ the owner's: do not route a deploy round it.
   In the lo-fi look everything goes through a narrow band with a little tape saturation, the
   effects are cut to a few dozen levels so they crunch, and the music wavers in pitch like a worn
   cassette (`lofi`; `look=smooth` plays it clean).
+
+- **Only what is near is drawn** (`Props` in `props.ts`). Many of a kind (trees, bushes, rocks,
+  flowers) are split by where they stand, an instanced mesh to each 20 m square of the island
+  (`SQUARE`), so what is behind the camera is culled. Small things are not drawn far off
+  (`REACH`), and a tree beyond `FAR_FROM` is drawn from its second, far simpler file
+  (`<id>.far.glb`, which `lofi.mjs` cuts for everything in `TREES`). `Props.drawNear` is told
+  where the camera is. Draw calls went up and triangles well down; the phone's benchmark is
+  what says whether that is a good trade.
+- **Seasons** (`src/look/season.ts`, pure, tested): by the real calendar. A season is a repaint:
+  the leaves' and grass's colour, the light, frost on the grass, snow in place of rain in
+  winter (`SEASON_LOOK`, `World.setSeason`, `Props.tint`). Some fish keep to a season
+  (`seasons` on a `Species`); the journal says when.
+- **Weather** is clear, rain, fog or a thunderstorm (`weatherAt` in `clock.ts`, from the clock
+  alone). Fog is pale and close; a storm is darker rain with lightning (`World.air`,
+  `onLightning`, `Audio.thunder`). Four fish bite only in fog or only in a storm (`weather` on
+  a `Species`); a storm counts as rain for the fish that want rain.
+- **How a fish fights** (`FightStyle` in `reel.ts`: steady, runner, diver, jumper, sulker) is
+  its kind's own (`styleOf`), and the reel's card says which. **Tackle**: a line and a hook
+  (`LINES`, `HOOKS` in `economy.ts`) are bought beside the rods and change the rod's numbers
+  (`rigged`). **Bait can be found**: worms dug where the ground is dark after rain, crickets
+  in long grass, crawlers at night (`src/game/forage.ts`, `src/world/forage.ts`). The bait on
+  the line is a chip by the Cast key; a tap opens the tackle box (`src/ui/tackle.ts`) to change
+  bait, lure, line or hook on the spot. **Sets** (`src/game/sets.ts`): groups of fish that pay
+  once when all are in the journal, listed in the journal's Sets tab.
+- **Small life** (`src/world/wildlife.ts`): crabs that scuttle off along the sand, frogs on the
+  pond's rim that plop in when come upon, butterflies by day, fireflies by night, gulls on two
+  of the pier's lamps and the signpost that fly off when anyone comes near and come back when
+  they have gone. All made in code from the inks and moved in steps; only what is near the
+  player is moved. **Fish rise** (`src/game/rises.ts`, pure, tested): seven places on water
+  within a cast of somewhere to stand, new every six minutes, each with rings and now and then
+  a jump; a bobber landed within `RISE_REACH` of one gets its bite sooner (`RISE_SOONER`).
+- **A gull of your own** (`src/game/gull.ts`, pure, tested): one gull stands at the far corner
+  of the pier head and does not fly off. Feed it an ordinary fish (the Feed gull button) on
+  three days running and it is tame: it follows the player, flying to catch up, and brings
+  coins or bait a couple of times a day. A missed day starts the count again.
+- **The islanders keep hours** (`src/npc/hours.ts`, pure, tested): Puddle is asleep at the end
+  of the pier round noon, Birch stands by the creek at dawn, Juniper sits at the camp all
+  night. They walk their own routes to get there and put the rod away.
+- **Poses to idle in** (Fun sheet): lean on a rail, stretch, skip a stone (three rings out over
+  the water), warm hands (also offered as a button by any fire).
+- **Surf**: every few seconds a wave runs up the sand and slides back, leaving it wet. The
+  water's shader draws the line of foam coming in and the ground's shader the run-up, to the
+  same beat (`uSurf` is the water's clock).
+- **Rare skies** (`src/look/rare.ts`, pure, tested): the northern lights about one clear night
+  in seven, a blood moon one in thirteen, and a sunrise that fills the sky one dawn in five,
+  each decided by the island's day alone. Drawn in the sky's shader (`uAurora`, `uBlood`,
+  `uDawn`) and eased in; said once when they come; the save keeps which have been seen
+  (`skies`), and all three earn a title.
+- **The title picture moves** (`src/ui/titleArt.ts`, its rules pure and tested): the picture is
+  drawn into a canvas of its own size and changed five times a second. Rows of water slide a
+  pixel or two, the three painted gulls are painted out and drawn again where they have
+  drifted to, and the bobber dips. Where those things are in the picture is written down
+  there: set them again if the title is ever repainted.
 
 ## What the game leans into
 

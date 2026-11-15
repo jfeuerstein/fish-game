@@ -1,6 +1,7 @@
 // Fishing in the world: hold to wind up, let go to cast, wait for the bobber to go under, tap to
 // hook, then hold to reel against the fish. Lands a fish, or the line snaps, or it slips away;
 // either way the next cast is a tap away.
+import { RISE_SOONER } from '../game/rises';
 import { lit } from '../look/material';
 import * as THREE from 'three';
 import { model } from '../assets/models';
@@ -31,6 +32,8 @@ export interface FishingHooks {
   room(): boolean;
   /** Show or hide the "!" over the player's head. */
   exclaim?(on: boolean): void;
+  /** Whether a place on the water is by fish that are rising (src/game/rises.ts). */
+  byRise?(x: number, z: number): boolean;
   /** Something happened for the first time that is worth a word of help. */
   tip?(id: 'bite' | 'reel' | 'thrash' | 'snap'): void;
 }
@@ -371,7 +374,8 @@ export class Fishing {
     if (!this.zone) return;
     this.conditionsNow = this.hooks.conditions(this.zone);
     this.state = 'waiting';
-    this.timer = biteDelay(this.conditionsNow, this.rand);
+    // By a place where fish are rising, the bite comes sooner.
+    this.timer = biteDelay(this.conditionsNow, this.rand) * (this.hooks.byRise?.(this.bobber.position.x, this.bobber.position.z) ? RISE_SOONER : 1);
     this.nibblesLeft = nibbles(this.rand);
     this.nextNibble = 0.6 + this.rand() * Math.max(0.5, this.timer * 0.4);
     this.body.action = 'hold';

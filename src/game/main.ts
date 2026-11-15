@@ -32,6 +32,8 @@ import { tackleSheet } from '../ui/tackle';
 import { newSets } from './sets';
 import { FORAGE_GIVES, forageNow, type ForageSpot } from './forage';
 import { Foraging } from '../world/forage';
+import { Wildlife } from '../world/wildlife';
+import { feedGull, gullBrings, gullFish, gullGave, gullGift, gullHungry, gullSays } from './gull';
 import { floorAt } from '../world/layout';
 import { MS_PER_HOUR } from './clock';
 import { NAMES, doFavour, favourInBag, talk, type Who } from '../npc/talk';
@@ -52,6 +54,7 @@ import { bitesAt, dayNumber, hourAt, pinnedHour, sayHour, weatherAt, type Weathe
 import { HATS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
 import { SEASON_LOOK, pinnedSeason, seasonAt, type Season } from '../look/season';
 import { STYLE_SAYS } from '../fishing/reel';
+import { RARE_SAYS, RARE_SKIES, rareSkyAt, type RareSky } from '../look/rare';
 import { newTitles } from './titles';
 import { buriedToday, digUp, SHROOMS, SEA_GLASS } from '../world/secrets';
 import { Finds } from '../world/finds';
@@ -253,6 +256,18 @@ export class Game implements Session {
     this.forage = new Foraging(this.world.field, (x, z) => this.openGround(x, z));
     this.scene.add(this.forage.group);
     this.world.group.add(this.finds.group);
+    this.wild = new Wildlife(this.world.field, { ring: (at, size) => this.fx.ring(at, size), splash: (at, amount) => this.fx.splash(at, amount), play: (n, o) => this.audio.play(n, o) });
+    this.scene.add(this.wild.group);
+    if (models) {
+      // Gulls on the tops of things: two of the pier's lamps and the signpost in the square.
+      const lamp = (x: number, z: number): THREE.Vector3 => {
+        const g = [...this.world.props.glows].sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z))[0];
+        return g ? g.clone().setY(g.y + 0.2) : new THREE.Vector3(x, PIER.deck + 3.6, z);
+      };
+      const sign = PLACED.find((q) => q.id === 'signpost')!;
+      void this.wild.perch([lamp(61, 12.8), lamp(101, 7.6), new THREE.Vector3(sign.x, this.world.field.heightAt(sign.x, sign.z) + (this.world.props.sizes.get('signpost')?.y ?? 2.2), sign.z)]);
+    }
+    this.hud.onBait = () => this.openSheet('tackle');
     if (models) {
       await this.finds.load(this.save.glass);
       await this.body.setExtra(this.save.extra);
@@ -466,6 +481,7 @@ export class Game implements Session {
       bump: (a) => this.rig.bump(a),
       room: () => true,
       exclaim: () => undefined,
+      byRise: (x, z) => this.wild.byRise(x, z),
     };
   }
 
@@ -571,6 +587,11 @@ export class Game implements Session {
   // ---------- Bait to be found ----------
 
   private forage!: Foraging;
+  /** The rare sky last spoken of, so each is announced once as it comes. */
+  private skyTold: RareSky | null = null;
+  private wild!: Wildlife;
+  /** Seconds until a tame gull next brings something. */
+  private gullDue = 70 + Math.random() * 90;
   /** How wet the ground is, 0 to 1: it rises in rain and dries over a few island hours. */
   private wet = 0;
 
@@ -742,7 +763,25 @@ export class Game implements Session {
     this.mode = 'emote';
     this.player.free = false;
     this.body.action = name;
-    this.emoteTimer = name === 'dance' || name === 'sit' || name === 'flop' ? Infinity : name === 'spin' ? 2.4 : name === 'honk' ? 1.4 : name === 'slap' ? 1.1 : 3;
+    this.emoteTimer = name === 'dance' || name === 'sit' || name === 'flop' || name === 'lean' || name === 'warm' ? Infinity : name === 'spin' ? 2.4 : name === 'honk' ? 1.4 : name === 'slap' ? 1.1 : name === 'skip' ? 1.6 : 3;
+    if (name === 'skip') {
+      // A stone skipped out over whatever water is ahead: three rings, each further and smaller.
+      this.body.power = 0;
+      const yaw = this.player.yaw;
+      const from = this.player.pos.clone();
+      for (const [i, far] of [4.5, 7.5, 9.6].entries()) {
+        setTimeout(() => {
+          const x = from.x + Math.sin(yaw) * far;
+          const z = from.z + Math.cos(yaw) * far;
+          const w = waterAt(this.world.field, x, z);
+          if (!w) return;
+          const at = new THREE.Vector3(x, w.level + 0.02, z);
+          this.fx.ring(at, 0.7 - i * 0.15);
+          if (i === 2) this.fx.splash(at, 0.1);
+          this.audio.play('plop', { volume: 0.35 - i * 0.08, rate: 1.3 + i * 0.25 });
+        }, 620 + i * 260);
+      }
+    }
     if (name === 'wave') this.audio.play('wave', { volume: 0.5 });
     if (name === 'flop') this.audio.play('splash', { volume: 0.4, rate: 1.4 });
     if (name === 'spin') this.audio.play('cast', { volume: 0.4, rate: 1.5 });
@@ -882,6 +921,14 @@ export class Game implements Session {
     return false;
   }
 
+  /** Whether the player stands by a fire: the camp's, or one of their own. */
+  private nearFire(): boolean {
+    const p = this.player.pos;
+    const camp = PLACED.find((x) => x.id === 'campfire');
+    if (camp && Math.hypot(camp.x - p.x, camp.z - p.z) < 2.4) return true;
+    return this.save.placed.some((t) => t.id === 'f-firepit' && Math.hypot(t.x - p.x, t.z - p.z) < 2.4);
+  }
+
   private nearSeat(): Seat | null {
     let best: Seat | null = null;
     let bd = 1.7;
@@ -950,8 +997,10 @@ export class Game implements Session {
       const ready = favourInBag(this.save, who);
       hud.setSecond(ready >= 0 ? `Give ${BY_ID[this.save.bag[ready].species]?.name ?? 'fish'}` : 'Chat', () => this.speakTo(who, (words) => npc.chat(performance.now(), words), npc.def.lines));
     } else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.speakTo('npc-pelican', (words) => this.gus.chat(performance.now(), words), GUS_LINES));
+    else if (this.mode === 'walk' && this.gullNear()) hud.setSecond('Feed gull', () => this.feedTheGull());
     else if (found && this.mode === 'walk') hud.setSecond(found.kind === 'worms' ? 'Dig up' : 'Catch', () => this.takeForage(found));
     else if (seat) hud.setSecond('Sit', () => this.sitOn(seat));
+    else if (this.mode === 'walk' && this.nearFire()) hud.setSecond('Warm hands', () => this.emote('warm'));
     else if (this.boat.nearMooring(p) && p.y > 2) hud.setSecond(this.save.boat ? 'Row' : 'Boat', () => (this.save.boat ? this.boardBoat() : this.hud.toast('The rowboat needs a licence. Gus sells them (Upgrades).')));
     else if (Chalk.near(p)) hud.setSecond('Draw', () => this.startChalk());
     else if (thing) hud.setSecond('Pick up', () => {
@@ -970,6 +1019,40 @@ export class Game implements Session {
     else if (this.detecting && this.mode === 'walk') hud.setAction('Put away', () => this.toggleDetector(), undefined, 'blue');
     else if ((this.mode === 'walk' || this.mode === 'boat' || this.mode === 'emote') && this.waterAhead()) hud.setAction('Cast', cast, () => f.release(rod));
     else hud.setAction(null);
+  }
+
+  /** Whether the pier's gull is close by and would take a fish today. */
+  private gullNear(): boolean {
+    const at = this.wild.gullAt;
+    return !!at && at.distanceTo(this.player.pos) < 2.6 && gullHungry(this.save.gull, this.today);
+  }
+
+  private feedTheGull(): void {
+    const i = gullFish(this.save.bag);
+    if (i < 0) {
+      this.hud.toast('The gull looks at your empty hands. It would like a fish: any ordinary one.');
+      return;
+    }
+    const [fish] = this.save.bag.splice(i, 1);
+    this.save.gull = feedGull(this.save.gull, this.today);
+    this.audio.play('plop', { volume: 0.5, rate: 1.4 });
+    this.hud.toast(`You toss it a ${BY_ID[fish.species]?.name ?? 'fish'}. ${gullSays(this.save.gull)}`, this.save.gull.tame ? 'gold' : undefined);
+    this.changed();
+  }
+
+  /** A tame gull brings something now and then: a few coins it found, or bait. */
+  private gullCalls(dt: number): void {
+    if (!this.started || !this.save.gull.tame || this.mode !== 'walk' || this.fishing.busy || Sheet.current || !gullBrings(this.save.gull, this.today)) return;
+    this.gullDue -= dt;
+    if (this.gullDue > 0) return;
+    this.gullDue = 150 + Math.random() * 200;
+    const gift = gullGift(Math.random());
+    this.save.coins += gift.coins;
+    if (gift.bait) this.save.baits[gift.bait.id] = (this.save.baits[gift.bait.id] ?? 0) + gift.bait.count;
+    this.save.gull = gullGave(this.save.gull, this.today);
+    this.audio.play('coin', { volume: 0.4 });
+    this.hud.toast(gift.says);
+    this.changed();
   }
 
   /** The arcade's gull: bobs and looks about; smug when the player loses, astonished at a big win. */
@@ -1131,6 +1214,19 @@ export class Game implements Session {
       this.dressed = true;
       this.world.setSeason(season);
     }
+    // A sky that is not there every day, when the weather is clear.
+    const pinnedSky = RARE_SKIES.find((k) => k === this.cfg.sky) ?? null;
+    const rare: RareSky | null = pinnedSky ?? (this.benching ? null : rareSkyAt(dayNumber(now, mode, tz), this.hour, this.weather === 'clear'));
+    this.world.air.rare = rare;
+    this.world.air.rareNow = !!pinnedSky;
+    if (rare && rare !== this.skyTold && this.started && !pinnedSky) {
+      this.hud.toast(RARE_SAYS[rare], 'gold');
+      if (!this.save.skies.includes(rare)) {
+        this.save.skies.push(rare);
+        this.changed();
+      }
+    }
+    this.skyTold = rare;
     const cloud = performance.now() < this.cloudUntil;
     this.raining = skyRain || cloud;
     this.rain += ((skyRain ? 1 : 0) - this.rain) * (1 - Math.exp(-dt * 0.4));
@@ -1167,6 +1263,7 @@ export class Game implements Session {
     if (this.mode === 'sit' && this.seat) this.body.group.position.y = this.seat.y + this.seat.lift - 0.36;
     if (this.mode === 'emote') {
       this.emoteTimer -= dt;
+      if (this.body.action === 'skip') this.body.power = Math.min(1, this.body.power + dt / 0.9);
       if (this.emoteTimer <= 0) this.stopActivity();
     }
 
@@ -1178,7 +1275,7 @@ export class Game implements Session {
     if (this.fishing.state === 'aiming') this.body.group.rotation.y = this.rig.yaw + Math.PI;
     if (this.fishing.state === 'aiming' || this.fishing.state === 'flying') this.player.yaw = this.rig.yaw + Math.PI;
     this.body.update(dt);
-    for (const n of this.npcs) n.update(dt, this.player.pos);
+    for (const n of this.npcs) n.update(dt, this.player.pos, this.hour);
     this.gus.update(dt, this.player.pos);
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
@@ -1192,6 +1289,8 @@ export class Game implements Session {
     // In winter what falls is snow.
     this.fx.setRain(Math.max(this.rain, cloud ? 0.7 : 0), SEASON_LOOK[this.season].snow);
     this.finds.update(dt);
+    this.wild.update(dt, this.player.pos, this.world.sky.palette.night, this.rain, Math.floor(Date.now() / 360_000), this.save.gull.tame, this.mode !== 'boat');
+    this.gullCalls(dt);
     this.forageUpdate(dt, now);
     this.finds.setCloud(cloud, this.player.pos);
     if (this.started) this.secrets(dt, now);

@@ -1,4 +1,5 @@
 // The save: everything the player has, read defensively. Pure.
+import { NEW_GULL, type GullKept } from './gull';
 import { type Catch, type Variant, BY_ID, VARIANTS } from '../fishing/fish';
 import type { Zone } from '../world/island';
 import { type Quest, type QuestKind, makeQuest } from './quests';
@@ -49,6 +50,10 @@ export interface Save {
   hooks: string[];
   /** Sets finished (see src/game/sets.ts). */
   sets: string[];
+  /** The gull at the end of the pier (see src/game/gull.ts). */
+  gull: GullKept;
+  /** The rare skies seen (src/look/rare.ts). */
+  skies: string[];
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -127,6 +132,8 @@ export function newSave(): Save {
     hook: 'hook-1',
     hooks: ['hook-1'],
     sets: [],
+    gull: { ...NEW_GULL },
+    skies: [],
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -272,6 +279,8 @@ export function parseSave(text: string | null): Save {
     hook: str(o.hook, 'hook-1'),
     hooks: [...new Set(['hook-1', ...strs(o.hooks)])],
     sets: strs(o.sets),
+    skies: strs(o.skies),
+    gull: { fed: Math.floor(num(rec(o.gull).fed, -1, -1)), streak: Math.floor(num(rec(o.gull).streak, 0, 0)), tame: rec(o.gull).tame === true, giftDay: Math.floor(num(rec(o.gull).giftDay, -1, -1)), gifts: Math.floor(num(rec(o.gull).gifts, 0, 0)) },
     bait: str(o.bait, 'bait-worm'),
     baits,
     bag: (Array.isArray(o.bag) ? o.bag : []).map(readCatch).filter((c): c is Catch => c !== null),

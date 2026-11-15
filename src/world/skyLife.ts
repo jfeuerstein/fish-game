@@ -37,6 +37,23 @@ function wing(): THREE.BufferGeometry {
   return joined([block(0.52, 0.05, 0.3, 0.3, 0, 0, '#f4eee3'), block(0.3, 0.05, 0.2, 0.7, 0, -0.03, '#474e54')]);
 }
 
+/** A gull that can flap, made of blocks: its body with a wing each side. Turn `left` and `right` about z to raise them. */
+export function flapper(material: THREE.Material): { body: THREE.Group; left: THREE.Mesh; right: THREE.Mesh } {
+  const body = new THREE.Group();
+  const left = new THREE.Mesh(wing(), material);
+  const right = new THREE.Mesh(wing(), material);
+  right.scale.x = -1;
+  body.add(new THREE.Mesh(joined([block(0.22, 0.2, 0.62, 0, 0, 0, '#fffdf6'), block(0.1, 0.08, 0.16, 0, 0, 0.38, '#ecc77d'), block(0.2, 0.06, 0.26, 0, 0.02, -0.4, '#a4abac')]), material), left, right);
+  return { body, left, right };
+}
+
+/** The material a flapper wears: lit, coloured on its corners, seen from both sides. */
+export function feathers(): THREE.Material {
+  const m = lit({ vertexColors: true });
+  m.side = THREE.DoubleSide;
+  return m;
+}
+
 export class SkyLife {
   readonly group = new THREE.Group();
   private gulls: { body: THREE.Group; left: THREE.Mesh; right: THREE.Mesh }[] = [];

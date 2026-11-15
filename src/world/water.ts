@@ -90,6 +90,12 @@ void main() {
   float edge = depth - 0.1 - 0.08 * floor(sin(t * 1.4 + q.x * 0.3 + q.y * 0.2) * 2.0 + 0.5) / 2.0;
   float foam = 1.0 - step(0.22, edge);
   foam = max(foam, (1.0 - step(0.07, abs(edge - 0.5))) * step(0.5, vnoise(q * 1.2 + t * 0.2)));
+  // Surf: a broken line of foam that comes in from a little way out and arrives as the wave
+  // runs up the sand (the ground draws that part, to the same beat).
+  float surfBeat = fract(t * 0.17 + vnoise(q * 0.12) * 1.3);
+  float inward = clamp((surfBeat - 0.55) / 0.45, 0.0, 1.0);
+  float breaker = (1.0 - step(0.045 + 0.05 * inward, abs(depth - mix(1.25, 0.1, inward)))) * step(0.55, surfBeat) * step(vWorld.y, 0.3) * step(0.38, vnoise(q * 0.9 + 3.0));
+  foam = max(foam, breaker);
   // Rings spreading from the pier's legs, which stand at the corners of its three-metre sections.
   if (shore.x > PIER_X0 - 0.8 && shore.x < PIER_X1 + 0.8) {
     bool head = shore.x > PIER_HEAD;
@@ -155,6 +161,8 @@ export class Water {
   readonly group = new THREE.Group();
   readonly material: THREE.ShaderMaterial;
   private defines: Record<string, number | string>;
+  /** The water's clock, seconds: the ground's surf keeps the same time. */
+  clock = 0;
 
   constructor(field: Heightfield, look?: Look) {
     const f = (n: number): string => n.toFixed(2);
@@ -256,6 +264,7 @@ export class Water {
   update(dt: number, look: WaterLook, rain: number): void {
     const u = this.material.uniforms;
     u.uTime.value += dt;
+    this.clock = u.uTime.value;
     u.uDeep.value.copy(look.deep);
     u.uShallow.value.copy(look.shallow);
     u.uFoam.value.copy(look.foam);

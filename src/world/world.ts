@@ -269,6 +269,7 @@ export class World {
     this.props.blow(dt * (1 + rain * 0.8), this.lofi ? 6 : 0);
     (this.terrain.userData.wet as { value: number }).value = rain;
     this.water.update(dt, look, rain);
+    (this.terrain.userData.surf as { value: number }).value = this.water.clock;
     const night = this.sky.palette.night;
     this.life.update(dt, night, rain, focus);
     const on = Math.min(1, night * 1.2 + rain * 0.4);

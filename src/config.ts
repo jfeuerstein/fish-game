@@ -8,6 +8,8 @@ export interface Config {
   weather: 'clear' | 'rain' | 'fog' | 'storm' | null;
   /** Pin the season: spring, summer, fall or winter. */
   season: string | null;
+  /** `sky=aurora|bloodmoon|sunrise` shows one of the rare skies, whatever the day. */
+  sky: string | null;
   /** Hide the controls, for clean pictures. */
   hud: boolean;
   /** Skip the title card. */
@@ -50,6 +52,7 @@ export function parseConfig(search: string): Config {
     time: p.get('time'),
     weather: w === 'rain' || w === 'clear' || w === 'fog' || w === 'storm' ? w : null,
     season: p.get('season'),
+    sky: p.get('sky'),
     hud: p.get('hud') !== '0',
     title: p.get('title') !== '0',
     fresh: p.get('fresh') === '1',

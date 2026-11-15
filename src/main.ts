@@ -1,6 +1,7 @@
 import './style.css';
 import { Game } from './game/main';
 import { drawLogo } from './ui/logo';
+import { liveTitle } from './ui/titleArt';
 
 /**
  * Launched from the Home Screen, iOS can lay the page out shorter than the screen it shows.
@@ -29,6 +30,18 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     // Once the game is running, keep a copy of all of it for playing with no signal.
     setTimeout(() => (reg.active ?? navigator.serviceWorker.controller)?.postMessage('keep-all'), 20000);
   });
+}
+
+// The title picture moves from the moment it is up: the water laps, gulls drift, the bobber dips.
+const art = document.querySelector<HTMLElement>('#title .title-art');
+if (art && !/[?&]title=0/.test(location.search)) {
+  const stop = liveTitle(art, `${import.meta.env.BASE_URL}art/title.webp`);
+  // It stops when the title is taken away.
+  new MutationObserver((_, watch) => {
+    if (document.getElementById('title')) return;
+    stop();
+    watch.disconnect();
+  }).observe(document.getElementById('app')!, { childList: true });
 }
 
 const name = document.querySelector<HTMLElement>('#title .title-name h1');

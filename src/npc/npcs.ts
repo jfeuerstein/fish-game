@@ -1,5 +1,6 @@
 // The other islanders: three who wander between their favourite fishing spots and fish there,
 // and Gus the pelican behind the shop counter. Each has a few things to say.
+import { hauntNow } from './hours';
 import { lit } from '../look/material';
 import * as THREE from 'three';
 import { rng } from '../core/rng';
@@ -83,7 +84,7 @@ export const GUS_LINES = [
 
 const SPEED = 1.7;
 
-type Mode = 'walk' | 'fish' | 'reel' | 'show' | 'wave';
+type Mode = 'walk' | 'fish' | 'reel' | 'show' | 'wave' | 'rest';
 
 export class Npc {
   readonly body: Character;
@@ -123,6 +124,7 @@ export class Npc {
 
   private startFishing(): void {
     this.mode = 'fish';
+    this.body.rodOut = true;
     this.timer = 25 + this.rand() * 40;
     this.body.action = 'hold';
     this.body.rodOut = true;
@@ -132,6 +134,7 @@ export class Npc {
   chat(now: number, words?: string): string {
     const text = words ?? this.def.lines[this.line++ % this.def.lines.length];
     this.saying = { text, until: now + readingTime(text) };
+    if (this.mode === 'rest') return text;
     if (this.mode === 'fish' || this.mode === 'walk') {
       this.mode = 'wave';
       this.timer = 2;
@@ -141,15 +144,27 @@ export class Npc {
     return text;
   }
 
-  update(dt: number, player: THREE.Vector3): void {
+  /** `hour` is the island's: each islander keeps hours of their own (src/npc/hours.ts). */
+  update(dt: number, player: THREE.Vector3, hour = 12): void {
     this.timer -= dt;
+    const haunt = hauntNow(this.def.id, hour);
+    // Their time is over: back to fishing where they are.
+    if (this.mode === 'rest' && !haunt) this.startFishing();
     switch (this.mode) {
+      case 'rest':
+        this.body.action = haunt?.action ?? 'idle';
+        break;
       case 'walk': {
         const target = this.path[0];
         if (!target) {
           const s = this.def.route[this.leg].spot;
           this.yaw = s.yaw;
-          this.startFishing();
+          // Arrived where they keep their hours: the rod is put away.
+          if (haunt && haunt.leg === this.leg) {
+            this.mode = 'rest';
+            this.body.rodOut = false;
+            this.body.action = haunt.action;
+          } else this.startFishing();
           break;
         }
         const dx = target.x - this.pos.x;
@@ -177,6 +192,14 @@ export class Npc {
       }
       case 'fish': {
         this.showLine();
+        // When it is their time to be somewhere else, they do not linger.
+        if (haunt && haunt.leg !== this.leg) this.timer = 0;
+        else if (haunt && this.mode === 'fish') {
+          this.bobber.visible = this.string.visible = false;
+          this.mode = 'rest';
+          this.body.rodOut = false;
+          break;
+        }
         if (this.timer <= 0) {
           // Off to the next spot.
           this.bobber.visible = this.string.visible = false;
@@ -218,6 +241,8 @@ export class Npc {
         break;
     }
     this.body.group.position.copy(this.pos);
+    // Sitting on the ground, not hovering over it.
+    if (this.mode === 'rest' && this.body.action === 'sit') this.body.group.position.y -= 0.24;
     this.body.group.rotation.y = this.yaw;
     // Everyone keeps an eye on the player.
     this.body.watching = player;

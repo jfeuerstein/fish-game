@@ -12,6 +12,10 @@ const GLYPH: Record<Emote, string> = {
   spin: svg('<path d="M26 16a10 10 0 1 1-3-7.1"/><path d="M24 3v6h-6"/>'),
   flop: svg('<path d="M4 18c5-6 13-6 18 0-5 5-13 5-18 0z"/><path d="M22 18l6-4v8z"/><circle cx="9" cy="17" r="1" fill="currentColor"/><path d="M8 9l1 3M14 7v3M20 9l-1 3"/>'),
   honk: svg('<path d="M5 13v6h4l8 5V8l-8 5H5z"/><path d="M21 12c1.5 1 1.5 7 0 8M24 9c3 2 3 12 0 14"/>'),
+  stretch: svg('<circle cx="16" cy="10" r="3"/><path d="M16 13v9M16 22l-3 6M16 22l3 6M16 15L9 5M16 15l7-10"/>'),
+  skip: svg('<path d="M3 22h26"/><ellipse cx="8" cy="14" rx="3" ry="1.6"/><path d="M13 20c1-3 3-3 4 0M20 20c1-2 2-2 3 0M26 20c.5-1 1-1 1.5 0"/>'),
+  warm: svg('<path d="M16 6c3 4 6 7 6 12a6 6 0 0 1-12 0c0-3 2-4 3-7 1 2 2 3 3 3 1-2 0-5 0-8z"/><path d="M6 27h20"/>'),
+  lean: svg('<circle cx="11" cy="8" r="3"/><path d="M12 11l4 8h8M16 19l-3 9M4 19h24"/>'),
   slap: svg('<path d="M8 20c4-5 10-5 14 0-4 4-10 4-14 0z"/><path d="M22 20l5-3v6z"/><circle cx="12" cy="19" r="1" fill="currentColor"/><path d="M4 9l5 3M7 5l4 4M12 3l2 5"/>'),
 };
 import { el, icon } from './hud';
@@ -31,6 +35,10 @@ export function funSheet(app: HTMLElement, s: Session, chalk: () => boolean): Sh
       ['flop', 'Flop'],
       ['honk', 'Honk'],
       ['slap', 'Fish slap'],
+      ['stretch', 'Stretch'],
+      ['skip', 'Skip a stone'],
+      ['lean', 'Lean'],
+      ['warm', 'Warm hands'],
     ];
     for (const [id, label] of emotes) {
       const t = el('button', 'tile emote', label);
