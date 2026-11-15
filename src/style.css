@@ -442,6 +442,145 @@ button {
   animation: pop 0.25s ease-out;
   transition: opacity 0.5s, transform 0.5s;
 }
+/* ---------- The first minute ---------- */
+.coach {
+  position: absolute;
+  top: calc(var(--top-clear) + 132px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(86%, 340px);
+  z-index: 30;
+  padding: 10px 12px 8px;
+  background: var(--paper);
+  border: var(--edge);
+  box-shadow: var(--lift);
+  color: var(--ink);
+}
+.coach.done {
+  background: var(--brass-hi);
+}
+.coach-says {
+  font-size: 21px;
+  line-height: 1.15;
+}
+.coach-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.coach-count {
+  color: var(--ink-soft);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.coach.done .coach-count {
+  visibility: hidden;
+}
+/* A thumb drawn where the thumb goes: a ring with a knob that is pushed up and let go (to walk),
+   or a knob dragged from side to side higher up (to look round). Moved in steps, like the rest. */
+.coach-hint {
+  position: absolute;
+  left: 50%;
+  width: 112px;
+  height: 112px;
+  margin-left: -56px;
+  z-index: 6;
+  border: 2px dashed var(--paper);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.coach-hint i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: var(--edge);
+}
+.coach-hint.walk {
+  bottom: calc(var(--bottom-clear) + 96px);
+}
+.coach-hint.walk i {
+  animation: coach-push 1.6s steps(6) infinite;
+}
+.coach-hint.look {
+  top: 46%;
+  border-color: transparent;
+}
+.coach-hint.look i {
+  animation: coach-drag 1.8s steps(8) infinite;
+}
+@keyframes coach-push {
+  0%,
+  20% {
+    transform: translateY(0);
+  }
+  60%,
+  85% {
+    transform: translateY(-38px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes coach-drag {
+  0% {
+    transform: translateX(-70px);
+  }
+  50% {
+    transform: translateX(70px);
+  }
+  100% {
+    transform: translateX(-70px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach-hint i {
+    animation: none;
+  }
+}
+
+/* For testing: the frame rate, and what the benchmark is doing. */
+.fps,
+.bench-note {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 2px 8px;
+  background: var(--paper);
+  border: var(--edge);
+  color: var(--ink);
+  font-size: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.fps {
+  top: calc(var(--top-clear) + 4px);
+}
+.bench-note {
+  top: calc(var(--top-clear) + 96px);
+  font-size: 18px;
+  padding: 6px 12px;
+}
+.bench-text {
+  width: 100%;
+  height: 230px;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: var(--paper-2);
+  border: var(--edge);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.25;
+  resize: none;
+}
 .toast.good {
   border-color: rgba(140, 200, 130, 0.5);
   box-shadow: inset 3px 0 0 #8cc882;

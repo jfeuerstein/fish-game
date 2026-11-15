@@ -10,7 +10,7 @@ import { launchBrowser } from './browser.mjs';
 const out = process.argv[2] ?? 'play-check';
 mkdirSync(out, { recursive: true });
 const server = await preview({ preview: { port: 0, host: '127.0.0.1' }, logLevel: 'silent' });
-const url = `http://127.0.0.1:${server.httpServer.address().port}/?title=0&fresh=1&mute=1&time=day&weather=clear&at=pier&quality=low&warp=3`;
+const url = `http://127.0.0.1:${server.httpServer.address().port}/?title=0&fresh=1&mute=1&coach=0&time=day&weather=clear&at=pier&quality=low&warp=3`;
 const browser = await launchBrowser();
 const page = await browser.newPage({ viewport: { width: 402, height: 874 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.error(`[page error] ${e.message}`));

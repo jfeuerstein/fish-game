@@ -23,9 +23,20 @@ export class CameraRig {
   obstacles: THREE.Object3D[] = [];
   private ray = new THREE.Raycaster();
   private pulledIn = Infinity;
+  private rooms = new Map<THREE.Object3D, THREE.Box3>();
   private checkClock = 0;
 
   constructor(readonly camera: THREE.PerspectiveCamera, private field: Heightfield) {}
+
+  /** The box an obstacle fills, a little larger, worked out once. */
+  private roomOf(o: THREE.Object3D): THREE.Box3 {
+    let box = this.rooms.get(o);
+    if (!box) {
+      box = new THREE.Box3().setFromObject(o).expandByScalar(0.4);
+      this.rooms.set(o, box);
+    }
+    return box;
+  }
 
   turn(dx: number, dy: number): void {
     this.yaw = turned(this.yaw, dx);
@@ -65,8 +76,12 @@ export class CameraRig {
         const dir = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
         this.ray.set(this.smoothed, dir);
         this.ray.far = dist;
+        // A building in the way is opened over the player like a tree (src/look/spotlight.ts), so
+        // the camera stays where it is. It comes in only if it would otherwise be inside one,
+        // where there is nothing to see but the backs of walls.
         const hit = this.ray.intersectObjects(this.obstacles, false)[0];
-        this.pulledIn = hit ? Math.max(2.2, hit.distance - 0.6) : Infinity;
+        const wanted = this.smoothed.clone().addScaledVector(dir, dist);
+        this.pulledIn = hit && this.roomOf(hit.object).containsPoint(wanted) ? Math.max(2.2, hit.distance - 0.6) : Infinity;
       }
     }
     this.held += (Math.min(dist, this.pulledIn) - this.held) * (1 - Math.exp(-dt * (this.pulledIn < this.held ? 10 : 2)));

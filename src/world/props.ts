@@ -63,6 +63,9 @@ const SWAY: Record<string, { bend: number; power: number }> = {
 };
 
 /** Things too small to bother casting shadows. */
+/** What else is big enough to hide the player and so is opened over them like a tree (see src/look/spotlight.ts). */
+const WINDOWED = new Set(['cliff', 'shop', 'arcade', 'lighthouse', 'fishing-hut', 'tent', 'well', 'notice-board', 'rock-a']);
+
 const NO_SHADOW = new Set(['flowers', 'grass-tuft', 'mushrooms', 'lilypad', 'cattails', 'shell']);
 
 export class Props {
@@ -185,7 +188,7 @@ export class Props {
           inst.computeBoundingSphere();
           inst.name = id;
           this.group.add(inst);
-          if (id.startsWith('tree-') || id === 'cliff') this.spotlit(mesh.material as THREE.Material);
+          if (id.startsWith('tree-') || WINDOWED.has(id)) this.spotlit(mesh.material as THREE.Material);
         }
         for (const p of list) this.record(id, p, size);
       }),

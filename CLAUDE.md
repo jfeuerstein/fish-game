@@ -16,7 +16,8 @@ npm run build          # type-check and build to dist/
 node tools/shot.mjs out.png "at=pier&time=dusk"             # screenshot the built game (upright phone)
 node tools/shot.mjs out.png "at=shop" 402 874 1 "window.__cove.open('shop')"   # ...after a script
 node tools/play-check.mjs outdir                             # three scripted casts from the pier, with pictures
-node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons, and a dragged thumb walks and turns
+node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons, a dragged thumb walks and turns, and a whole cast by thumb
+node tools/bench-check.mjs                                   # runs the game's own benchmark end to end (its numbers mean nothing off the phone)
 node tools/icons.mjs [prefix]                                # render menu icons from the models (into art/icons)
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
@@ -44,7 +45,7 @@ the owner's: do not route a deploy round it.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes). `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes). `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
   the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
@@ -143,6 +144,23 @@ the owner's: do not route a deploy round it.
   in the trees' materials and `Props.clearView` says each frame where the player is. Only what
   is nearer the camera than the player is opened, pixel by pixel, so nothing is decided tree
   by tree and nothing pops. Shadows are whole.
+- **The first minute** (`src/game/coach.ts`, pure, tested; `src/ui/coach.ts`): someone with no
+  fish to their name is walked through it on a card under the clock, a step at a time, each
+  done by doing it: drag to walk, drag higher to look round, hold Cast, tap Hook!, hold Reel.
+  A drawn thumb shows where the first two are done. A missed bite or a lost fish goes back to
+  casting; the first fish ends it; Skip ends it; it is not offered again (`coach` in the
+  save's hints). The touch check does every step with a thumb on the glass.
+- **Measuring** (`src/debug/bench.ts`, pure, tested): Settings > For testing has a frame-rate
+  readout (frames a second and the game's own share of a frame) and Run benchmark, which
+  stands in six places for five seconds each, turning slowly, and ends with text to copy:
+  for each, frames a second, the usual and the slow gap between frames, the share that
+  missed a refresh, the game's own time, draw calls and triangles. Nothing is saved. Only the
+  phone's numbers count: headless Chromium draws with software.
+- **The camera and buildings.** A building in the way is opened over the player like a tree
+  (`WINDOWED` in `props.ts`); the camera comes in closer only if it would otherwise be inside
+  one (`CameraRig.roomOf`).
+- **Flames** (`World.addFlame`) are their own light: faceted tongues drawn unlit that jump in
+  steps. A fire's painted flame is lit like wood and was a dark lump at dusk.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
   the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
   and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;

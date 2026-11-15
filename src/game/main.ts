@@ -27,6 +27,10 @@ import { Hud } from '../ui/hud';
 import { journalSheet } from '../ui/journal';
 import { moreSheet } from '../ui/more';
 import { Sheet } from '../ui/sheet';
+import { Coach } from '../ui/coach';
+import { coachDue, coachNext, type CoachStep } from './coach';
+import { TURN } from '../player/steer';
+import { BENCH_SECS, BENCH_SETTLE, BENCH_STEPS, benchReport, readout, summarise, type BenchLine } from '../debug/bench';
 import { shopSheet } from '../ui/shop';
 import { Uke } from '../ui/uke';
 import { Boat } from '../world/boat';
@@ -313,6 +317,9 @@ export class Game implements Session {
     if (!this.cfg.title) go();
 
     if (this.cfg.zoo) await this.zoo(this.cfg.zoo);
+    if (this.cfg.stats) this.setStats(true);
+    // From the address, the benchmark starts by itself once things have settled (for the tools).
+    if (this.cfg.bench) setTimeout(() => void this.runBench(), 500);
     this.ready = true;
     (window as unknown as Record<string, unknown>).__cove = this.api();
     this.renderer.setAnimationLoop(() => this.frame());
@@ -335,8 +342,56 @@ export class Game implements Session {
       this.save.hints.push('welcome');
       this.changed();
       setTimeout(() => this.hud.toast('Welcome to Driftwood Cove!'), 400);
-      setTimeout(() => this.hud.toast('Walk to the water, face it, and hold Cast.'), 3200);
+      if (!this.coachBegin()) setTimeout(() => this.hud.toast('Walk to the water, face it, and hold Cast.'), 3200);
+    } else this.coachBegin();
+  }
+
+  // ---------- The first minute ----------
+
+  private coach: Coach | null = null;
+  private coachStep: CoachStep = 'walk';
+  /** What the player has done since the step began, and how many fish they had when the coach began. */
+  private coachDid = { walked: 0, turned: 0, from: new THREE.Vector2(NaN, NaN), caught: 0 };
+
+  /** Start walking someone new through their first fish. Says whether it did. */
+  private coachBegin(): boolean {
+    if (this.coach || !this.cfg.coach || !this.cfg.hud || !coachDue(this.save.hints, this.save.stats.caught)) return false;
+    this.coach = new Coach(this.app);
+    this.coach.onSkip = () => this.coachEnd();
+    this.coachStep = 'walk';
+    this.coachDid = { walked: 0, turned: 0, from: new THREE.Vector2(NaN, NaN), caught: this.save.stats.caught };
+    this.coach.show('walk');
+    return true;
+  }
+
+  /** The coach is over, done or skipped: it is not offered again. */
+  private coachEnd(): void {
+    this.coach?.remove();
+    this.coach = null;
+    if (!this.save.hints.includes('coach')) {
+      this.save.hints.push('coach');
+      this.changed();
     }
+  }
+
+  /** Each frame while coaching: count what the player is doing and move on when a step is done. `swung` is how far the view was turned this frame. */
+  private coachWatch(swung: number): void {
+    if (!this.coach || this.coachStep === 'done') return;
+    const p = this.player.pos;
+    const d = this.coachDid;
+    const moved = Number.isNaN(d.from.x) ? 0 : Math.hypot(p.x - d.from.x, p.z - d.from.y);
+    d.from.set(p.x, p.z);
+    // Walked, not carried somewhere.
+    if (moved < 1 && this.mode === 'walk') d.walked += moved;
+    d.turned += Math.abs(swung);
+    const next = coachNext(this.coachStep, { walked: d.walked, turned: d.turned, fishing: this.fishing.state, caught: this.save.stats.caught - d.caught });
+    if (next === this.coachStep) return;
+    this.coachStep = next;
+    d.walked = d.turned = 0;
+    this.coach.show(next);
+    this.audio.play('click', { volume: 0.5 });
+    // The goodbye stays up long enough to be read, and goes by itself.
+    if (next === 'done') setTimeout(() => this.coachEnd(), 8000);
   }
 
   private fishingHooks(): ConstructorParameters<typeof Fishing>[3] {
@@ -433,6 +488,8 @@ export class Game implements Session {
     const key = `tip-${id}`;
     if (this.save.hints.includes(key) || !this.cfg.hud) return;
     this.save.hints.push(key);
+    // The coach is already saying it.
+    if (this.coach && (id === 'bite' || id === 'reel')) return;
     const words: Record<string, string> = {
       bite: 'A bite! Tap Hook! before it lets go.',
       reel: 'Hold Reel to wind it in.',
@@ -855,7 +912,110 @@ export class Game implements Session {
 
   // ---------- The frame ----------
 
+  /** A frame, timed: the gap since the last one, and how long the game's own part of it took. */
   private frame(): void {
+    const t0 = performance.now();
+    this.step();
+    const gap = this.lastFrame ? t0 - this.lastFrame : 0;
+    this.lastFrame = t0;
+    // A gap of a second or more is the game having been put away, not a slow frame.
+    if (gap <= 0 || gap > 1000) return;
+    const work = performance.now() - t0;
+    this.meter?.gaps.push(gap);
+    this.meter?.work.push(work);
+    if (this.showStats) {
+      this.recent.gaps.push(gap);
+      this.recent.work.push(work);
+      if (this.recent.gaps.length >= 30) {
+        this.statsEl.textContent = readout(this.recent.gaps, this.recent.work);
+        this.recent = { gaps: [], work: [] };
+      }
+    }
+  }
+
+  // ---------- For testing: the frame rate and the benchmark ----------
+
+  showStats = false;
+  private statsEl = Object.assign(document.createElement('div'), { className: 'fps', hidden: true });
+  private lastFrame = 0;
+  private recent: { gaps: number[]; work: number[] } = { gaps: [], work: [] };
+  /** While a benchmark step is being timed: every frame's gap and work. */
+  private meter: { gaps: number[]; work: number[] } | null = null;
+  private benching = false;
+  /** The last benchmark's text, for the tools. */
+  benchText = '';
+
+  setStats(on: boolean): void {
+    this.showStats = on;
+    this.statsEl.hidden = !on;
+    this.statsEl.textContent = '';
+    if (!this.statsEl.parentElement) this.app.append(this.statsEl);
+  }
+
+  /**
+   * Stand in each of the benchmark's places in turn, turning slowly, and time every frame; then
+   * put the player back and show what it came to as text to copy. Nothing is saved.
+   */
+  async runBench(): Promise<void> {
+    if (this.benching) return;
+    this.benching = true;
+    Sheet.current?.close();
+    this.stopActivity();
+    const was = { time: this.pin.time, weather: this.pin.weather, x: this.player.pos.x, z: this.player.pos.z, yaw: this.player.yaw, look: this.rig.yaw };
+    const note = Object.assign(document.createElement('div'), { className: 'bench-note' });
+    this.app.append(note);
+    const wait = (secs: number): Promise<void> => new Promise((done) => setTimeout(done, secs * 1000));
+    const secs = this.cfg.benchsecs ?? BENCH_SECS;
+    const lines: BenchLine[] = [];
+    for (const [i, s] of BENCH_STEPS.entries()) {
+      note.textContent = `Benchmark ${i + 1} of ${BENCH_STEPS.length}: ${s.name}`;
+      this.teleport(s.at);
+      this.pin.time = s.time;
+      this.pin.weather = s.weather;
+      this.rain = s.weather === 'rain' ? 1 : 0;
+      await wait(Math.min(BENCH_SETTLE, secs));
+      this.meter = { gaps: [], work: [] };
+      await wait(secs);
+      const m = this.meter;
+      this.meter = null;
+      lines.push({ name: s.name, calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles, ...summarise(m.gaps, m.work) });
+    }
+    note.remove();
+    this.pin.time = was.time;
+    this.pin.weather = was.weather;
+    this.player.place(was.x, was.z, was.yaw);
+    this.rig.yaw = was.look;
+    this.benching = false;
+    const gl = this.renderer.getContext();
+    const card = gl.getExtension('WEBGL_debug_renderer_info');
+    const canvas = this.renderer.domElement;
+    this.benchText = benchReport(
+      [
+        `${new Date().toISOString().slice(0, 10)}, screen ${window.innerWidth} x ${window.innerHeight} at ${window.devicePixelRatio}x, canvas ${canvas.width} x ${canvas.height}`,
+        `${this.look.lofi ? 'lo-fi' : 'smooth'} look, shadows ${this.renderer.shadowMap.enabled ? 'on' : 'off'}, chunkier pixels ${this.save.settings.pixels ? 'on' : 'off'}, grain ${this.save.settings.grain}`,
+        `${card ? String(gl.getParameter(card.UNMASKED_RENDERER_WEBGL)) : 'graphics card not named'}, ${secs} s a step`,
+      ],
+      lines,
+    );
+    const text = this.benchText;
+    const sheet = new Sheet(this.app, 'Benchmark', (body) => {
+      const out = Object.assign(document.createElement('textarea'), { className: 'bench-text', value: text, readOnly: true });
+      const copy = Object.assign(document.createElement('button'), { className: 'big-btn', textContent: 'Copy' });
+      copy.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          copy.textContent = 'Copied';
+        } catch {
+          out.select();
+          copy.textContent = 'Select all, then copy';
+        }
+      };
+      body.append(out, copy);
+    });
+    sheet.show();
+  }
+
+  private step(): void {
     const dt = Math.min(0.05, this.clock.getDelta()) * this.cfg.warp;
     this.frames++;
     const now = Date.now();
@@ -870,8 +1030,11 @@ export class Game implements Session {
 
     const look = this.controls.takeLook();
     this.rig.turn(look.x, look.y);
+    this.coachWatch(look.x * TURN);
     this.rig.zoomBy(look.zoom);
-    const stick = this.controls.enabled ? this.controls.stick() : { x: 0, y: 0 };
+    const stick = this.controls.enabled && !this.benching ? this.controls.stick() : { x: 0, y: 0 };
+    // The benchmark looks all round each place, slowly.
+    if (this.benching) this.rig.yaw += dt * 0.5;
     // Walking off ends whatever was going on (the keyboard has no push event, so check here too).
     if (Math.hypot(stick.x, stick.y) > 0.3 && (this.mode === 'sit' || this.mode === 'emote' || (this.fishing.busy && this.fishing.state !== 'landing' && this.mode !== 'boat'))) this.stopActivity();
 
@@ -1133,6 +1296,8 @@ export class Game implements Session {
   api(): Record<string, unknown> {
     const looking = {
       ready: true,
+      /** The last benchmark's text (empty until one has finished). */
+      bench: () => this.benchText,
       state: () => ({
         frames: this.frames,
         hour: +this.hour.toFixed(2),

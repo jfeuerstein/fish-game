@@ -29,6 +29,10 @@ export interface Session {
   setBigHeads(on: boolean): void;
   /** For testing: go somewhere. */
   teleport(name: string): void;
+  /** For testing: a frame-rate readout in the corner, and the benchmark. */
+  showStats: boolean;
+  setStats(on: boolean): void;
+  runBench(): void;
   /** Settings that change how the game runs. */
   applySettings(): void;
   /** The island's hour, and whether it rains. */

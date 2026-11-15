@@ -132,7 +132,8 @@ export const PLACED: readonly Placed[] = [
   { id: 'bench', x: -11, z: 14, yaw: Math.PI / 2 },
   { id: 'bench', x: 12, z: 6, yaw: -Math.PI / 2 - 0.4 },
   { id: 'bench', x: 5, z: 26, yaw: Math.PI },
-  { id: 'bench', x: 102, z: 20.6, y: PIER.deck, yaw: Math.PI },
+  // At the end of the pier, looking out to sea.
+  { id: 'bench', x: 102, z: 20.4, y: PIER.deck, yaw: 0 },
   { id: 'bench', x: 25, z: -30, yaw: 2.2 },
   { id: 'bench', x: -20, z: -8, yaw: Math.PI + 0.3 },
   { id: 'crates', x: -4.5, z: 0.5, yaw: 0.3 },

@@ -107,6 +107,17 @@ export const MODELS = {
   'f-snowman': { kind: 'prop', what: 'a small snowman with a carrot nose, coal eyes, a red scarf and a little black top hat', h: 1.2, faces: 3000, item: true },
   'f-tiki': { kind: 'prop', what: 'a tiki torch: a bamboo pole with a woven basket at the top holding an orange flame', h: 1.8, faces: 2500, item: true },
 
+  // --- Camp things: the catalogue the player makes a campsite of their own from ---
+  'f-tent': { kind: 'prop', what: 'a small A-frame camping tent of sage green canvas with its two door flaps tied open and a wooden pole at the front', h: 1.5, faces: 3000, item: true },
+  'f-firepit': { kind: 'prop', what: 'a campfire: a ring of round grey stones with a few crossed logs and one chunky orange and yellow flame', h: 0.7, faces: 3000, item: true },
+  'f-bedroll': { kind: 'prop', what: 'a quilted blue sleeping bag rolled out flat on the ground with a small cream pillow at one end', h: 0.3, faces: 2500, item: true },
+  'f-stump': { kind: 'prop', what: 'a short fat tree stump to sit on, with pale rings on its flat top and rough brown bark', h: 0.5, faces: 2000, item: true },
+  'f-table': { kind: 'prop', what: 'a small folding wooden camp table with a blue enamel mug and a tin plate on it', h: 0.7, faces: 3000, item: true },
+  'f-stove': { kind: 'prop', what: 'a little green two-ring camping stove with a round steel kettle sitting on it', h: 0.6, faces: 3000, item: true },
+  'f-woodpile': { kind: 'prop', what: 'a neat stack of split firewood logs held between two short wooden posts', h: 0.8, faces: 3000, item: true },
+  'f-lights': { kind: 'prop', what: 'a string of round warm yellow bulb lights hung in a swag between two wooden poles', h: 2.0, faces: 3000, item: true },
+  'f-washline': { kind: 'prop', what: 'a clothes line between two wooden posts with a red and white striped towel and two socks pegged on it', h: 1.6, faces: 3000, item: true },
+
   // --- Things held ---
   'rod-1': { kind: 'prop', what: 'a simple wooden fishing rod made from a stick, with a little reel, as a chunky toy, lying diagonally', h: 1.6, faces: 2000 },
   'rod-2': { kind: 'prop', what: 'a fishing rod with a blue fibreglass pole, a cork handle and a silver reel, as a chunky toy, lying diagonally', h: 1.6, faces: 2000 },

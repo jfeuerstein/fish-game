@@ -12,7 +12,7 @@ export function chance(n: number, salt = 0): number {
 
 // ---------- Gulls ----------
 
-export const GULLS = 3;
+export const GULLS = 5;
 /** A gull's wings are moved this many times a second: on twos, like everything else. */
 export const FLAP_RATE = 6;
 /** The wings' angles through one beat, radians up from level. */
@@ -32,7 +32,7 @@ export interface GullAt {
 
 /** Where gull `i` is at `t` seconds: each goes round a wide ring of its own over the island, flapping a while and gliding a while. */
 export function gullAt(i: number, t: number): GullAt {
-  const radius = 34 + i * 19;
+  const radius = 30 + i * 14;
   const way = i % 2 ? -1 : 1;
   const speed = (6.5 + i * 0.8) / radius;
   const a = way * t * speed + i * 2.1;
@@ -41,7 +41,7 @@ export function gullAt(i: number, t: number): GullAt {
   const cz = Math.sin(i * 2.4) * 22;
   const x = cx + Math.cos(a) * radius;
   const z = cz + Math.sin(a) * radius;
-  const y = 19 + i * 3.5 + Math.sin(t * 0.21 + i) * 2;
+  const y = 19 + i * 2.5 + Math.sin(t * 0.21 + i) * 2;
   // Flying along the ring: the tangent.
   const yaw = Math.atan2(-Math.sin(a) * way, Math.cos(a) * way);
   const spell = Math.floor(t / 2.6 + i * 0.37);

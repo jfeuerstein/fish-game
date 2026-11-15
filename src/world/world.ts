@@ -24,6 +24,7 @@ export class World {
   private glowMat: THREE.SpriteMaterial;
   /** What is lit after dark: lamps, the fire, the shop's counter, the lighthouse. */
   private lamps: { light: THREE.PointLight; strength: number; flickers: boolean }[] = [];
+  private flames: THREE.Object3D[] = [];
   private beam: THREE.Object3D | null = null;
   private lofi = false;
   private terrain!: THREE.Mesh;
@@ -78,12 +79,57 @@ export class World {
         c.rotation.y = r() * 6;
         this.sky.addCloud(c);
       }
+      // And a bank of bigger ones far out and low, where the camera looks: those overhead are
+      // seldom in the picture.
+      for (let i = 0; i < 12; i++) {
+        const c = proto.clone(true);
+        c.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (m.isMesh && paint) {
+            m.castShadow = false;
+            m.receiveShadow = false;
+            m.material = paint;
+          }
+        });
+        c.scale.setScalar(6 + r() * 6);
+        const far = r() < 0.5 ? -1 : 1;
+        c.position.set((r() - 0.5) * 680, 38 + r() * 40, far * (330 + r() * 160));
+        c.rotation.y = r() * 6;
+        this.sky.addCloud(c);
+      }
     }
     for (const p of this.props.glows) {
       this.addGlow(p, 1.6);
       this.addLamp(p.clone().setY(p.y - 0.25), 7.5, 2.6);
     }
     this.lightUp();
+  }
+
+  /**
+   * A flame that is its own light: two faceted tongues, one inside the other, that no lamp or
+   * hour darkens. (A fire's flame as its model has it is painted, and so is lit like wood: at
+   * dusk and in rain it was a dark red lump.) It jumps a few times a second, in steps.
+   * Returns the flame, to take away again with `removeFlame`.
+   */
+  addFlame(at: THREE.Vector3, height: number): THREE.Object3D {
+    const flame = new THREE.Group();
+    for (const [colour, wide, tall, up] of [
+      [0xd65a3c, 0.36, 1, 0],
+      [0xf08c62, 0.26, 0.78, 0.02],
+      [0xf8e6b0, 0.14, 0.48, 0.04],
+    ] as const) {
+      const tongue = new THREE.Mesh(new THREE.ConeGeometry(wide * height, tall * height, 5).translate(0, (tall * height) / 2 + up * height, 0), new THREE.MeshBasicMaterial({ color: colour, fog: false }));
+      flame.add(tongue);
+    }
+    flame.position.copy(at);
+    this.group.add(flame);
+    this.flames.push(flame);
+    return flame;
+  }
+
+  removeFlame(flame: THREE.Object3D): void {
+    this.group.remove(flame);
+    this.flames = this.flames.filter((f) => f !== flame);
   }
 
   /** Something that gives light after dark: it reaches `reach` metres, in flat steps. */
@@ -114,6 +160,7 @@ export class World {
       const p = new THREE.Vector3(fire.x, ground(fire.x, fire.z) + 0.7, fire.z);
       this.addLamp(p, 9, 3, 0xff9448, true);
       this.addGlow(p, 1.4);
+      this.addFlame(new THREE.Vector3(fire.x, ground(fire.x, fire.z) + 0.22, fire.z), 1.0);
     }
     const shop = at('shop');
     if (shop) this.addLamp(front(shop, 0.4, 1.9), 7, 2.4);
@@ -171,6 +218,14 @@ export class World {
     this.clock += dt;
     const jump = 0.8 + 0.2 * Math.abs(Math.sin(Math.floor(this.clock * 7) * 12.9898) * 43758.5453 % 1);
     for (const l of this.lamps) l.light.intensity = l.strength * on * (l.flickers ? jump : 1);
+    // Flames lean and stretch on the same beat, each a little differently.
+    const beat = Math.floor(this.clock * 7);
+    for (const [i, f] of this.flames.entries()) {
+      const k = Math.abs((Math.sin((beat + i * 3) * 12.9898) * 43758.5453) % 1);
+      f.scale.set(1, 0.85 + k * 0.3, 1);
+      f.rotation.z = (k - 0.5) * 0.25;
+      f.rotation.y = beat * 1.3 + i;
+    }
     if (this.beam) {
       this.beam.visible = night > 0.4;
       this.beam.rotation.y = this.clock * 0.45;

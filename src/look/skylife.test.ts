@@ -29,7 +29,8 @@ describe('life in the sky', () => {
   it('sends the gulls in at night and most of them in from the rain', () => {
     expect(gullsOut(0, 0)).toBe(GULLS);
     expect(gullsOut(1, 0)).toBe(0);
-    expect(gullsOut(0, 1)).toBe(1);
+    expect(gullsOut(0, 1)).toBeGreaterThanOrEqual(1);
+    expect(gullsOut(0, 1)).toBeLessThan(GULLS / 2);
   });
 
   it('keeps the boat far out, going round', () => {

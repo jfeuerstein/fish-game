@@ -149,6 +149,18 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         }
         body.append(row);
       };
+      toggle('Frame rate', 'Frames a second and the game\'s own share of each, at the top of the screen. Until the game is closed.', s.showStats, () => s.setStats(!s.showStats));
+      {
+        const row = el('div', 'row');
+        row.innerHTML = '<div class="grow"><div class="title">Benchmark</div><div class="sub">Stands in six places for a few seconds each and times every frame. Half a minute, then a block of text to copy.</div></div>';
+        const b = el('button', 'btn plain', 'Run');
+        b.onclick = () => {
+          sheet.close();
+          s.runBench();
+        };
+        row.append(b);
+        body.append(row);
+      }
       pinRow('Time', [null, 'dawn', 'day', 'dusk', 'night'], () => s.pin.time, (v) => (s.pin.time = v));
       pinRow('Weather', [null, 'clear', 'rain'], () => s.pin.weather, (v) => (s.pin.weather = v as 'clear' | 'rain' | null));
       const go = el('div', 'row');

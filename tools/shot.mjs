@@ -11,7 +11,7 @@ import { launchBrowser } from './browser.mjs';
 const [out = 'shot.png', query = '', width = '402', height = '874', scale = '1', script = ''] = process.argv.slice(2);
 const server = await preview({ preview: { port: 0, host: '127.0.0.1' }, logLevel: 'silent' });
 const params = new URLSearchParams(query);
-for (const [k, v] of [['title', '0'], ['time', 'day'], ['weather', 'clear'], ['fresh', '1'], ['mute', '1']]) if (!params.has(k)) params.set(k, v);
+for (const [k, v] of [['title', '0'], ['time', 'day'], ['weather', 'clear'], ['fresh', '1'], ['mute', '1'], ['coach', '0']]) if (!params.has(k)) params.set(k, v);
 const url = `http://127.0.0.1:${server.httpServer.address().port}/?${params}`;
 const browser = await launchBrowser();
 let failed = false;

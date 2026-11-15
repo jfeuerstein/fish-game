@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Plays the built game on an emulated phone with real taps: opens and closes every menu, flips
-// through each sheet's tabs, checks that everything pressable is at least 44 points tall, and
-// walks and turns the camera with a dragged thumb.
+// through each sheet's tabs, checks that everything pressable is at least 44 points tall, walks
+// and turns the camera with a dragged thumb, and follows the first-minute coach through a whole
+// cast (hold Cast, tap Hook!, hold Reel) with a thumb on the big button.
 //
 //   npm run build && node tools/touch-check.mjs
 import { preview } from 'vite';
@@ -58,9 +59,65 @@ await small('playing');
   const right = (sidestepped.pos[0] - walked.pos[0]) * Math.cos(walked.yaw) - (sidestepped.pos[2] - walked.pos[2]) * Math.sin(walked.yaw);
   if (right < 0.5) problems.push(`pushing the stick right walked ${right.toFixed(1)} m to the right of the screen`);
   // ...and a finger dragged right above it turns the view to the right (the camera's yaw goes down).
-  await drag(width * 0.5, height * 0.35, 120, 0, 200);
+  await drag(width * 0.5, height * 0.52, 120, 0, 200);
   const turned = await where();
   if (sidestepped.yaw - turned.yaw < 0.1) problems.push(`dragging right above the stick turned the camera by ${(turned.yaw - sidestepped.yaw).toFixed(2)}, the wrong way or not at all`);
+  // The first minute: someone new is coached through walking, looking round and one whole cast,
+  // every part of it done here with a thumb on the glass, as on the phone.
+  const says = () => page.evaluate(() => document.querySelector('.coach-says')?.textContent ?? '');
+  if (!(await says())) problems.push('a new player was not offered the first-minute coach');
+  for (let i = 0; i < 12 && /drag to walk/.test(await says()); i++) await drag(width * 0.3, height * 0.78, i % 2 ? 50 : -50, -30, 1500);
+  // (The walking and looking above may already have carried it past both.)
+  if (!/look round|Hold Cast/.test(await says())) problems.push(`after walking, the coach says "${await says()}"`);
+  for (let i = 0; i < 4 && /look round/.test(await says()); i++) await drag(width * 0.5, height * 0.52, 150, 0, 300);
+  if (!/Hold Cast/.test(await says())) problems.push(`after looking round, the coach says "${await says()}"`);
+  await page.evaluate(() => {
+    window.__cove.teleport('pier');
+    window.__cove.face(Math.PI);
+  });
+  await page.waitForTimeout(900);
+  const big = await (await page.$('.act-main')).boundingBox();
+  const bx = big.x + big.width / 2;
+  const by = big.y + big.height / 2;
+  const fishing = () => page.evaluate(() => window.__cove.state().fishing);
+  const until = (fn, ms) => page.waitForFunction(fn, null, { timeout: ms, polling: 50 }).then(() => true, () => false);
+  let landed = false;
+  for (let cast = 0; cast < 5 && !landed; cast++) {
+    // Hold Cast, let go.
+    await touch('touchStart', bx, by);
+    await page.waitForTimeout(350);
+    await touch('touchEnd');
+    if (!(await until(() => window.__cove.state().fishing === 'waiting', 30000))) {
+      problems.push(`holding Cast with a thumb did not cast (fishing is "${await fishing()}")`);
+      break;
+    }
+    if (cast === 0 && !/Wait for a bite/.test(await says())) problems.push(`with a line out, the coach says "${await says()}"`);
+    // Tap Hook! when it bites.
+    if (!(await until(() => window.__cove.state().fishing === 'bite', 180000))) continue;
+    await touch('touchStart', bx, by);
+    await touch('touchEnd');
+    if (!(await until(() => window.__cove.state().fishing === 'reeling', 3000))) continue;
+    // Hold Reel while the fish is calm and the line slack; let go when it is not.
+    let held = false;
+    for (;;) {
+      const now = await page.evaluate(() => {
+        const f = window.__cove.game.fishing;
+        return { state: f.state, thrashing: f.reelState?.thrashing ?? false, tension: f.reelState?.tension ?? 0 };
+      });
+      if (now.state !== 'reeling') break;
+      const want = !now.thrashing && now.tension < (held ? 0.7 : 0.35);
+      if (want !== held) {
+        await touch(want ? 'touchStart' : 'touchEnd', bx, by);
+        held = want;
+      }
+      await page.waitForTimeout(30);
+    }
+    if (held) await touch('touchEnd');
+    landed = (await fishing()) === 'landing';
+    await until(() => window.__cove.state().fishing === 'ready', 30000);
+  }
+  if (!landed) problems.push('no fish was landed with a thumb in five casts');
+  else if (!/first fish/.test(await says())) problems.push(`after the first fish, the coach says "${await says()}"`);
   // Back to the counter, where the rest of the check expects to be.
   await page.evaluate(() => window.__cove.teleport('shop'));
   await page.waitForTimeout(400);

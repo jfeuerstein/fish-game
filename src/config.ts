@@ -18,8 +18,13 @@ export interface Config {
   yaw: number | null;
   /** Draw fewer things and no shadows. */
   low: boolean;
+  /** `coach=0`: no first-minute guide, even on a new save (for the tools' pictures). */
+  coach: boolean;
   /** Show a frame-rate readout. */
   stats: boolean;
+  /** Run the benchmark once the game is up (as Settings > For testing does), each step timed for `benchsecs` seconds. */
+  bench: boolean;
+  benchsecs: number | null;
   /** No sound at all. */
   mute: boolean;
   /** Load no models (for quick logic checks). */
@@ -48,7 +53,10 @@ export function parseConfig(search: string): Config {
     zoom: num('zoom'),
     yaw: num('yaw'),
     low: p.get('quality') === 'low',
+    coach: p.get('coach') !== '0',
     stats: p.get('stats') === '1',
+    bench: p.get('bench') === '1',
+    benchsecs: num('benchsecs'),
     mute: p.get('mute') === '1',
     models: p.get('models') !== '0',
     zoo: p.get('zoo'),
