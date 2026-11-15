@@ -916,7 +916,7 @@ export class Game implements Session {
     this.viewClock -= dt;
     if (this.viewClock <= 0) {
       this.viewClock = 0.15;
-      this.world.props.clearView(this.camera.position, this.rig.override ? this.rig.override.pos : this.player.pos);
+      this.world.props.clearView(this.rig.override ? this.rig.override.pos : this.player.pos);
     }
     this.fx.setRain(Math.max(this.rain, cloud ? 0.7 : 0));
     this.finds.update(dt);

@@ -134,11 +134,14 @@ the owner's: do not route a deploy round it.
   Which way a push or a drag goes is `src/player/steer.ts` (pure, tested): the stick pushed right
   walks (or rows) to the right of the screen, and a finger dragged right above it carries the
   world with it. The owner asked for both that way round; the touch check holds them.
-- **Trees are never taken away.** The owner did not want them vanishing as the player came near.
-  One whose crown really crosses the line from the player to the camera (`sightCrosses` in
-  `src/world/sight.ts`, pure, tested: beside the line, beyond the player, or only its bare trunk
-  in the way, does not count) is drawn as a veil, every other pixel (`Props.clearView`, `aVeil`),
-  so the player shows through it and it still casts its shadow.
+- **Trees are never taken away, and the player is always seen.** The owner did not want trees
+  vanishing as the player came near, nor a whole tree thinned: where a tree (or the cliff) comes
+  between the camera and the player, a round window is opened in it over the player, clear in
+  the middle and dithered toward its rim. `src/look/spotlight.ts` (pure, tested) holds the
+  numbers (`SPOT`), the rule and the same rule for the graphics card; `Props.spotlit` puts it
+  in the trees' materials and `Props.clearView` says each frame where the player is. Only what
+  is nearer the camera than the player is opened, pixel by pixel, so nothing is decided tree
+  by tree and nothing pops. Shadows are whole.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
   the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
   and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;

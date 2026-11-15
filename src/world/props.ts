@@ -2,7 +2,7 @@
 // mesh, however many there are. Also records what is solid, what can be sat on, and what can
 // be used.
 import * as THREE from 'three';
-import { sightCrosses } from './sight';
+import { spotFragmentBody, spotFragmentHead, spotVertexBody, spotVertexHead } from '../look/spotlight';
 import { model } from '../assets/models';
 import { Colliders } from './colliders';
 import { Heightfield } from './island';
@@ -72,8 +72,8 @@ export class Props {
   /** The size of each kind, as loaded. */
   readonly sizes = new Map<string, THREE.Vector3>();
 
-  /** Trees (and cliffs) that can be seen through when they are in the way, with where each one stands. */
-  private thinnable: { list: Placed[]; kept: THREE.Matrix4[]; size: THREE.Vector3; veil: THREE.InstancedBufferAttribute; trunk: number }[] = [];
+  /** Where the player is, for the window opened in any tree (or cliff) that comes between them and the camera. */
+  private spot = { value: new THREE.Vector3() };
 
   /** The wind's clock, shared by everything that sways, and how many times a second what sways is moved (0: every frame). */
   private wind = { value: 0 };
@@ -118,53 +118,25 @@ export class Props {
   }
 
   /**
-   * Trees are never taken away. One that really stands between the camera and the player (its
-   * crown across the line from one to the other, or round the camera itself) is drawn as a
-   * veil, every other pixel of it, so the player is seen through it and the tree is still there.
-   * Standing beside a tree, or under one that the camera looks past, does nothing to it.
+   * Trees are never taken away. Where one comes between the camera and the player, a round
+   * window is opened in it over the player, clear in the middle and dithered toward its rim
+   * (src/look/spotlight.ts). All this needs each frame is where the player is.
    */
-  clearView(camera: THREE.Vector3, target: THREE.Vector3): void {
-    // The line of sight: from the player's chest to the camera.
-    const ax = target.x;
-    const ay = target.y + 0.9;
-    const az = target.z;
-    const dx = camera.x - ax;
-    const dy = camera.y - ay;
-    const dz = camera.z - az;
-    for (const t of this.thinnable) {
-      let changed = false;
-      const veil = t.veil.array as Float32Array;
-      t.list.forEach((p, i) => {
-        const s = p.scale ?? 1;
-        // Once veiled, a tree stays so until the line is well clear of it, so it does not flicker.
-        const on = sightCrosses(
-          { ax, ay, az, dx, dy, dz },
-          { x: p.x, z: p.z, base: t.kept[i].elements[13], height: t.size.y * s, radius: Math.max(t.size.x, t.size.z) * 0.5 * s * (veil[i] ? 1.05 : 0.85), trunk: t.trunk },
-        )
-          ? 1
-          : 0;
-        if (on !== veil[i]) {
-          veil[i] = on;
-          changed = true;
-        }
-      });
-      if (changed) t.veil.needsUpdate = true;
-    }
+  clearView(target: THREE.Vector3): void {
+    // The middle of the player, not their feet.
+    this.spot.value.set(target.x, target.y + 0.7, target.z);
   }
 
-  /** Let a material be drawn as a veil where its instance asks for one (`aVeil`): every other pixel, like a screen door. */
-  private veiled(material: THREE.Material): void {
-    if (material.userData.veils) return;
-    material.userData.veils = true;
+  /** Give a material the spotlight: what it draws nearer the camera than the player is opened round them. */
+  private spotlit(material: THREE.Material): void {
+    if (material.userData.spotlit) return;
+    material.userData.spotlit = true;
     const before = material.onBeforeCompile;
     material.onBeforeCompile = (shader, renderer) => {
       before?.call(material, shader, renderer);
-      shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aVeil;\nvarying float vVeil;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vVeil = aVeil;');
-      shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', '#include <common>\nvarying float vVeil;')
-        .replace('void main() {', 'void main() {\n  if (vVeil > 0.5 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 0.5) discard;');
+      shader.uniforms.uSpotAt = this.spot;
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>${spotVertexHead}`).replace('#include <project_vertex>', `#include <project_vertex>${spotVertexBody}`);
+      shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>${spotFragmentHead}`).replace('void main() {', `void main() {${spotFragmentBody}`);
     };
     material.needsUpdate = true;
   }
@@ -213,16 +185,7 @@ export class Props {
           inst.computeBoundingSphere();
           inst.name = id;
           this.group.add(inst);
-          if (id.startsWith('tree-') || id === 'cliff') {
-            const kept: THREE.Matrix4[] = [];
-            for (let i = 0; i < list.length; i++) kept.push(inst.instanceMatrix ? new THREE.Matrix4().fromArray(inst.instanceMatrix.array as Float32Array, i * 16) : new THREE.Matrix4());
-            // Whether each one is drawn as a veil, for the shader; a tree's crown begins a third of the way up.
-            const veil = new THREE.InstancedBufferAttribute(new Float32Array(list.length), 1);
-            veil.setUsage(THREE.DynamicDrawUsage);
-            geo.setAttribute('aVeil', veil);
-            this.veiled(mesh.material as THREE.Material);
-            this.thinnable.push({ list, kept, size, veil, trunk: id === 'cliff' ? 0 : 0.3 });
-          }
+          if (id.startsWith('tree-') || id === 'cliff') this.spotlit(mesh.material as THREE.Material);
         }
         for (const p of list) this.record(id, p, size);
       }),
