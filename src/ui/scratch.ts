@@ -50,16 +50,16 @@ export function scratchTicket(parent: HTMLElement, audio: Audio, prize: Prize, d
   coat.width = Math.round(rect.width * dpr);
   coat.height = Math.round(rect.height * dpr);
   const g = coat.getContext('2d')!;
-  const grad = g.createLinearGradient(0, 0, coat.width, coat.height);
-  grad.addColorStop(0, '#c9ced6');
-  grad.addColorStop(0.5, '#eef1f5');
-  grad.addColorStop(1, '#b8bec8');
-  g.fillStyle = grad;
+  // Flat silver with a scatter of pale and dark specks, in big square grains.
+  g.fillStyle = '#a4abac';
   g.fillRect(0, 0, coat.width, coat.height);
-  g.fillStyle = 'rgba(255,255,255,0.5)';
-  for (let i = 0; i < 60; i++) g.fillRect(Math.random() * coat.width, Math.random() * coat.height, 3 * dpr, 3 * dpr);
-  g.fillStyle = 'rgba(80,90,110,0.35)';
-  g.font = `800 ${13 * dpr}px 'Manrope Variable', sans-serif`;
+  const grain = 4 * dpr;
+  for (let i = 0; i < 260; i++) {
+    g.fillStyle = i % 3 ? '#d2d6d2' : '#737b80';
+    g.fillRect(Math.floor((Math.random() * coat.width) / grain) * grain, Math.floor((Math.random() * coat.height) / grain) * grain, grain, grain);
+  }
+  g.fillStyle = '#18262f';
+  g.font = `${24 * dpr}px 'Jersey 15', monospace`;
   g.textAlign = 'center';
   g.fillText('SCRATCH ME', coat.width / 2, coat.height / 2);
 

@@ -4,10 +4,12 @@
 //   NODE_USE_ENV_PROXY=1 node tools/assets/make-models.mjs [id ...] [--redo id,id] [--bump n] [--only models|fish|icons]
 //
 // For each model: a picture is painted through fal, a 3D shape is made of the picture (Tripo's
-// model through fal), and the shape is slimmed for the phone (textures to WebP, meshopt) into
-// public/models/<id>.glb. Characters are rigged and animated by Tripo directly. The picture
-// becomes the icon shown in menus (public/icons/<id>.webp). Everything bought is kept in
-// tools/assets/cache/ (not in the repository), so running this again costs nothing.
+// model through fal), and the shape is slimmed (textures to WebP, meshopt) into
+// art/models/<id>.glb. Characters are rigged and animated by Tripo directly. The picture
+// becomes the icon shown in menus (art/icons/<id>.webp). lofi.mjs then cuts both down to what
+// the game draws, in public/. Everything bought is kept in tools/assets/cache/ (not in the
+// repository), so running this again costs nothing.
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { run, save } from './fal.mjs';
 import { iconFrom, slim } from './finish.mjs';
@@ -32,8 +34,8 @@ const named = args.filter((a, i) => a in jobs && !args[i - 1]?.startsWith('--'))
 const ids = named.length ? named : Object.keys(jobs);
 
 mkdirSync(CACHE, { recursive: true });
-mkdirSync(`${ROOT}public/models`, { recursive: true });
-mkdirSync(`${ROOT}public/icons`, { recursive: true });
+mkdirSync(`${ROOT}art/models`, { recursive: true });
+mkdirSync(`${ROOT}art/icons`, { recursive: true });
 let bought = 0;
 
 async function picture(id, job) {
@@ -72,7 +74,7 @@ async function rig(id, glbUrl) {
 
 /** The picture as an icon (see finish.mjs). */
 async function icon(id) {
-  const out = `${ROOT}public/icons/${id}.webp`;
+  const out = `${ROOT}art/icons/${id}.webp`;
   if (existsSync(out) && !redo.has(id)) return;
   await iconFrom(`${CACHE}/${id}.png`, out);
 }
@@ -90,7 +92,7 @@ async function make(id) {
   await icon(id);
   if (job.flat) return;
   const glbUrl = await shape(id, job, url);
-  const out = `${ROOT}public/models/${id}.glb`;
+  const out = `${ROOT}art/models/${id}.glb`;
   if (job.rig) {
     await rig(id, glbUrl);
     if (!existsSync(out) || redo.has(id)) await slim(`${CACHE}/${id}.rigged.glb`, out, 1024);
@@ -116,10 +118,13 @@ await Promise.all(Array.from({ length: Number(flag('--jobs') ?? 6) }, worker));
 const index = {};
 for (const [id, job] of Object.entries({ ...jobs })) {
   // Only what fal made: models Blender built in its place keep their own entries.
-  if (job.flat || !existsSync(`${ROOT}public/models/${id}.glb`) || !existsSync(`${CACHE}/${id}.glb`)) continue;
+  if (job.flat || !existsSync(`${ROOT}art/models/${id}.glb`) || !existsSync(`${CACHE}/${id}.glb`)) continue;
   index[id] = { kind: job.kind, h: job.h ?? null, ...(job.rig ? { rig: true } : {}) };
 }
 const indexFile = `${ROOT}public/models/index.json`;
 const before = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : {};
 writeFileSync(indexFile, JSON.stringify({ ...before, ...index }, null, 0));
 console.log(`${bought} things bought from fal; ${failed.length ? `failed: ${failed.join(', ')}` : 'none failed'}`);
+
+// What the game draws is cut down from what was just made (see lofi.mjs).
+execFileSync('node', [`${ROOT}tools/assets/lofi.mjs`, 'models', 'icons'], { stdio: 'inherit' });

@@ -2,6 +2,7 @@
 // and moon, stars at night, drifting clouds, and the colours the water and fog take.
 import * as THREE from 'three';
 import { clamp, lerp, smoothstep } from '../core/rng';
+import type { Look } from '../look/look';
 import type { WaterLook } from './water';
 
 interface Moment {
@@ -107,10 +108,16 @@ float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 4
 void main() {
   vec3 d = normalize(vDir);
   float h = clamp(d.y, -0.2, 1.0);
+  float s = max(dot(d, normalize(uSunDir)), 0.0);
+  #ifdef LOFI
+  // Bands of flat colour up from the horizon, and a sun with a hard edge and two flat rings.
+  vec3 col = mix(uHorizon, uTop, floor(pow(smoothstep(-0.05, 0.75, h), 0.8) * 7.0 + 0.5) / 7.0);
+  col += uSun * (step(0.9968, s) * 1.6 + (step(0.989, s) * 0.1 + step(0.965, s) * 0.06) * (1.0 - uNight * 0.6));
+  #else
   vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.05, 0.75, h), 0.8));
   // The sun's (or moon's) disc and glow.
-  float s = max(dot(d, normalize(uSunDir)), 0.0);
   col += uSun * (smoothstep(0.9985, 0.9992, s) * 1.6 + pow(s, 24.0) * 0.25 * (1.0 - uNight * 0.6));
+  #endif
   // Stars, fading in at night.
   vec3 cell = floor(d * 160.0);
   float star = step(0.9975, hash(cell)) * smoothstep(0.05, 0.3, d.y);
@@ -129,8 +136,9 @@ export class Sky {
   readonly fog: THREE.Fog;
   palette: Palette = paletteAt(12, 0);
 
-  constructor(scene: THREE.Scene, shadows: boolean) {
+  constructor(scene: THREE.Scene, shadows: boolean, private look?: Look) {
     this.domeMat = new THREE.ShaderMaterial({
+      defines: look?.lofi ? { LOFI: 1 } : {},
       vertexShader: skyVertex,
       fragmentShader: skyFragment,
       side: THREE.BackSide,
@@ -143,7 +151,8 @@ export class Sky {
     this.group.add(this.dome);
     this.sun.castShadow = shadows;
     if (shadows) {
-      this.sun.shadow.mapSize.set(2048, 2048);
+      const map = look?.lofi ? 1024 : 2048;
+      this.sun.shadow.mapSize.set(map, map);
       const cam = this.sun.shadow.camera;
       cam.left = -32;
       cam.right = 32;
@@ -151,12 +160,21 @@ export class Sky {
       cam.bottom = -32;
       cam.near = 1;
       cam.far = 160;
-      this.sun.shadow.bias = -0.0006;
+      this.sun.shadow.bias = look?.lofi ? -0.0012 : -0.0006;
       this.sun.shadow.normalBias = 0.04;
     }
     this.group.add(this.sun, this.sun.target, this.hemi);
     this.fog = new THREE.Fog(0xcfe8f5, 120, 520);
     scene.fog = this.fog;
+  }
+
+  private snapped(focus: THREE.Vector3, dir: THREE.Vector3): THREE.Vector3 {
+    const cam = this.sun.shadow.camera;
+    const texel = (cam.right - cam.left) / this.sun.shadow.mapSize.x;
+    const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), dir).normalize();
+    const up = new THREE.Vector3().crossVectors(dir, right).normalize();
+    const snap = (v: number): number => Math.round(v / texel) * texel;
+    return new THREE.Vector3().addScaledVector(right, snap(focus.dot(right))).addScaledVector(up, snap(focus.dot(up))).addScaledVector(dir, focus.dot(dir));
   }
 
   addCloud(cloud: THREE.Object3D): void {
@@ -176,8 +194,11 @@ export class Sky {
     this.dome.position.copy(focus);
     this.sun.color.copy(p.sun);
     this.sun.intensity = p.sunI;
-    this.sun.position.copy(focus).addScaledVector(p.dir, 80);
-    this.sun.target.position.copy(focus);
+    // With hard-edged shadows the shadow's picture must not slide under its own pixels as the
+    // player walks: it is moved a whole pixel of itself at a time.
+    const at = this.look?.lofi ? this.snapped(focus, p.dir) : focus;
+    this.sun.position.copy(at).addScaledVector(p.dir, 80);
+    this.sun.target.position.copy(at);
     this.hemi.color.copy(p.hemiSky);
     this.hemi.groundColor.copy(p.hemiGround);
     this.hemi.intensity = p.hemiI;

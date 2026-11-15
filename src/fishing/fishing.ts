@@ -1,6 +1,7 @@
 // Fishing in the world: hold to wind up, let go to cast, wait for the bobber to go under, tap to
 // hook, then hold to reel against the fish. Lands a fish, or the line snaps, or it slips away;
 // either way the next cast is a tap away.
+import { lit } from '../look/material';
 import * as THREE from 'three';
 import { model } from '../assets/models';
 import { rng } from '../core/rng';
@@ -65,7 +66,7 @@ export class Fishing {
     scene.add(this.bobber);
     void model('bobber', 0.18).then((m) => {
       if (m) this.bobber.add(m);
-      else this.bobber.add(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshLambertMaterial({ color: 0xe8453c })));
+      else this.bobber.add(new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), lit({ color: 0xd65a3c })));
     });
     const segs = 24;
     this.linePos = new Float32Array((segs + 1) * 2 * 3);

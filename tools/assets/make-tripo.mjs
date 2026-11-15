@@ -5,9 +5,10 @@
 //
 // Tripo's image model paints a picture of each thing from its words and the look for its kind;
 // its shape model makes a model of the picture, by the picture's task, so nothing is uploaded.
-// The model is slimmed for the phone into public/models/<id>.glb and the picture becomes the
-// icon (public/icons/<id>.webp). Everything bought is kept in tools/assets/cache/ as
+// The model is slimmed into art/models/<id>.glb and the picture becomes the icon
+// (art/icons/<id>.webp); lofi.mjs then cuts both down to what the game draws, in public/. Everything bought is kept in tools/assets/cache/ as
 // <id>.tripo.png and <id>.tripo.glb, so running this again costs nothing.
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { iconFrom, slim } from './finish.mjs';
 import { FISH_ART, ICONS, MODELS, TRIPO, TRIPO_LOOK } from './manifest.mjs';
@@ -51,7 +52,7 @@ async function make(id) {
     console.log(`painted ${id}`);
   }
   if (job.flat) {
-    await iconFrom(png, `${ROOT}public/icons/${id}.webp`);
+    await iconFrom(png, `${ROOT}art/icons/${id}.webp`);
     return id;
   }
   if (again || !existsSync(glb)) {
@@ -60,8 +61,8 @@ async function make(id) {
     spent += shaped.credits_consumed ?? 0;
     console.log(`shaped ${id}`);
   }
-  await slim(glb, `${ROOT}public/models/${id}.glb`, (job.h ?? 1) > 3 ? 1024 : 512, job.simplify ?? 1);
-  await iconFrom(png, `${ROOT}public/icons/${id}.webp`);
+  await slim(glb, `${ROOT}art/models/${id}.glb`, (job.h ?? 1) > 3 ? 1024 : 512, job.simplify ?? 1);
+  await iconFrom(png, `${ROOT}art/icons/${id}.webp`);
   return id;
 }
 
@@ -90,3 +91,6 @@ for (const id of done) {
 }
 writeFileSync(indexFile, JSON.stringify(index, null, 0));
 console.log(`${done.length} made, ${spent} Tripo credits spent; ${failed.length ? `failed: ${failed.join(', ')}` : 'none failed'}`);
+
+// What the game draws is cut down from what was just made (see lofi.mjs).
+execFileSync('node', [`${ROOT}tools/assets/lofi.mjs`, 'models', 'icons'], { stdio: 'inherit' });

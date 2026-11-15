@@ -18,7 +18,7 @@ const redo = new Set((args.find((a, i) => args[i - 1] === '--redo') ?? '').split
 const bump = Number(args.find((a, i) => args[i - 1] === '--bump') ?? '1');
 const sets = args.filter((a) => ['textures', 'pictures', 'sounds', 'music'].includes(a));
 const want = (set) => !sets.length || sets.includes(set);
-for (const dir of [CACHE, `${ROOT}public/textures`, `${ROOT}public/art`, `${ROOT}public/audio`]) mkdirSync(dir, { recursive: true });
+for (const dir of [CACHE, `${ROOT}art/textures`, `${ROOT}public/art`, `${ROOT}public/audio`]) mkdirSync(dir, { recursive: true });
 const seedOf = (id) => [...id].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 7) % 1000000;
 const failed = [];
 const attempt = (id, fn) => fn().catch((e) => { failed.push(id); console.error(`FAILED ${id}: ${e.message.slice(0, 300)}`); });
@@ -31,7 +31,7 @@ async function texture(id, prompt) {
     await save(out.images[0].url, raw);
     console.log(`painted texture ${id}`);
   }
-  const out = `${ROOT}public/textures/${id}.webp`;
+  const out = `${ROOT}art/textures/${id}.webp`;
   if (existsSync(out) && !redo.has(id)) return;
   execFileSync('python3', ['-I', '-c', `
 import numpy as np
@@ -58,7 +58,7 @@ async function picture(id, { size, prompt }) {
   if (id === 'icon') {
     for (const s of [180, 192, 512]) await sharp(raw).resize(s, s).png().toFile(`${ROOT}public/art/icon-${s}.png`);
   } else {
-    await sharp(raw).resize(720).webp({ quality: 80 }).toFile(`${ROOT}public/art/${id}.webp`);
+    await sharp(raw).resize(720).webp({ quality: 80 }).toFile(`${ROOT}art/${id}.webp`);
   }
 }
 

@@ -3,17 +3,18 @@
 // grass everywhere else.
 import * as THREE from 'three';
 import { smoothstep } from '../core/rng';
+import type { Look } from '../look/look';
+import { pixelled } from '../look/material';
 import { Heightfield, pathDistance } from './island';
 import { PATH_WIDTH, PLAZA, POND, STEP, CREEK, CREEK_WIDTH, nearestOnLine } from './layout';
 
 const base = import.meta.env.BASE_URL;
 
 export function loadTexture(name: string, repeat = true): THREE.Texture {
-  const t = new THREE.TextureLoader().load(`${base}textures/${name}.webp`);
+  const t = new THREE.TextureLoader().load(`${base}textures/${name}.png`);
   t.colorSpace = THREE.SRGBColorSpace;
   if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 8;
-  return t;
+  return pixelled(t);
 }
 
 /** How much each point is sand, earth, stone and cobbles, each on its own (grass is under them all). */
@@ -34,7 +35,47 @@ export function splatAt(field: Heightfield, x: number, z: number): [number, numb
   return [sand, earth, rock, cobble];
 }
 
-export function buildTerrain(field: Heightfield): THREE.Mesh {
+/** The splat as a picture, so the lo-fi ground can ask what any one of its own pixels is. */
+function splatTexture(field: Heightfield, splat: Float32Array): THREE.DataTexture {
+  const data = new Uint8Array(splat.length);
+  for (let i = 0; i < splat.length; i++) data[i] = Math.round(Math.min(1, Math.max(0, splat[i])) * 255);
+  const tex = new THREE.DataTexture(data, field.n, field.n, THREE.RGBAFormat);
+  tex.magFilter = tex.minFilter = THREE.LinearFilter;
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * How the lo-fi ground is coloured: as pixel art, sixteen pixels to the metre. Every tile is 64
+ * pixels and repeats every four metres, so their pixels share one grid; what ground a pixel is
+ * (grass, sand, earth, rock, paving) is decided once for the whole pixel, so one ground meets
+ * the next along a stair of pixels and nothing is blended.
+ */
+const LOFI_GROUND = /* glsl */ `vec2 wuv = vGround.xz;
+vec2 cell = (floor(wuv * 16.0) + 0.5) / 16.0;
+float big = fbm(cell / 9.0);
+float mid = fbm(cell / 2.6 + 11.0) * 0.7 + vnoise(cell * 1.1 + 5.0) * 0.3;
+vec2 tile = wuv / 4.0;
+vec3 grass = texture2D(tGrass, tile).rgb;
+// Patches of sunnier and deeper green, each one flat.
+float patchy = fbm(cell / 14.0 + 3.0);
+grass *= patchy > 0.6 ? vec3(1.1, 1.07, 0.86) : (patchy < 0.42 ? vec3(0.84, 0.93, 0.8) : vec3(1.0));
+vec3 sand = texture2D(tSand, tile).rgb;
+vec3 dirt = texture2D(tDirt, tile).rgb;
+vec3 rock = texture2D(tRock, tile).rgb;
+vec3 cob = texture2D(tPlaza, tile).rgb;
+vec4 w = texture2D(tSplat, (cell + uHalf) / (uHalf * 2.0) * uSplatScale + uSplatBias);
+vec3 ground = grass;
+ground = mix(ground, sand, step(0.5, w.x + (mid - 0.5) * 0.7));
+ground = mix(ground, dirt, step(0.5, w.y + (mid - 0.5) * 0.7));
+ground = mix(ground, rock, step(0.5, w.z + (big - 0.5) * 0.7));
+ground = mix(ground, cob, step(0.5, w.w + (mid * 0.5 - 0.25) * 0.7));
+// Darker and greener under the water, in two steps.
+ground *= vGround.y < -1.6 ? vec3(0.6, 0.76, 0.74) : (vGround.y < -0.25 ? vec3(0.8, 0.89, 0.86) : vec3(1.0));
+diffuseColor.rgb *= ground;`;
+
+export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
   const n = field.n;
   const half = field.half;
   const positions = new Float32Array(n * n * 3);
@@ -75,6 +116,11 @@ export function buildTerrain(field: Heightfield): THREE.Mesh {
     shader.uniforms.tDirt = { value: tex.dirt };
     shader.uniforms.tRock = { value: tex.rock };
     shader.uniforms.tPlaza = { value: tex.plaza };
+    shader.uniforms.tSplat = { value: look?.lofi ? splatTexture(field, splat) : null };
+    shader.uniforms.uHalf = { value: half };
+    // Texel centres: the splat's first sample is at the island's edge, half a texel in.
+    shader.uniforms.uSplatScale = { value: (n - 1) / n };
+    shader.uniforms.uSplatBias = { value: 0.5 / n };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec4 splat;\nvarying vec4 vSplat;\nvarying vec3 vGround;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSplat = splat;\nvGround = (modelMatrix * vec4(transformed, 1.0)).xyz;');
@@ -82,7 +128,8 @@ export function buildTerrain(field: Heightfield): THREE.Mesh {
       .replace(
         '#include <common>',
         `#include <common>
-uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza;
+uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza, tSplat;
+uniform float uHalf, uSplatScale, uSplatBias;
 varying vec4 vSplat;
 varying vec3 vGround;
 float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -105,7 +152,9 @@ vec3 desat(vec3 c, float k) { return mix(c, vec3(dot(c, vec3(0.299, 0.587, 0.114
       )
       .replace(
         '#include <map_fragment>',
-        `vec2 wuv = vGround.xz;
+        look?.lofi
+          ? LOFI_GROUND
+          : `vec2 wuv = vGround.xz;
 float big = fbm(wuv / 9.0);
 float mid = fbm(wuv / 2.6 + 11.0) * 0.7 + vnoise(wuv * 1.1 + 5.0) * 0.3;
 vec3 grass = untiled(tGrass, wuv / 4.2, big);

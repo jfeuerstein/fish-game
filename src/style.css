@@ -1,41 +1,99 @@
-@import '@fontsource-variable/fraunces/opsz.css';
-@import '@fontsource-variable/manrope/index.css';
+@import '@fontsource/jersey-15/latin-400.css';
 
 :root {
   /*
-   * A harbour chart room: bone paper and deep ink for the sheets, smoked glass over the game,
-   * brass for what is precious and a red-orange enamel for the one thing to press. Headings and
-   * numbers in a warm serif (Fraunces), everything else in a plain, sturdy sans (Manrope).
+   * A harbour chart room, drawn small: the game is a little picture blown up, with a short
+   * palette and hard pixels, and the interface is cut from the same cloth. Bone paper and deep
+   * ink for sheets and labels, brass for what is precious and a red-orange enamel for the one
+   * thing to press, all from the island's inks (src/look/inks.ts). One pixel typeface (Jersey
+   * 15) throughout, in its one weight: nothing is made bold or slanted by the browser. Everything is flat: a fill, a two-point ink line round it and a hard
+   * shadow down and to the right. No blur, no glass, no gradients, no soft shadows, and corners
+   * are cut square or nearly so. Pictures are pixel sprites and are never smoothed.
    */
   --paper: #f4eee3;
-  --paper-2: #e9e0d0;
-  --paper-3: #fbf8f2;
+  --paper-2: #d6cbb2;
+  --paper-3: #fffdf6;
   --ink: #18262f;
-  --ink-soft: rgba(24, 38, 47, 0.6);
-  --line: rgba(24, 38, 47, 0.13);
-  --glass: rgba(16, 27, 34, 0.68);
-  --glass-line: rgba(244, 238, 227, 0.16);
-  --on-glass: #f4eee3;
-  --sea: #2c6b78;
-  --sea-deep: #1b4652;
-  --foam: #e6f1ef;
+  --ink-soft: #4f6d7c;
+  --line: #a89c84;
+  /* Labels over the game: paper, not glass. */
+  --glass: #f4eee3;
+  --glass-line: #18262f;
+  --on-glass: #18262f;
+  --sea: #2c8a8a;
+  --sea-deep: #1b5a66;
+  --foam: #b4e4d4;
   --coral: #d65a3c;
-  --sun: #d9a441;
+  --coral-deep: #a2341f;
+  --sun: #c8963e;
   --brass: #c8963e;
   --brass-hi: #ecc77d;
-  --leaf: #4f7d4c;
-  --plum: #7a5aa6;
-  --font: 'Manrope Variable', system-ui, -apple-system, sans-serif;
-  --display: 'Fraunces Variable', Georgia, serif;
-  --radius: 12px;
-  --press: 0 2px 0 rgba(10, 20, 26, 0.35);
-  --lift: 0 10px 28px rgba(8, 16, 22, 0.35);
+  --brass-deep: #96691f;
+  --leaf: #5c8f44;
+  --leaf-deep: #35633a;
+  --plum: #8f74ba;
+  --night: #18262f;
+  --night-2: #2b4250;
+  --font: 'Jersey 15', ui-monospace, 'Courier New', monospace;
+  --display: 'Jersey 15', ui-monospace, 'Courier New', monospace;
+  --radius: 3px;
+  --edge: 2px solid var(--ink);
+  --press: 0 3px 0 var(--ink);
+  --lift: 4px 4px 0 rgba(16, 24, 31, 0.55);
   font-family: var(--font);
+  font-weight: 400;
+  font-synthesis: none;
   color: var(--ink);
-  font-feature-settings: 'tnum' 1;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+img {
+  image-rendering: pixelated;
+}
+/* Line drawings are cut with hard edges, like everything else. */
+svg {
+  shape-rendering: crispEdges;
+}
+/* A slider: a flat groove with an ink line, and a square brass knob. */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  margin: 0;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  background: var(--paper-2);
+  border: var(--edge);
+  border-radius: 0;
+}
+input[type='range']::-moz-range-track {
+  height: 8px;
+  background: var(--paper-2);
+  border: var(--edge);
+  border-radius: 0;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 24px;
+  margin-top: -10px;
+  background: var(--brass);
+  border: var(--edge);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 0 var(--ink);
+}
+input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 20px;
+  background: var(--brass);
+  border: var(--edge);
+  border-radius: var(--radius);
 }
 .eyebrow {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -103,8 +161,8 @@ button {
   height: 112px;
   margin: -56px 0 0 -56px;
   border-radius: 50%;
-  background: rgba(16, 27, 34, 0.16);
-  border: 1.5px solid rgba(244, 238, 227, 0.55);
+  background: rgba(16, 24, 31, 0.2);
+  border: 2px solid var(--paper);
   pointer-events: none;
   z-index: 5;
 }
@@ -115,8 +173,9 @@ button {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: rgba(244, 238, 227, 0.9);
-  box-shadow: 0 0 0 5px rgba(244, 238, 227, 0.18), 0 3px 8px rgba(0, 0, 0, 0.25);
+  background: var(--paper);
+  border: var(--edge);
+  box-shadow: var(--press);
 }
 
 /* ---------- Title ---------- */
@@ -133,6 +192,7 @@ button {
   position: absolute;
   inset: 0;
   background: url('/art/title.webp') 38% 100% / cover no-repeat;
+  image-rendering: pixelated;
 }
 #title .title-name {
   position: absolute;
@@ -141,19 +201,19 @@ button {
   right: 0;
   text-align: center;
   color: #fff;
-  text-shadow: 0 2px 18px rgba(10, 20, 30, 0.45);
+  text-shadow: 0 4px 0 var(--ink);
 }
 #title .title-name h1 {
   color: #fff;
-  font-size: 54px;
+  font-size: 68px;
   font-weight: 560;
   font-style: normal;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 #title .title-name .title-sub {
   color: rgba(255, 255, 255, 0.9);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.24em;
   text-transform: uppercase;
@@ -162,11 +222,9 @@ button {
   position: relative;
   margin: 0 28px calc(var(--bottom-clear) + 20px);
   padding: 14px;
-  border-radius: 18px;
+  border-radius: var(--radius);
   background: var(--glass);
-  border: 1px solid var(--glass-line);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  border: 3px solid var(--glass-line);
   box-shadow: var(--lift);
   text-align: center;
   color: var(--on-glass);
@@ -174,7 +232,7 @@ button {
 #title h1 {
   margin: 0;
   font-family: var(--display);
-  font-size: 40px;
+  font-size: 50px;
   font-weight: 600;
   line-height: 1;
   color: var(--sea-deep);
@@ -182,12 +240,13 @@ button {
 #title .title-sub {
   margin: 6px 0 14px;
   color: var(--ink-soft);
-  font-size: 16px;
+  font-size: 20px;
 }
 #title .title-bar {
-  height: 3px;
+  height: 6px;
   border-radius: 3px;
-  background: rgba(244, 238, 227, 0.16);
+  background: var(--paper-2);
+  border: var(--edge);
   overflow: hidden;
   margin-bottom: 10px;
 }
@@ -201,19 +260,19 @@ button {
 #title button {
   width: 100%;
   height: 54px;
-  border: 0;
+  border: var(--edge);
   border-radius: var(--radius);
   background: var(--coral);
-  color: #fff;
+  color: #fffdf6;
   font-family: var(--display);
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 30px;
   letter-spacing: 0.01em;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--press);
+  text-shadow: 0 2px 0 rgba(16, 24, 31, 0.4);
+  box-shadow: inset 0 3px 0 rgba(255, 253, 246, 0.25), var(--press);
 }
 #title button:disabled {
-  background: rgba(244, 238, 227, 0.18);
-  color: rgba(244, 238, 227, 0.7);
+  background: var(--paper-2);
+  color: var(--ink-soft);
   box-shadow: none;
 }
 #title.gone {
@@ -235,7 +294,7 @@ button {
     justify-content: center;
     background: var(--sea-deep);
     color: #fff;
-    font-size: 22px;
+    font-size: 28px;
   }
 }
 
@@ -273,15 +332,13 @@ button {
   align-items: center;
   gap: 5px;
   padding: 4px 11px 4px 6px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--glass);
-  border: 1px solid var(--glass-line);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  border: 2px solid var(--glass-line);
   color: var(--on-glass);
   font-family: var(--display);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 20px;
   height: 28px;
 }
 .chip img {
@@ -293,8 +350,8 @@ button {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #f3e9ff 30%, #c9b6ef 70%, #9c84d6 100%);
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8) inset, 0 0 8px rgba(201, 182, 239, 0.6);
+  background: #c6b4e2;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.8) inset;
   margin: 0 2px;
 }
 .chip.level {
@@ -302,7 +359,7 @@ button {
   gap: 8px;
 }
 .chip .lv {
-  font-size: 13px;
+  font-size: 16px;
   font-family: var(--font);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -310,19 +367,20 @@ button {
 }
 .xp {
   width: 56px;
-  height: 3px;
+  height: 6px;
   border-radius: 3px;
-  background: rgba(244, 238, 227, 0.18);
+  background: var(--paper-2);
+  box-shadow: 0 0 0 2px var(--ink);
   overflow: hidden;
 }
 .xp i {
   display: block;
   height: 100%;
-  background: var(--brass-hi);
+  background: var(--brass);
 }
 .clock-chip {
   padding-left: 9px;
-  font-size: 14px;
+  font-size: 18px;
   font-family: var(--font);
   font-weight: 700;
 }
@@ -351,13 +409,11 @@ button {
 }
 .toast {
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--glass);
-  border: 1px solid var(--glass-line);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  border: 2px solid var(--glass-line);
   color: var(--on-glass);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
   text-align: center;
   animation: pop 0.25s ease-out;
@@ -368,7 +424,7 @@ button {
   box-shadow: inset 3px 0 0 #8cc882;
 }
 .toast.gold {
-  background: linear-gradient(100deg, #8a6420, #c8963e 45%, #ecc77d);
+  background: var(--brass);
   border-color: rgba(255, 230, 170, 0.6);
   color: #fff8e8;
   text-shadow: 0 1px 0 rgba(60, 40, 0, 0.4);
@@ -393,9 +449,9 @@ button {
   gap: 12px;
   align-items: center;
   padding: 10px 14px 10px 10px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--paper);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--lift);
   transform: translateY(calc(-100% - 120px));
   visibility: hidden;
@@ -407,11 +463,11 @@ button {
   transition: transform 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 .catch-card.shiny {
-  background: linear-gradient(135deg, var(--paper), #e3eef6 60%, var(--paper));
+  background: #c6e4f4;
   box-shadow: 0 0 0 2px #9fc8e8, var(--lift);
 }
 .catch-card.golden {
-  background: linear-gradient(135deg, #f8eccd, #efd38f 60%, #f8eccd);
+  background: #f8e6b0;
   box-shadow: 0 0 0 2px var(--brass), var(--lift);
 }
 .catch-card > img {
@@ -423,16 +479,16 @@ button {
   filter: sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.15);
 }
 .catch-card > img.shiny {
-  filter: drop-shadow(0 0 6px #9fd3ff) saturate(1.3) brightness(1.1);
+  filter: drop-shadow(2px 0 0 #9fd3ff) drop-shadow(-2px 0 0 #9fd3ff) drop-shadow(0 2px 0 #9fd3ff) drop-shadow(0 -2px 0 #9fd3ff) saturate(1.3) brightness(1.1);
 }
 .cc-name {
   font-family: var(--display);
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 .cc-meta {
-  font-size: 14px;
+  font-size: 18px;
   color: var(--ink-soft);
 }
 .cc-row {
@@ -455,12 +511,12 @@ button {
 .best,
 .vb {
   font-family: var(--font);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   padding: 3px 6px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: var(--coral);
   color: #fff;
   vertical-align: middle;
@@ -478,20 +534,19 @@ button {
   background: var(--leaf);
 }
 .vb.prismatic {
-  background: linear-gradient(90deg, #ff6b9a, #ffb84a, #6be07a, #4ab8ff, #b07aff);
+  background: linear-gradient(90deg, #cf6e86 0 20%, #ecc77d 20% 40%, #93b85a 40% 60%, #7fbbe6 60% 80%, #8f74ba 80%);
 }
 .cc-quip {
-  font-size: 13px;
+  font-size: 16px;
   color: var(--ink-soft);
-  font-style: italic;
-  margin-top: 3px;
+    margin-top: 3px;
 }
 .cc-quip b {
   font-style: normal;
   color: var(--leaf);
 }
 .catch-card.prismatic {
-  background: linear-gradient(135deg, #f8ecf1, #f8f0dd 30%, #e6f3e6 55%, #e3eef6 80%, #efe8f6);
+  background: repeating-linear-gradient(135deg, #f2a8b0 0 14px, #f8e6b0 14px 28px, #cbdc8e 28px 42px, #c6e4f4 42px 56px, #c6b4e2 56px 70px);
   box-shadow: 0 0 0 2px #d9a0c4, var(--lift);
 }
 .catch-card > img.prismatic {
@@ -502,16 +557,16 @@ button {
 }
 @keyframes prism {
   from {
-    filter: hue-rotate(0deg) saturate(1.6) drop-shadow(0 0 6px #fff);
+    filter: hue-rotate(0deg) saturate(1.6) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff);
   }
   to {
-    filter: hue-rotate(360deg) saturate(1.6) drop-shadow(0 0 6px #fff);
+    filter: hue-rotate(360deg) saturate(1.6) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .catch-card > img.prismatic {
     animation: none;
-    filter: saturate(1.6) drop-shadow(0 0 6px #fff);
+    filter: saturate(1.6) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff);
   }
 }
 .act-jump {
@@ -520,14 +575,12 @@ button {
   bottom: calc(var(--bottom-clear) + 78px);
   width: 56px;
   height: 56px;
-  border-radius: 50%;
-  border: 1px solid var(--glass-line);
+  border-radius: var(--radius);
+  border: var(--edge);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
   color: var(--on-glass);
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 30px;
+  box-shadow: var(--press);
   touch-action: none;
 }
 .blip {
@@ -542,18 +595,17 @@ button {
 }
 .blip.lit {
   background: #ff4a3a;
-  box-shadow: 0 0 0 2px #fff, 0 0 14px #ff4a3a;
+  box-shadow: 0 0 0 2px #fff;
 }
 .name-tag {
   position: absolute;
   transform: translate(-50%, -100%);
   padding: 3px 9px;
-  border-radius: 6px;
-  background: rgba(16, 27, 34, 0.62);
+  border-radius: var(--radius);
+  background: var(--ink);
   color: var(--brass-hi);
   font-family: var(--display);
-  font-style: italic;
-  font-size: 13px;
+    font-size: 16px;
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none !important;
@@ -565,42 +617,43 @@ button {
   bottom: calc(var(--bottom-clear) + 74px);
   width: 92px;
   height: 92px;
-  border-radius: 50%;
-  border: 0;
-  background: radial-gradient(circle at 50% 30%, #e7735a, var(--coral) 60%, #b4452c);
-  color: #fff;
+  /* A big enamel key: square, an ink line round it, and its own depth under it to press into. */
+  border-radius: 6px;
+  border: 3px solid var(--ink);
+  background: var(--coral);
+  color: #fffdf6;
   font-family: var(--display);
-  font-size: 19px;
-  font-weight: 600;
-  line-height: 1.05;
-  box-shadow: 0 0 0 3px rgba(16, 27, 34, 0.55), 0 0 0 4.5px rgba(236, 199, 125, 0.75), inset 0 2px 0 rgba(255, 255, 255, 0.22), 0 10px 22px rgba(8, 16, 22, 0.35);
+  font-size: 30px;
+  line-height: 1;
+  box-shadow: inset 0 3px 0 rgba(255, 253, 246, 0.3), inset 0 -4px 0 rgba(16, 24, 31, 0.22), 0 6px 0 var(--ink);
   touch-action: none;
   padding: 6px;
-  text-shadow: 0 1px 0 rgba(80, 20, 10, 0.35);
+  text-shadow: 0 2px 0 rgba(16, 24, 31, 0.45);
 }
 .act-main.down {
-  filter: brightness(0.9);
-  transform: scale(0.96);
+  transform: translateY(4px);
+  box-shadow: inset 0 3px 0 rgba(255, 253, 246, 0.3), inset 0 -4px 0 rgba(16, 24, 31, 0.22), 0 2px 0 var(--ink);
 }
 .act-main.blue {
-  background: radial-gradient(circle at 50% 30%, #3d8796, var(--sea) 60%, #1d4d58);
+  background: var(--sea);
 }
 .act-main.green {
-  background: radial-gradient(circle at 50% 30%, #659a62, var(--leaf) 60%, #355a33);
+  background: var(--leaf);
 }
 .act-main.gold {
-  background: radial-gradient(circle at 50% 30%, #f3d48e, var(--brass) 60%, #8a6420);
-  text-shadow: 0 1px 0 rgba(60, 40, 0, 0.45);
+  background: var(--brass);
+  text-shadow: 0 2px 0 rgba(16, 24, 31, 0.45);
 }
 .act-main.pulse {
-  background: radial-gradient(circle at 50% 30%, #f3d48e, var(--sun) 60%, #a97a25);
+  background: var(--brass-hi);
   color: var(--ink);
   text-shadow: none;
-  animation: pulse 0.35s ease-in-out infinite alternate;
+  animation: pulse 0.35s steps(2, jump-none) infinite alternate;
 }
 @keyframes pulse {
   to {
     transform: scale(1.1);
+    background: var(--paper-3);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -615,13 +668,11 @@ button {
   min-width: 92px;
   height: 46px;
   padding: 0 16px;
-  border-radius: 12px;
-  border: 1px solid var(--glass-line);
+  border-radius: var(--radius);
+  border: 2px solid var(--glass-line);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
   color: var(--on-glass);
-  font-size: 15px;
+  font-size: 19px;
   font-weight: 700;
 }
 
@@ -632,17 +683,15 @@ button {
   display: flex;
   gap: 2px;
   padding: 4px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--glass);
-  border: 1px solid var(--glass-line);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 22px rgba(8, 16, 22, 0.28);
+  border: 2px solid var(--glass-line);
+  box-shadow: var(--lift);
 }
 .menu-btn {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 0;
   background: transparent;
   color: var(--on-glass);
@@ -652,19 +701,19 @@ button {
   justify-content: center;
   gap: 1px;
   padding: 2px;
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 .menu-btn:active {
-  background: rgba(244, 238, 227, 0.12);
+  background: var(--paper-2);
 }
 .menu-btn img {
   width: 32px;
   height: 32px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
 }
 
 .reel-meter {
@@ -673,20 +722,19 @@ button {
   right: 22px;
   top: calc(var(--top-clear) + 70px);
   padding: 12px 14px 10px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--glass);
-  border: 1px solid var(--glass-line);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  border: 2px solid var(--glass-line);
   color: var(--on-glass);
   box-shadow: var(--lift);
   pointer-events: none !important;
 }
 .reel-track {
   position: relative;
-  height: 8px;
-  border-radius: 8px;
-  background: rgba(244, 238, 227, 0.14);
+  height: 10px;
+  border-radius: 0;
+  background: var(--paper-2);
+  box-shadow: 0 0 0 2px var(--ink);
   margin: 10px 14px 0;
 }
 .reel-fill {
@@ -694,8 +742,8 @@ button {
   left: 0;
   top: 0;
   bottom: 0;
-  border-radius: 8px;
-  background: linear-gradient(90deg, #3d8796, #7cc2c6);
+  border-radius: var(--radius);
+  background: var(--sea);
 }
 .reel-fish {
   position: absolute;
@@ -720,15 +768,16 @@ button {
 .reel-hint {
   text-align: center;
   font-family: var(--display);
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   margin-top: 14px;
 }
 .tension {
   position: relative;
-  height: 4px;
-  border-radius: 4px;
-  background: rgba(244, 238, 227, 0.14);
+  height: 6px;
+  border-radius: 0;
+  background: var(--paper-2);
+  box-shadow: 0 0 0 2px var(--ink);
   margin: 6px 14px 0;
   overflow: hidden;
 }
@@ -739,7 +788,6 @@ button {
   display: block;
   height: 100%;
   background: var(--leaf);
-  transition: background 0.2s;
 }
 .tension-fill.warm {
   background: var(--sun);
@@ -754,9 +802,9 @@ button {
   bottom: calc(var(--bottom-clear) + 236px);
   width: 16px;
   height: 120px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--glass);
-  border: 1px solid var(--glass-line);
+  border: 2px solid var(--glass-line);
   overflow: hidden;
   display: flex;
   align-items: flex-end;
@@ -765,7 +813,7 @@ button {
 .power i {
   display: block;
   width: 100%;
-  background: linear-gradient(0deg, var(--leaf), var(--sun));
+  background: linear-gradient(0deg, var(--leaf) 0 40%, var(--brass-hi) 40% 75%, var(--coral) 75%);
 }
 .power i.max {
   background: var(--coral);
@@ -776,12 +824,13 @@ button {
   transform: translate(-50%, -100%);
   max-width: 220px;
   padding: 8px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: var(--paper-3);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 500;
   line-height: 1.3;
-  box-shadow: 0 6px 16px rgba(8, 16, 22, 0.25);
+  border: var(--edge);
+  box-shadow: var(--lift);
   pointer-events: none !important;
 }
 .bubble::after {
@@ -792,22 +841,22 @@ button {
   margin-left: -8px;
   border: 8px solid transparent;
   border-bottom: 0;
-  border-top-color: var(--paper-3);
+  border-top-color: var(--ink);
 }
 .bang {
   position: absolute;
   transform: translate(-50%, -100%);
   width: 38px;
   height: 38px;
-  border-radius: 50%;
-  background: var(--sun);
+  border-radius: var(--radius);
+  background: var(--brass-hi);
   color: var(--ink);
   font-family: var(--display);
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 40px;
   text-align: center;
-  line-height: 38px;
-  box-shadow: 0 0 0 3px rgba(16, 27, 34, 0.6), 0 6px 14px rgba(8, 16, 22, 0.35);
+  line-height: 36px;
+  border: var(--edge);
+  box-shadow: var(--press);
   pointer-events: none !important;
   animation: pop 0.2s ease-out;
 }
@@ -823,10 +872,11 @@ button {
   display: flex;
   flex-direction: column;
   background: var(--paper);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -12px 36px rgba(8, 16, 22, 0.32);
+  border-radius: 0;
+  border-top: 3px solid var(--ink);
+  box-shadow: 0 -5px 0 rgba(16, 24, 31, 0.35);
   transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+  transition: transform 0.22s steps(6, end);
   pointer-events: auto;
 }
 .sheet.up {
@@ -845,7 +895,7 @@ button {
   width: 36px;
   height: 4px;
   margin-left: -18px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--line);
 }
 .sheet-head {
@@ -857,19 +907,20 @@ button {
 .sheet-head h2 {
   margin: 0;
   font-family: var(--display);
-  font-size: 27px;
+  font-size: 34px;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
   color: var(--ink);
 }
 .sheet-close {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: transparent;
-  font-size: 15px;
-  color: var(--ink-soft);
+  border-radius: var(--radius);
+  border: var(--edge);
+  background: var(--paper-3);
+  box-shadow: var(--press);
+  font-size: 24px;
+  color: var(--ink);
 }
 .sheet-tabs {
   display: flex;
@@ -877,7 +928,7 @@ button {
   margin: 2px 14px 10px;
   padding: 0;
   overflow-x: auto;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--line);
   scrollbar-width: none;
 }
 .sheet-tabs::-webkit-scrollbar {
@@ -888,11 +939,11 @@ button {
   height: 44px;
   padding: 0 12px;
   border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  border-bottom: 4px solid transparent;
+  margin-bottom: -2px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -911,7 +962,7 @@ button {
 .sheet-body p {
   margin: 4px 4px 12px;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1.45;
 }
 .sheet-body b {
@@ -929,9 +980,9 @@ button {
   align-items: center;
   padding: 8px 4px 9px;
   border-radius: var(--radius);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   background: var(--paper-3);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   text-align: center;
   min-height: 44px;
@@ -947,11 +998,11 @@ button {
 }
 .tile.on {
   border-color: var(--coral);
-  box-shadow: 0 0 0 1.5px var(--coral);
+  box-shadow: 0 0 0 2px var(--coral);
 }
 .tile small {
   font-weight: 600;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--ink-soft);
 }
 .tile .price {
@@ -968,9 +1019,9 @@ button {
   position: absolute;
   top: 6px;
   right: 6px;
-  font-size: 10px;
+  font-size: 12px;
   padding: 2px 5px;
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -983,7 +1034,7 @@ button {
   padding: 10px 12px;
   border-radius: var(--radius);
   background: var(--paper-3);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   margin-bottom: 6px;
 }
 .row img {
@@ -999,11 +1050,11 @@ button {
 .row .title {
   font-family: var(--display);
   font-weight: 600;
-  font-size: 17px;
-  letter-spacing: -0.01em;
+  font-size: 21px;
+  letter-spacing: 0;
 }
 .row .sub {
-  font-size: 13px;
+  font-size: 16px;
   color: var(--ink-soft);
 }
 .btn {
@@ -1011,14 +1062,19 @@ button {
   min-width: 76px;
   height: 44px;
   padding: 0 14px;
-  border-radius: 10px;
-  border: 0;
+  border-radius: var(--radius);
+  border: var(--edge);
   background: var(--ink);
   color: var(--paper);
-  font-size: 13.5px;
-  font-weight: 800;
+  font-size: 20px;
   letter-spacing: 0.02em;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: var(--press);
+}
+.btn:active,
+.big-btn:active,
+.sheet-close:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
 }
 .btn.coral {
   background: var(--coral);
@@ -1027,18 +1083,18 @@ button {
   background: var(--leaf);
 }
 .btn.plain {
-  background: transparent;
+  background: var(--paper-3);
   color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line);
 }
 .btn:disabled {
   background: var(--paper-2);
-  color: rgba(24, 38, 47, 0.38);
+  border-color: var(--line);
+  color: var(--line);
   box-shadow: none;
 }
 .bar {
-  height: 4px;
-  border-radius: 4px;
+  height: 6px;
+  border-radius: 0;
   background: var(--paper-2);
   overflow: hidden;
   margin-top: 6px;
@@ -1053,7 +1109,7 @@ button {
   align-items: center;
   gap: 10px;
   margin: 18px 4px 10px;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1062,21 +1118,21 @@ button {
 .section::after {
   content: '';
   flex: 1;
-  height: 1px;
+  height: 2px;
   background: var(--line);
 }
 .big-btn {
   width: 100%;
   height: 52px;
   border-radius: var(--radius);
-  border: 0;
+  border: var(--edge);
   background: var(--coral);
-  color: #fff;
+  color: #fffdf6;
   font-family: var(--display);
-  font-size: 19px;
-  font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), var(--press);
-  margin: 8px 0;
+  font-size: 28px;
+  text-shadow: 0 2px 0 rgba(16, 24, 31, 0.4);
+  box-shadow: inset 0 3px 0 rgba(255, 253, 246, 0.25), var(--press);
+  margin: 8px 0 11px;
 }
 
 /* ---------- Chest roulette ---------- */
@@ -1089,12 +1145,12 @@ button {
   justify-content: center;
   align-items: center;
   gap: 18px;
-  background: radial-gradient(circle at 50% 40%, rgba(40, 70, 100, 0.92), rgba(12, 22, 36, 0.96));
+  background: rgba(16, 24, 31, 0.94);
   pointer-events: auto;
 }
 .roulette-title {
   color: #fff;
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 600;
 }
 .roulette-window {
@@ -1102,11 +1158,9 @@ button {
   width: calc(100% - 24px);
   height: 124px;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.15);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
 }
 .roulette-track {
   position: absolute;
@@ -1120,7 +1174,7 @@ button {
   width: 96px;
   height: 104px;
   margin-right: 8px;
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: linear-gradient(180deg, #fff8ec 70%, var(--rar) 70%);
   box-shadow: 0 0 0 2px var(--rar) inset;
   display: flex;
@@ -1134,7 +1188,7 @@ button {
   margin-top: -14px;
 }
 .roulette-tile.win {
-  box-shadow: 0 0 0 4px var(--rar) inset, 0 0 24px var(--rar);
+  box-shadow: 0 0 0 4px var(--rar) inset;
 }
 .roulette-marker {
   position: absolute;
@@ -1144,7 +1198,7 @@ button {
   width: 4px;
   margin-left: -2px;
   background: var(--sun);
-  box-shadow: 0 0 10px var(--sun);
+  box-shadow: none;
 }
 .roulette-marker::before,
 .roulette-marker::after {
@@ -1164,10 +1218,10 @@ button {
 .roulette-result {
   width: calc(100% - 48px);
   padding: 16px;
-  border-radius: 22px;
+  border-radius: var(--radius);
   background: var(--paper);
   text-align: center;
-  box-shadow: 0 0 0 4px var(--rar), 0 0 40px var(--rar);
+  box-shadow: 0 0 0 4px var(--rar);
   opacity: 0;
   transform: scale(0.8);
   transition: opacity 0.3s, transform 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
@@ -1187,10 +1241,10 @@ button {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  font-size: 13px;
+  font-size: 16px;
 }
 .rr-name {
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 600;
 }
 .rr-sub {
@@ -1212,8 +1266,9 @@ button {
   z-index: 25;
   padding: 14px 12px calc(var(--bottom-clear) + 10px);
   background: var(--paper);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -12px 36px rgba(8, 16, 22, 0.3);
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-top: 3px solid var(--ink);
+  box-shadow: 0 -5px 0 rgba(16, 24, 31, 0.35);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1228,19 +1283,19 @@ button {
 }
 .uke-pad {
   height: 50px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   border: 0;
   background: hsl(var(--h), 38%, 46%);
   color: #fff;
   font-family: var(--display);
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 0 hsl(var(--h), 40%, 30%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 0 hsl(var(--h) , 40%, 30%);
   touch-action: none;
 }
 .uke-pad.hit {
   transform: translateY(3px);
-  box-shadow: 0 1px 0 hsl(var(--h), 40%, 30%);
+  box-shadow: 0 1px 0 hsl(var(--h) , 40%, 30%);
 }
 .uke-chords {
   display: grid;
@@ -1269,10 +1324,10 @@ button {
 }
 .uke-root {
   height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
   background: var(--paper-3);
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 700;
 }
 .uke-root.on {
@@ -1285,8 +1340,8 @@ button {
   grid-template-columns: repeat(4, 1fr);
   width: 100%;
   height: 74px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #d9a25a, #b98243);
+  border-radius: var(--radius);
+  background: #a97c52;
   touch-action: none;
 }
 .uke-strings i {
@@ -1294,12 +1349,12 @@ button {
   width: 3px;
   height: 100%;
   background: #f6efe0;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 .uke-strings i.hit {
   width: 5px;
   background: #fff;
-  box-shadow: 0 0 8px #fff;
+  box-shadow: none;
 }
 .uke-pads.all {
   grid-template-columns: repeat(6, 1fr);
@@ -1316,11 +1371,11 @@ button {
 }
 .uke-chord {
   height: 48px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  border: 2px solid var(--line);
   background: var(--paper-3);
   font-family: var(--display);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
   touch-action: none;
 }
@@ -1339,7 +1394,7 @@ button {
   z-index: 25;
   padding: 12px 12px calc(var(--bottom-clear) + 8px);
   background: var(--paper);
-  border-radius: 20px 20px 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   pointer-events: auto;
 }
 .chalk-palette {
@@ -1350,12 +1405,13 @@ button {
 .chalk-colour {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  border: 3px solid #fff;
-  box-shadow: 0 0 0 1px var(--line);
+  border-radius: var(--radius);
+  border: var(--edge);
+  box-shadow: var(--press);
 }
 .chalk-colour.on {
-  box-shadow: 0 0 0 3px var(--sea);
+  transform: translateY(-4px);
+  box-shadow: 0 7px 0 var(--ink);
 }
 .chalk-tools {
   display: flex;
@@ -1381,26 +1437,26 @@ button {
 .scratch-card {
   width: calc(100% - 40px);
   padding: 16px 16px 18px;
-  border-radius: 24px;
+  border-radius: var(--radius);
   background: #fff8ec;
-  box-shadow: 0 0 0 6px #4f9e5b, 0 14px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 6px #4f9e5b, 0 14px 0 rgba(0, 0, 0, 0.4);
   text-align: center;
 }
 .scratch-card.lucky {
-  box-shadow: 0 0 0 6px #3a78c9, 0 14px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 6px #3a78c9, 0 14px 0 rgba(0, 0, 0, 0.4);
 }
 .scratch-card.splash {
-  box-shadow: 0 0 0 6px #d9453c, 0 14px 40px rgba(0, 0, 0, 0.4);
-  background: linear-gradient(160deg, #fff8ec, #ffe6ea);
+  box-shadow: 0 0 0 6px #d9453c, 0 14px 0 rgba(0, 0, 0, 0.4);
+  background: #f8c4a4;
 }
 .scratch-title {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 600;
   color: var(--sea-deep);
 }
 .scratch-hint {
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: 18px;
   margin: 2px 0 10px;
 }
 .scratch-board {
@@ -1409,15 +1465,15 @@ button {
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   padding: 8px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: #e9dfcb;
   touch-action: none;
 }
 .scratch-cell {
   height: 74px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: #fff;
-  font-size: 40px;
+  font-size: 50px;
   line-height: 74px;
 }
 .scratch-board.done .scratch-cell.win {
@@ -1429,13 +1485,13 @@ button {
   inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 16px;
+  border-radius: var(--radius);
   touch-action: none;
 }
 .scratch-result {
   min-height: 28px;
   margin: 12px 0 10px;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--ink-soft);
 }
@@ -1444,22 +1500,22 @@ button {
 }
 .scratch-result.win.crown {
   color: #d79a1c;
-  font-size: 22px;
+  font-size: 28px;
 }
 
 .row img.q-golden {
   filter: sepia(1) saturate(4) hue-rotate(-12deg) brightness(1.15);
 }
 .row img.q-shiny {
-  filter: drop-shadow(0 0 5px #9fd3ff);
+  filter: drop-shadow(2px 0 0 #9fd3ff) drop-shadow(-2px 0 0 #9fd3ff) drop-shadow(0 2px 0 #9fd3ff) drop-shadow(0 -2px 0 #9fd3ff);
 }
 .row img.q-prismatic {
-  filter: saturate(1.8) hue-rotate(40deg) drop-shadow(0 0 5px #ffb0e0);
+  filter: saturate(1.8) hue-rotate(40deg) drop-shadow(2px 0 0 #ffb0e0) drop-shadow(-2px 0 0 #ffb0e0) drop-shadow(0 2px 0 #ffb0e0) drop-shadow(0 -2px 0 #ffb0e0);
 }
 .qdots {
   display: inline-flex;
   gap: 2px;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: -1px;
 }
 .qdots i {
@@ -1499,29 +1555,37 @@ button {
 }
 
 /* ---------- The Lucky Gull (arcade) ---------- */
+/* The dark room: the same flat pieces with the inks turned about, pale on night, lined in brass. */
+.sheet.casino,
+.roulette,
+.prize-overlay,
+.scratch {
+  --glass: #2b4250;
+  --glass-line: #4f6d7c;
+  --on-glass: #f4eee3;
+}
 .sheet.casino {
   height: 90%;
-  background: radial-gradient(120% 70% at 50% 0%, #1d3a42 0%, #122229 55%, #0c171c 100%);
+  background: var(--night);
   color: var(--on-glass);
-  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(236, 199, 125, 0.35);
+  border-top-color: var(--brass);
 }
 .sheet.casino::before {
-  background: rgba(244, 238, 227, 0.2);
+  background: var(--glass-line);
 }
 .sheet.casino .sheet-head h2 {
   color: var(--brass-hi);
-  font-style: italic;
-  font-weight: 500;
+    font-weight: 500;
 }
 .sheet.casino .sheet-close {
-  color: var(--on-glass);
-  border-color: var(--glass-line);
+  color: var(--ink);
+  background: var(--brass-hi);
 }
 .sheet.casino .sheet-tabs {
   border-bottom-color: var(--glass-line);
 }
 .sheet.casino .tab {
-  color: rgba(244, 238, 227, 0.55);
+  color: #86a1ab;
 }
 .sheet.casino .tab.on {
   color: var(--brass-hi);
@@ -1529,36 +1593,36 @@ button {
 }
 .sheet.casino .sheet-body p,
 .casino-blurb {
-  color: rgba(244, 238, 227, 0.62);
-  font-size: 13px;
+  color: #86a1ab;
+  font-size: 16px;
 }
 .sheet.casino .sheet-body b {
   color: var(--brass-hi);
 }
 .sheet.casino .row {
-  background: rgba(244, 238, 227, 0.05);
+  background: #2b4250;
   border-color: var(--glass-line);
 }
 .sheet.casino .row .sub {
-  color: rgba(244, 238, 227, 0.6);
+  color: #86a1ab;
 }
 .sheet.casino .tile {
-  background: rgba(244, 238, 227, 0.05);
+  background: #2b4250;
   border-color: var(--glass-line);
   color: var(--on-glass);
 }
 .sheet.casino .tile small {
-  color: rgba(244, 238, 227, 0.55);
+  color: #86a1ab;
 }
 .sheet.casino .section {
-  color: rgba(244, 238, 227, 0.5);
+  color: #86a1ab;
 }
 .sheet.casino .section::after {
   background: var(--glass-line);
 }
 .sheet.casino .btn:disabled {
-  background: rgba(244, 238, 227, 0.08);
-  color: rgba(244, 238, 227, 0.35);
+  background: #2b4250;
+  color: #86a1ab;
 }
 .purse {
   display: flex;
@@ -1566,7 +1630,7 @@ button {
   gap: 14px;
   margin: -2px 4px 6px;
   font-family: var(--display);
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 600;
 }
 .purse span {
@@ -1587,11 +1651,11 @@ button {
 .stake-step {
   width: 52px;
   height: 48px;
-  border-radius: 10px;
-  border: 1px solid var(--glass-line);
-  background: rgba(244, 238, 227, 0.06);
+  border-radius: var(--radius);
+  border: 2px solid var(--glass-line);
+  background: #2b4250;
   color: var(--on-glass);
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 500;
 }
 .stake-step:disabled {
@@ -1605,14 +1669,14 @@ button {
   gap: 1px;
 }
 .stake-v .eyebrow {
-  color: rgba(244, 238, 227, 0.5);
+  color: #86a1ab;
 }
 .stake-v b {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-family: var(--display);
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 600;
   color: var(--on-glass) !important;
 }
@@ -1625,8 +1689,8 @@ button {
   margin: 8px 4px 0;
   text-align: center;
   font-family: var(--display);
-  font-size: 17px;
-  color: rgba(244, 238, 227, 0.75);
+  font-size: 21px;
+  color: #86a1ab;
 }
 .casino-out.good {
   color: #9fe0b0;
@@ -1639,7 +1703,7 @@ button {
 }
 .casino-go {
   margin: 4px 0 0;
-  background: radial-gradient(circle at 50% 0%, #f0cf86, var(--brass) 70%, #8a6420) !important;
+  background: var(--brass) !important;
   color: #2a1d05 !important;
   text-shadow: 0 1px 0 rgba(255, 240, 200, 0.5);
 }
@@ -1647,14 +1711,14 @@ button {
   filter: grayscale(0.6) brightness(0.7);
 }
 .casino-go.cash {
-  background: radial-gradient(circle at 50% 0%, #a6e2c0, #3f9a6a 70%, #23603f) !important;
+  background: var(--leaf) !important;
   color: #fff !important;
   text-shadow: 0 1px 0 rgba(0, 40, 20, 0.4);
   animation: cashbeat 0.5s ease-in-out infinite alternate;
 }
 .casino-go.cash span {
   font-family: var(--font);
-  font-size: 15px;
+  font-size: 19px;
   font-weight: 800;
   margin-left: 6px;
   opacity: 0.9;
@@ -1678,16 +1742,16 @@ button {
 .wheel-hist i {
   width: 14px;
   height: 14px;
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .flight-hist i {
   padding: 2px 6px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   font-style: normal;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
-  background: rgba(244, 238, 227, 0.08);
-  color: rgba(244, 238, 227, 0.7);
+  background: #2b4250;
+  color: #86a1ab;
 }
 .flight-hist i.hi {
   background: rgba(63, 154, 106, 0.35);
@@ -1698,23 +1762,21 @@ button {
   color: #f2b9a8;
 }
 .pk-crab {
-  background: linear-gradient(180deg, #d66a4f, #a8402a);
+  background: var(--coral);
 }
 .pk-shell {
-  background: linear-gradient(180deg, #4d8a6a, #2c5a44);
+  background: var(--sea);
 }
 .pk-gull {
-  background: linear-gradient(180deg, #f0cf86, #b2832f);
+  background: var(--brass);
 }
 .wheel-window {
   position: relative;
   height: 92px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 8px 20px rgba(0, 0, 0, 0.4);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 8px 0 rgba(0, 0, 0, 0.4);
 }
 .wheel-track {
   position: absolute;
@@ -1728,7 +1790,7 @@ button {
   width: 70px;
   height: 76px;
   margin-right: 6px;
-  border-radius: 9px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1738,10 +1800,10 @@ button {
   width: 48px;
   height: 48px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
 }
 .wheel-tile.win {
-  box-shadow: 0 0 0 2px #fff, 0 0 22px rgba(255, 230, 170, 0.9);
+  box-shadow: 0 0 0 2px #fff;
 }
 .wheel-marker {
   position: absolute;
@@ -1751,7 +1813,7 @@ button {
   width: 2px;
   margin-left: -1px;
   background: var(--brass-hi);
-  box-shadow: 0 0 10px var(--brass-hi);
+  box-shadow: none;
 }
 .wheel-marker::before,
 .wheel-marker::after {
@@ -1775,7 +1837,7 @@ button {
 }
 .wheel-bet {
   height: 92px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 0;
   color: #fff;
   display: flex;
@@ -1791,14 +1853,14 @@ button {
   object-fit: contain;
 }
 .wheel-bet span {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .wheel-bet b {
   font-family: var(--display);
-  font-size: 18px;
+  font-size: 22px;
   color: #fff !important;
 }
 .wheel-bet.pk-gull,
@@ -1816,28 +1878,28 @@ button {
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   padding: 12px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #3a2a14, #1e150a);
-  box-shadow: inset 0 0 0 2px #c8963e, inset 0 0 0 5px #2a1d0b, 0 10px 24px rgba(0, 0, 0, 0.45);
+  border-radius: var(--radius);
+  background: #2e1e16;
+  box-shadow: inset 0 0 0 2px #c8963e, inset 0 0 0 5px #2a1d0b, 0 10px 0 rgba(0, 0, 0, 0.45);
 }
 .slots.lit {
   animation: lit 0.25s steps(2) 6;
 }
 @keyframes lit {
   50% {
-    box-shadow: inset 0 0 0 2px #ffe7a8, inset 0 0 0 5px #c8963e, 0 0 40px rgba(255, 220, 140, 0.8);
+    box-shadow: inset 0 0 0 2px #ffe7a8, inset 0 0 0 5px #c8963e;
   }
 }
 .reel {
   position: relative;
   height: 168px;
   overflow: hidden;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #d9d2c3, #faf6ee 30%, #faf6ee 70%, #d9d2c3);
-  box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.35), inset 0 -6px 12px rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--paper-2) 0 12%, var(--paper-3) 12% 88%, var(--paper-2) 88%);
+  box-shadow: inset 0 6px 0 rgba(0, 0, 0, 0.35), inset 0 -6px 0 rgba(0, 0, 0, 0.35);
 }
 .reel.tease {
-  box-shadow: inset 0 0 0 3px var(--brass-hi), 0 0 18px rgba(255, 220, 140, 0.7);
+  box-shadow: inset 0 0 0 3px var(--brass-hi);
 }
 .reel-strip {
   position: absolute;
@@ -1865,7 +1927,7 @@ button {
   height: 2px;
   margin-top: -1px;
   background: rgba(214, 90, 60, 0.75);
-  box-shadow: 0 0 6px rgba(214, 90, 60, 0.8);
+  box-shadow: none;
   pointer-events: none;
 }
 .paytable {
@@ -1878,7 +1940,7 @@ button {
   align-items: center;
   justify-content: space-between;
   padding: 4px 0;
-  border-bottom: 1px solid var(--glass-line);
+  border-bottom: 2px solid var(--glass-line);
 }
 .paytable img {
   width: 22px;
@@ -1887,7 +1949,7 @@ button {
 }
 .paytable b {
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 19px;
 }
 
 /* Flying Fish. */
@@ -1895,7 +1957,7 @@ button {
   display: block;
   width: 100%;
   height: 230px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   box-shadow: inset 0 0 0 1px var(--glass-line);
 }
 
@@ -1940,7 +2002,7 @@ button {
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  background: radial-gradient(circle at 50% 42%, rgba(10, 18, 24, 0.25), rgba(10, 18, 24, 0.6));
+  background: rgba(16, 24, 31, 0.45);
   animation: ffin 0.25s ease-out;
 }
 .ff-stamp.out {
@@ -1961,8 +2023,8 @@ button {
   margin: -450px 0 0 -450px;
   border-radius: 50%;
   background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--glow) 55%, transparent) 0deg 9deg, transparent 9deg 22deg);
-  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.6) 30%, transparent 62%);
-  mask-image: radial-gradient(circle, #000 0%, rgba(0, 0, 0, 0.6) 30%, transparent 62%);
+  -webkit-mask-image: radial-gradient(circle, #000 0 58%, transparent 58%);
+  mask-image: radial-gradient(circle, #000 0 58%, transparent 58%);
   animation: ffspin 9s linear infinite;
 }
 .ff-big .ff-rays {
@@ -1992,12 +2054,11 @@ button {
   font-family: var(--display);
   font-size: min(58px, 12.5vw);
   font-weight: 800;
-  font-style: italic;
-  letter-spacing: -0.02em;
+    letter-spacing: 0;
   line-height: 1;
   color: #fff8e6;
   -webkit-text-stroke: 1.5px rgba(60, 35, 5, 0.6);
-  text-shadow: 0 3px 0 color-mix(in srgb, var(--glow) 70%, #000), 0 0 30px var(--glow), 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 3px 0 color-mix(in srgb, var(--glow) 70%, #000), 0 10px 0 rgba(0, 0, 0, 0.5);
 }
 .ff-jackpot .ff-title {
   font-size: min(72px, 14vw);
@@ -2012,10 +2073,10 @@ button {
   margin-top: 10px;
   display: inline-block;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: rgba(10, 18, 24, 0.7);
   color: var(--on-glass);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2032,7 +2093,7 @@ button {
 
 /* The chest strip, in the same dark room as the arcade. */
 .roulette {
-  background: radial-gradient(120% 80% at 50% 30%, #1d3a42, #0c171c 70%);
+  background: var(--night);
   gap: 16px;
 }
 .roulette-title {
@@ -2041,36 +2102,35 @@ button {
   align-items: center;
   gap: 4px;
   font-family: var(--display);
-  font-style: italic;
-  font-weight: 500;
-  font-size: 30px;
+    font-weight: 500;
+  font-size: 38px;
   color: var(--brass-hi);
 }
 .roulette-title .eyebrow {
-  color: rgba(244, 238, 227, 0.55);
+  color: #86a1ab;
   font-style: normal;
 }
 .roulette-window {
-  border-radius: 12px;
+  border-radius: var(--radius);
   background: rgba(0, 0, 0, 0.3);
-  box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 8px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 0 0 1px var(--glass-line), inset 0 8px 0 rgba(0, 0, 0, 0.4);
 }
 .roulette-tile {
-  border-radius: 10px;
-  background: linear-gradient(180deg, #24343c 0%, #1a262c 72%, var(--rar) 72%);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--night-2) 0 72%, var(--rar) 72%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 60%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 .roulette-tile img {
-  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
 }
 .roulette-tile.win {
-  box-shadow: inset 0 0 0 2px var(--rar), 0 0 26px var(--rar);
+  box-shadow: inset 0 0 0 2px var(--rar);
 }
 .roulette-marker {
   width: 2px;
   margin-left: -1px;
   background: var(--brass-hi);
-  box-shadow: 0 0 10px var(--brass-hi);
+  box-shadow: none;
 }
 .roulette-marker::before {
   border-top-color: var(--brass-hi);
@@ -2080,15 +2140,15 @@ button {
 }
 .roulette-result {
   position: relative;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--paper);
-  box-shadow: 0 0 0 2px var(--rar), 0 0 50px color-mix(in srgb, var(--rar) 70%, transparent), var(--lift);
+  box-shadow: 0 0 0 2px var(--rar), var(--lift);
   overflow: hidden;
 }
 .rr-glow {
   position: absolute;
   inset: -40%;
-  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--rar) 35%, transparent), transparent 55%);
+  background: none;
   pointer-events: none;
 }
 .roulette-result img,
@@ -2099,49 +2159,48 @@ button {
   position: relative;
 }
 .rr-rar {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.18em;
 }
 .rr-name {
   font-family: var(--display);
-  font-size: 28px;
-  letter-spacing: -0.01em;
+  font-size: 35px;
+  letter-spacing: 0;
 }
 .roulette.won-legendary .roulette-window,
 .roulette.won-epic .roulette-window {
-  box-shadow: inset 0 0 0 1px var(--rar), 0 0 30px color-mix(in srgb, var(--rar) 60%, transparent);
+  box-shadow: inset 0 0 0 1px var(--rar);
 }
 
 /* Scratch tickets: printed card stock with a coloured edge. */
 .scratch {
-  background: rgba(8, 16, 22, 0.78);
+  background: rgba(16, 24, 31, 0.86);
 }
 .scratch-card {
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--paper);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 0 6px var(--leaf), inset 0 0 0 7px rgba(255, 255, 255, 0.6), 0 18px 44px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 0 6px var(--leaf), inset 0 0 0 7px rgba(255, 255, 255, 0.6), 0 18px 0 rgba(0, 0, 0, 0.5);
   padding: 20px 18px 18px;
 }
 .scratch-card.lucky {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 0 6px var(--sea), inset 0 0 0 7px rgba(255, 255, 255, 0.6), 0 18px 44px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 0 6px var(--sea), inset 0 0 0 7px rgba(255, 255, 255, 0.6), 0 18px 0 rgba(0, 0, 0, 0.5);
 }
 .scratch-card.splash {
   background: var(--paper);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 0 6px var(--coral), inset 0 0 0 7px rgba(255, 255, 255, 0.6), 0 18px 44px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), inset 0 0 0 6px var(--coral), inset 0 0 0 7px rgba(255, 255, 255, 0.6), 0 18px 0 rgba(0, 0, 0, 0.5);
 }
 .scratch-title {
   font-family: var(--display);
-  font-style: italic;
-  font-size: 30px;
+    font-size: 38px;
   color: var(--ink);
 }
 .scratch-board {
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--paper-2);
 }
 .scratch-cell {
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--paper-3);
   display: flex;
   align-items: center;
@@ -2157,7 +2216,7 @@ button {
   box-shadow: 0 0 0 2px var(--brass);
 }
 .scratch-coat {
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 .scratch-result {
   font-family: var(--display);
@@ -2187,12 +2246,11 @@ button {
   position: absolute;
   transform: translate(-50%, -100%) rotate(-6deg);
   font-family: var(--display);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 34px;
+    font-weight: 800;
+  font-size: 42px;
   color: #fff8e6;
   -webkit-text-stroke: 1.5px rgba(40, 25, 5, 0.65);
-  text-shadow: 0 3px 0 var(--coral), 0 8px 16px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 3px 0 var(--coral), 0 8px 0 rgba(0, 0, 0, 0.35);
   pointer-events: none !important;
   white-space: nowrap;
 }
@@ -2218,7 +2276,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(120% 80% at 50% 40%, rgba(29, 58, 66, 0.82), rgba(8, 16, 22, 0.92));
+  background: rgba(16, 24, 31, 0.88);
   pointer-events: auto;
 }
 .prize-overlay .roulette-result {
@@ -2229,11 +2287,11 @@ button {
 .tier {
   display: inline-block;
   padding: 2px 7px;
-  border-radius: 5px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--rar) 22%, transparent);
   color: var(--rar);
   font-family: var(--font);
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2244,12 +2302,12 @@ button {
   align-items: center;
   padding: 8px 12px;
   margin: 0 0 8px;
-  border-radius: 10px;
-  background: rgba(244, 238, 227, 0.05);
+  border-radius: var(--radius);
+  background: #2b4250;
   box-shadow: inset 0 0 0 1px var(--glass-line);
 }
 .casino .purse .eyebrow {
-  color: rgba(244, 238, 227, 0.55);
+  color: #86a1ab;
 }
 .casino .purse .pearl {
   width: 20px;
@@ -2265,7 +2323,7 @@ button {
   box-shadow: none;
 }
 .wheel-bet small {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   opacity: 0.8;
 }
@@ -2284,23 +2342,23 @@ button {
   flex-direction: column;
   align-items: center;
   padding: 5px 2px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--rar) 16%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 45%, transparent);
   color: var(--rar);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .flight-ladder b {
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 19px;
   color: var(--on-glass) !important;
   letter-spacing: 0;
 }
 .paytable .tier {
-  font-size: 10px;
+  font-size: 12px;
 }
 .btn .price .pearl,
 .big-btn .pearl {
@@ -2319,8 +2377,6 @@ button {
 
 /* A row of tabs that runs off the edge fades there, so it reads as more to scroll to. */
 .sheet-tabs {
-  -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent);
-  mask-image: linear-gradient(90deg, #000 82%, transparent);
   padding-right: 28px;
 }
 
@@ -2336,18 +2392,18 @@ button {
   flex-direction: column;
   align-items: center;
   padding: 5px 2px;
-  border-radius: 7px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--rar) 16%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rar) 45%, transparent);
   color: var(--rar);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .odds-row b {
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 19px;
   letter-spacing: 0;
   color: var(--on-glass) !important;
 }
@@ -2359,8 +2415,8 @@ button {
   justify-content: center;
   height: 150px;
   margin: 4px 0 12px;
-  border-radius: 14px;
-  background: radial-gradient(circle at 50% 60%, rgba(236, 199, 125, 0.18), transparent 65%), rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius);
+  background: var(--night-2);
   box-shadow: inset 0 0 0 1px var(--glass-line);
   overflow: hidden;
 }
@@ -2370,7 +2426,7 @@ button {
   width: 64px;
   height: 64px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
   z-index: 1;
 }
 .wheel-art-strip {
@@ -2384,19 +2440,19 @@ button {
   height: 56px;
   object-fit: contain;
   padding: 4px;
-  border-radius: 9px;
-  background: rgba(244, 238, 227, 0.08);
+  border-radius: var(--radius);
+  background: #2b4250;
   box-shadow: inset 0 0 0 1px var(--glass-line);
 }
 .wheel-art-strip img:nth-child(3) {
-  box-shadow: inset 0 0 0 2px var(--brass-hi), 0 0 14px rgba(236, 199, 125, 0.6);
+  box-shadow: inset 0 0 0 2px var(--brass-hi);
 }
 .scratch-art img {
   width: 130px;
   height: 130px;
   object-fit: contain;
   transform: rotate(-6deg);
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
 }
 .flight-ladder span {
   transition: transform 0.15s, background 0.15s;
@@ -2408,8 +2464,8 @@ button {
   transform: scale(1.08);
 }
 .slots.lit {
-  box-shadow: inset 0 0 0 2px var(--rar, var(--brass)), inset 0 0 0 5px #2a1d0b, 0 0 40px color-mix(in srgb, var(--rar, #ecc77d) 70%, transparent);
+  box-shadow: inset 0 0 0 2px var(--rar, var(--brass) ), inset 0 0 0 5px #2a1d0b;
 }
 .reel-cell img {
-  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
 }

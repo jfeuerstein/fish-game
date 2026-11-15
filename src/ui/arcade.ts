@@ -193,7 +193,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         ctx.fillStyle = `${RARITY_COLOR[b.rarity]}${bandAt(h) === b.rarity && h > 1 ? '40' : '1c'}`;
         ctx.fillRect(0, y1, W, y0 - y1);
         ctx.fillStyle = `${RARITY_COLOR[b.rarity]}cc`;
-        ctx.font = `800 9px 'Manrope Variable', sans-serif`;
+        ctx.font = `12px 'Jersey 15', monospace`;
         ctx.textAlign = 'right';
         ctx.fillText(RARITY_LABEL[b.rarity].toUpperCase(), W - 8, y1 + 13);
       }

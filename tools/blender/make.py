@@ -1,4 +1,4 @@
-"""Build the models fal did not make, in Blender, as GLB files in public/models/.
+"""Build the models fal did not make, in Blender, as GLB files in art/models/ (tools/assets/lofi.mjs then cuts them down for the game).
 
     tools/blender/run.sh [id ...]
 
@@ -18,7 +18,7 @@ from fish import FISH  # noqa: E402
 from lib import Model, R, S, T, clean, hexrgb  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-OUT = os.path.join(ROOT, 'public', 'models')
+OUT = os.path.join(ROOT, 'art', 'models')
 
 
 # --- Hats: Z up, brim at z = 0, about a unit across ----------------------------------
@@ -593,7 +593,7 @@ BUILD['pier'] = (pier, 'prop', 2.4)
 
 def main():
     wanted = [a for a in sys.argv[1:] if a in BUILD] or list(BUILD)
-    index_file = os.path.join(OUT, 'index.json')
+    index_file = os.path.join(ROOT, 'public', 'models', 'index.json')
     index = json.load(open(index_file)) if os.path.exists(index_file) else {}
     made = 0
     for mid in wanted:

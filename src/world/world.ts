@@ -1,6 +1,7 @@
 // Puts the island together: ground, water, sky, everything standing on it, and what is solid.
 import * as THREE from 'three';
 import { rng } from '../core/rng';
+import type { Look } from '../look/look';
 import { Colliders } from './colliders';
 import { Heightfield } from './island';
 import { PLACED, pierSections, railPosts } from './layout';
@@ -21,11 +22,11 @@ export class World {
   private glows: THREE.Sprite[] = [];
   private glowMat: THREE.SpriteMaterial;
 
-  constructor(readonly scene: THREE.Scene, shadows: boolean) {
-    this.sky = new Sky(scene, shadows);
-    this.water = new Water(this.field);
+  constructor(readonly scene: THREE.Scene, shadows: boolean, look?: Look) {
+    this.sky = new Sky(scene, shadows, look);
+    this.water = new Water(this.field, look);
     this.props = new Props(this.field, this.solid);
-    this.group.add(buildTerrain(this.field), this.water.group, this.props.group, this.sky.group);
+    this.group.add(buildTerrain(this.field, look), this.water.group, this.props.group, this.sky.group);
     scene.add(this.group);
     // The bridge's rails are solid, so nobody walks off the side of it into the creek.
     for (const p of railPosts()) this.solid.addCircle({ x: p.x, z: p.z, r: 0.22 });

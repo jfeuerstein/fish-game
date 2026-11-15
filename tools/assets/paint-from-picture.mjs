@@ -3,7 +3,7 @@
 // usable texture (it happens: Tripo returned the frog grey). The picture is a front view, so
 // each vertex takes the colour of the picture where it would appear from the front; on the
 // back, features like eyes are replaced by the colour around them. Writes vertex colours and
-// drops the texture, then slims the model into public/models as usual.
+// drops the texture, then slims the model into art/models as usual (run lofi.mjs after).
 //
 //   node tools/assets/paint-from-picture.mjs char-frog
 import { NodeIO } from '@gltf-transform/core';
@@ -89,4 +89,4 @@ for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimi
   console.log(`${id}: painted ${n} vertices (across axis ${across}, front ${frontSign > 0 ? '+' : '-'}${'xyz'[depth]})`);
 }
 await doc.transform(dedup(), weld(), prune(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
-await io.write(`${ROOT}public/models/${id}.glb`, doc);
+await io.write(`${ROOT}art/models/${id}.glb`, doc);

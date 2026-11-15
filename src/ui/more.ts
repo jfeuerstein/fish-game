@@ -16,7 +16,7 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
       for (const c of CHARACTERS) {
         const owned = save.characters.includes(c.id);
         const t = el('button', `tile${save.character === c.id ? ' on' : ''}${owned ? '' : ' locked'}`);
-        t.innerHTML = `<img src="${icon(c.id)}" alt="">${c.name}${owned ? '' : '<small>From a chest</small>'}`;
+        t.innerHTML = `<img src="${icon(c.id)}" alt="">${c.name}${owned ? '' : '<small>From the Lucky Gull</small>'}`;
         t.disabled = !owned;
         t.onclick = () => {
           s.become(c.id);
@@ -115,7 +115,7 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         body.append(row);
       };
       toggle('Real clock', 'Follow the time where you are, instead of a 24-minute island day.', save.settings.clock === 'real', () => (save.settings.clock = save.settings.clock === 'real' ? 'island' : 'real'));
-      toggle('Retro pixels', 'Big soft pixels, like an old computer game. Easier on the battery too. Takes effect when the game is next opened.', save.settings.pixels, () => (save.settings.pixels = !save.settings.pixels));
+      toggle('Chunkier pixels', 'The island is drawn small and blown up. This draws it smaller still. Easier on the battery too. Takes effect when the game is next opened.', save.settings.pixels, () => (save.settings.pixels = !save.settings.pixels));
       toggle('Shadows', 'Softer on the battery when off. Takes effect when the game is next opened.', save.settings.quality === 'high', () => (save.settings.quality = save.settings.quality === 'high' ? 'low' : 'high'));
       body.append(el('div', 'section', 'Silly'));
       toggle('Big heads', 'Everyone on the island gets a much bigger head. Hats too.', save.settings.bigHeads, () => (save.settings.bigHeads = !save.settings.bigHeads));
@@ -154,7 +154,7 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
       body.append(el('p', '', 'Your game is kept on this phone. Copy this code somewhere safe to move it or keep a backup.'));
       const area = el('textarea') as HTMLTextAreaElement;
       area.value = toCode(save);
-      area.style.cssText = 'width:100%;height:110px;border-radius:12px;border:2px solid var(--line);font-size:11px;padding:8px;box-sizing:border-box';
+      area.style.cssText = 'width:100%;height:110px;border-radius:var(--radius);border:var(--edge);font-size:11px;padding:8px;box-sizing:border-box';
       area.readOnly = true;
       const copy = el('button', 'big-btn', 'Copy code');
       copy.onclick = async () => {

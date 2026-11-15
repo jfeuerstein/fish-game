@@ -1,9 +1,10 @@
 // Loads the generated models (public/models/*.glb) and gets them ready to stand in the world:
-// a set height, their feet on the ground, centred, and drawn with a cheap matte material.
+// a set height, their feet on the ground, centred, and drawn with the look's own material.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { currentLook, lit, pixelled } from '../look/material';
 
 export interface ModelInfo {
   kind: string;
@@ -32,19 +33,25 @@ export async function loadIndex(): Promise<Record<string, ModelInfo>> {
 export const hasModel = (id: string): boolean => id in index;
 export const infoOf = (id: string): ModelInfo | undefined => index[id];
 
-/** Matte materials: the generated textures already carry their colour; this keeps them soft and cheap. */
+/** The look's material (`lit`): the textures already carry their colour, in the island's inks. */
 function soften(root: THREE.Object3D): void {
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
     const old = mesh.material as THREE.MeshStandardMaterial;
-    const painted = !!mesh.geometry.getAttribute('color');
-    const mat = new THREE.MeshLambertMaterial({ map: old.map ?? null, color: old.map || painted ? 0xffffff : old.color, vertexColors: painted && !old.map, flatShading: painted && !old.map });
-    if (mat.map) {
-      mat.map.colorSpace = THREE.SRGBColorSpace;
-      mat.map.anisotropy = 4;
+    // Lo-fi: every face its own flat tone. The models are cut down to a few hundred triangles,
+    // and the toon material has no facets of its own, so each face is given its own corners.
+    if (currentLook()?.lofi) {
+      const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+      g.computeVertexNormals();
+      mesh.geometry = g;
     }
-    mesh.material = mat;
+    const painted = !!mesh.geometry.getAttribute('color');
+    if (old.map) {
+      old.map.colorSpace = THREE.SRGBColorSpace;
+      pixelled(old.map);
+    }
+    mesh.material = lit({ map: old.map ?? null, color: old.map || painted ? 0xffffff : old.color, vertexColors: painted && !old.map, flatShading: painted && !old.map });
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     if ((mesh as THREE.SkinnedMesh).isSkinnedMesh) mesh.frustumCulled = false;

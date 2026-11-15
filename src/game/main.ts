@@ -8,6 +8,9 @@ import { BY_ID, TIER_COLOR, TIER_LABEL, type Catch, quip, sayLength } from '../f
 import { rollCatch } from '../fishing/roll';
 import { Fishing } from '../fishing/fishing';
 import { Effects } from '../fx/particles';
+import { Screen } from '../fx/screen';
+import { type Look, lookFor } from '../look/look';
+import { setLook } from '../look/material';
 import { Controls } from '../input/controls';
 import { NPCS, Npc, Shopkeeper } from '../npc/npcs';
 import { CameraRig } from '../player/camera';
@@ -52,6 +55,8 @@ const MISSED = ['You slap the air with a fish. It feels good.', 'Nobody to slap.
 export class Game implements Session {
   readonly cfg = parseConfig(location.search);
   renderer!: THREE.WebGLRenderer;
+  screen!: Screen;
+  look!: Look;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(58, 1, 0.2, 1500);
   world!: World;
@@ -140,17 +145,20 @@ export class Game implements Session {
     const canvas = document.getElementById('game') as HTMLCanvasElement;
     this.app = document.getElementById('app')!;
     const low = this.cfg.low || this.save.settings.quality === 'low';
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(this.save.settings.pixels ? 0.42 : Math.min(window.devicePixelRatio, low ? 1.5 : 2));
-    if (this.save.settings.pixels) canvas.style.imageRendering = 'pixelated';
+    const look = (this.look = lookFor(this.cfg.look, this.save.settings.pixels));
+    setLook(look);
+    Character.look = look;
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !look.lofi, powerPreference: 'high-performance' });
+    this.screen = new Screen(this.renderer, look);
     this.renderer.shadowMap.enabled = !low;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // A shadow in the lo-fi look is one flat tone with a hard, stepped edge.
+    this.renderer.shadowMap.type = look.lofi ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = look.lofi ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
     const resize = (): void => {
       const w = this.app.clientWidth;
       const h = this.app.clientHeight;
-      this.renderer.setSize(w, h, false);
+      this.screen.setSize(w, h);
       this.camera.aspect = w / h;
       this.camera.fov = w < h ? 58 : 50;
       this.camera.updateProjectionMatrix();
@@ -160,7 +168,7 @@ export class Game implements Session {
     new ResizeObserver(resize).observe(this.app);
 
     await loadIndex();
-    this.world = new World(this.scene, !low);
+    this.world = new World(this.scene, !low, look);
     this.scene.add(this.fx.group);
     const bar = document.getElementById('load-bar')!;
     this.body = new Character(this.save.character, 1.1);
@@ -560,6 +568,7 @@ export class Game implements Session {
       if (d.length() > reach) continue;
       if (inFront && d.normalize().dot(fwd) < 0.3) continue;
       who.saying = { text: pick(lines), until: now + 2800 };
+      who.body.express(inFront ? 'squint' : 'wide', 1.6);
       any = true;
     }
     return any;
@@ -836,6 +845,7 @@ export class Game implements Session {
     this.fishing.update(dt, this.hud.held, rod, baitById(this.save.bait));
     this.fishing.setCamera(this.camera.position);
     // While casting or reeling, the camera swings round behind the line.
+    if (this.fishing.state === 'bite') this.body.express('wide', 0.2);
     if (this.fishing.state === 'aiming') this.body.group.rotation.y = this.rig.yaw + Math.PI;
     if (this.fishing.state === 'aiming' || this.fishing.state === 'flying') this.player.yaw = this.rig.yaw + Math.PI;
     this.body.update(dt);
@@ -872,7 +882,7 @@ export class Game implements Session {
     }
     this.hud?.setClock(sayHour(this.hour), this.raining, this.world.sky.palette.night > 0.5);
     this.keep();
-    this.renderer.render(this.scene, this.camera);
+    this.screen.render(this.scene, this.camera);
   }
 
   /** Sea glass, bounce mushrooms, the metal detector, digging, and titles. */

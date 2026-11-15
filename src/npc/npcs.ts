@@ -1,5 +1,6 @@
 // The other islanders: three who wander between their favourite fishing spots and fish there,
 // and Gus the pelican behind the shop counter. Each has a few things to say.
+import { lit } from '../look/material';
 import * as THREE from 'three';
 import { rng } from '../core/rng';
 import { SPECIES } from '../fishing/fish';
@@ -98,7 +99,7 @@ export class Npc {
   constructor(readonly def: NpcDef, private field: Heightfield, private scene: THREE.Scene) {
     this.body = new Character(def.id, def.id === 'npc-bear' ? 1.2 : 1.05);
     this.rand = rng(def.id.length * 977);
-    this.bobber = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8453c }));
+    this.bobber = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), lit({ color: 0xd65a3c }));
     this.string = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xf3f0ea }));
     this.bobber.visible = this.string.visible = false;
     scene.add(this.bobber, this.string);

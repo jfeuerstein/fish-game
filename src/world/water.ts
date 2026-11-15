@@ -1,6 +1,7 @@
 // The sea, the pond and the creek: one material, coloured by how deep the water is over the
 // ground beneath it, with a line of foam where it meets the shore and the sun glinting on it.
 import * as THREE from 'three';
+import type { Look } from '../look/look';
 import { Heightfield } from './island';
 import { CREEK, CREEK_WIDTH, POND, creekLevel } from './layout';
 
@@ -58,6 +59,44 @@ float vnoise(vec2 p) {
   return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
 }
 
+#ifdef LOFI
+// The lo-fi water: flat bands of colour by depth, foam and wave marks as hard pixels (eight to
+// the metre), moved a few times a second.
+void main() {
+  vec2 shore = (floor(vWorld.xz * 8.0) + 0.5) / 8.0;
+  vec2 uv = (shore + uHalf) / uSize;
+  float ground = texture2D(uGround, uv).r;
+  if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ground = -14.0;
+  float depth = vWorld.y - ground;
+  if (depth < -0.05) discard;
+  #ifdef CREEK
+  if (ground < 0.02) discard;
+  #endif
+  vec2 q = shore;
+  float t = floor(uTime * 5.0) / 5.0;
+  float d = clamp(depth / mix(3.0, 7.0, step(vWorld.y, 0.3)), 0.0, 1.0);
+  float band = min(1.0, floor(sqrt(d) * 3.999) / 3.0);
+  vec3 col = mix(uShallow, uDeep, band);
+  // Wave marks: short pale dashes lying across the swell, drifting.
+  float mark = vnoise(vec2(q.x * 0.55, q.y * 2.4) + vec2(t * 0.3, t * 0.12));
+  float where = vnoise(q * 0.16 - vec2(t * 0.05, 0.0));
+  col = mix(col, uSky, step(0.74, mark) * step(0.42, where) * 0.42);
+  // The sun on it: single pixels that come and go.
+  float glint = step(0.986, hash(floor(vWorld.xz * 4.0) + floor(uTime * 3.0) * 17.0)) * step(0.55, vnoise(q * 0.3 + t * 0.1)) * step(0.0, uSunDir.y) * (1.0 - uRain);
+  col = mix(col, uSun, glint * 0.85);
+  // Rain: rings would be lost at this size, so the surface is pitted with pale pixels.
+  col = mix(col, uSky, step(0.9, hash(floor(vWorld.xz * 4.0) + floor(uTime * 9.0) * 31.0)) * uRain * 0.5);
+  // Foam where the water meets the shore, stepping in and out, and a broken line further out.
+  float edge = depth - 0.1 - 0.08 * floor(sin(t * 1.4 + q.x * 0.3 + q.y * 0.2) * 2.0 + 0.5) / 2.0;
+  float foam = 1.0 - step(0.22, edge);
+  foam = max(foam, (1.0 - step(0.07, abs(edge - 0.5))) * step(0.5, vnoise(q * 1.2 + t * 0.2)));
+  col = mix(col, uFoam, foam);
+  float alpha = max(depth < 0.5 ? 0.62 : 0.92, foam);
+  gl_FragColor = vec4(col, alpha);
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}
+#else
 void main() {
   vec2 uv = (vWorld.xz + uHalf) / uSize;
   float ground = texture2D(uGround, uv).r;
@@ -98,14 +137,19 @@ void main() {
   gl_FragColor = vec4(col, alpha);
   #include <colorspace_fragment>
   #include <fog_fragment>
-}`;
+}
+#endif`;
 
 export class Water {
   readonly group = new THREE.Group();
   readonly material: THREE.ShaderMaterial;
+  private defines: Record<string, number>;
 
-  constructor(field: Heightfield) {
+  constructor(field: Heightfield, look?: Look) {
+    const defines: Record<string, number> = look?.lofi ? { LOFI: 1 } : {};
+    this.defines = defines;
     this.material = new THREE.ShaderMaterial({
+      defines,
       vertexShader: vertex,
       fragmentShader: fragment,
       transparent: true,
@@ -190,7 +234,7 @@ export class Water {
     geo.setIndex(idx);
     // The creek's own material shares every uniform with the sea's, but gives way wherever the sea
     // already has water (ground below sea level): no second layer of water at the mouth, no edge.
-    const creekMat = new THREE.ShaderMaterial({ vertexShader: this.material.vertexShader, fragmentShader: this.material.fragmentShader, uniforms: this.material.uniforms, defines: { CREEK: 1 }, transparent: true, depthWrite: false, fog: true });
+    const creekMat = new THREE.ShaderMaterial({ vertexShader: this.material.vertexShader, fragmentShader: this.material.fragmentShader, uniforms: this.material.uniforms, defines: { ...this.defines, CREEK: 1 }, transparent: true, depthWrite: false, fog: true });
     const mesh = new THREE.Mesh(geo, creekMat);
     mesh.renderOrder = 1;
     void field;

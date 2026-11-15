@@ -28,6 +28,8 @@ export interface Config {
   zoo: string | null;
   /** Run time faster (for the tools, whose software rendering draws a few frames a second). */
   warp: number;
+  /** `smooth` draws the game full size with soft light and fluid movement, as it was before the lo-fi look. */
+  look: string | null;
 }
 
 export function parseConfig(search: string): Config {
@@ -49,5 +51,6 @@ export function parseConfig(search: string): Config {
     models: p.get('models') !== '0',
     zoo: p.get('zoo'),
     warp: Math.min(8, Math.max(1, Number(p.get('warp')) || 1)),
+    look: p.get('look'),
   };
 }

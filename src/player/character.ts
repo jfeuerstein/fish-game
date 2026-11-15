@@ -1,9 +1,12 @@
 // A character in the world: a rigged model, posed every frame, with a hat on its head and a rod
 // (or a ukulele, or a fish) in its hands.
+import { lit } from '../look/material';
 import * as THREE from 'three';
 import { fit, model } from '../assets/models';
 import * as P from './poses';
 import { Rig } from './rig';
+import { type Look, poseDue } from '../look/look';
+import { EXPRESSIONS, type Expression, blinking, faceFor, faceOf, faceSheet } from './face';
 import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headOf, measureHat, placeHat, placeFor } from './fit';
 
 /** Draw each skull's ellipsoid (`socket=1` in the address), to tune HEADS by eye. */
@@ -92,6 +95,17 @@ export class Character {
   private tip = 0;
   private baseYaw = 0;
   private twirl = 0;
+  /** The game's look: in the lo-fi one a pose is held for a few frames, as a toy is moved by hand. */
+  static look: Look | null = null;
+  private sincePose = Math.random() * 0.08;
+  private posedAs: Action | null = null;
+  /** The drawn face: both eyes as one small mesh that follows the head. */
+  private faceMesh: THREE.Mesh | null = null;
+  private faceMap: THREE.Texture | null = null;
+  private faceSeed = Math.floor(Math.random() * 1000);
+  private faceNow: Expression | null = null;
+  private facePut: { face: Expression; until: number } | null = null;
+  private static sheet: THREE.DataTexture | null = null;
   /** Everyone's heads, much bigger (a setting). */
   static bigHeads = false;
   /** Whether the rod is out. */
@@ -113,7 +127,7 @@ export class Character {
     const m = await model(this.id, this.height);
     if (!m) {
       // A stand-in so the game still plays without the model.
-      const g = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.5, 4, 8), new THREE.MeshLambertMaterial({ color: 0xc9925a }));
+      const g = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.5, 4, 8), lit({ color: 0xa97c52 }));
       g.position.y = 0.55;
       g.castShadow = true;
       this.group.add(g);
@@ -125,6 +139,98 @@ export class Character {
     if (this.rig.ok) this.faceForward();
     m.rotation.y += this.facing;
     this.baseYaw = m.rotation.y;
+    if (this.rig.ok) this.drawFace();
+  }
+
+  /** Wear an expression for a moment, whatever the body is doing (a bite, being honked at). */
+  express(face: Expression, seconds: number): void {
+    this.facePut = { face, until: this.t + seconds };
+  }
+
+  /**
+   * Put the drawn eyes on the head: a ray is cast at the head from where each eye looks out, and
+   * a small flat picture is stood just off the surface where it lands, facing out.
+   */
+  private drawFace(): void {
+    const m = this.measure();
+    const body = this.body;
+    const head = this.rig?.headBone;
+    if (!m || !body || !head) return;
+    const spec = faceOf(this.id);
+    const h = this.height;
+    const toWorld = this.group.matrixWorld;
+    const toLocal = toWorld.clone().invert();
+    const ray = new THREE.Raycaster();
+    // From `from` (in the character's frame) in along `dir`: the last surface met on the way to the
+    // head's middle, so that a hat's brim or an ear in front of the eye is passed through.
+    const land = (from: THREE.Vector3, dir: THREE.Vector3): THREE.Vector3 | null => {
+      ray.set(from.clone().addScaledVector(dir, 3).applyMatrix4(toWorld), dir.clone().negate().transformDirection(toWorld));
+      ray.far = 3;
+      const hit = ray.intersectObject(body, true).pop();
+      return hit ? hit.point.clone().applyMatrix4(toLocal) : null;
+    };
+    const pos: number[] = [];
+    const uv: number[] = [];
+    const idx: number[] = [];
+    const up = new THREE.Vector3(0, 1, 0);
+    const cols = EXPRESSIONS.length;
+    const quad = (at: THREE.Vector3, dir: THREE.Vector3, size: number, mirror: boolean): void => {
+      const right = new THREE.Vector3().crossVectors(up, dir).normalize().multiplyScalar(size / 2);
+      const rise = up.clone().multiplyScalar(size / 2);
+      const o = pos.length / 3;
+      const [u0, u1] = mirror ? [1 / cols, 0] : [0, 1 / cols];
+      const v0 = spec.rim ? 0.5 : 0;
+      for (const [sx, sy, u, v] of [[-1, -1, u0, v0], [1, -1, u1, v0], [1, 1, u1, v0 + 0.5], [-1, 1, u0, v0 + 0.5]] as const) {
+        const p = at.clone().addScaledVector(right, sx).addScaledVector(rise, sy);
+        pos.push(p.x, p.y, p.z);
+        uv.push(u, v);
+      }
+      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+    };
+    for (const side of [1, -1]) {
+      const dir = spec.x ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(Math.sin(spec.az) * side, 0, Math.cos(spec.az));
+      const at = land(new THREE.Vector3(spec.x ? spec.x * h * side : 0, spec.y * h, m.headZ), dir);
+      if (at) quad(at.addScaledVector(dir, 0.014 * h), dir, spec.size * h, side < 0);
+    }
+    if (!pos.length) return;
+    if (!Character.sheet) {
+      const s = faceSheet();
+      Character.sheet = new THREE.DataTexture(s.data, s.width, s.height, THREE.RGBAFormat);
+      Character.sheet.colorSpace = THREE.SRGBColorSpace;
+      Character.sheet.magFilter = Character.sheet.minFilter = THREE.NearestFilter;
+      Character.sheet.needsUpdate = true;
+    }
+    // Each character's own copy of the sheet, so each can show a different column of it.
+    this.faceMap = Character.sheet.clone();
+    this.faceMap.needsUpdate = true;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    this.faceMesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: this.faceMap, alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    this.faceMesh.matrixAutoUpdate = false;
+    this.faceMesh.frustumCulled = false;
+    this.group.parent?.add(this.faceMesh);
+  }
+
+  /** Keep the face on the head, and showing what the character feels. */
+  private placeFace(): void {
+    const mesh = this.faceMesh;
+    const head = this.rig?.headBone;
+    if (!mesh || !head || !this.faceMap) return;
+    if (!mesh.parent) this.group.parent?.add(mesh);
+    mesh.visible = this.group.visible;
+    const restInv = this.restInv.get(head);
+    if (!restInv) return;
+    mesh.matrix.copy(head.matrixWorld).multiply(restInv);
+    mesh.matrixWorldNeedsUpdate = true;
+    if (this.facePut && this.facePut.until < this.t) this.facePut = null;
+    let face = this.facePut?.face ?? faceFor(this.action);
+    if ((face === 'open' || face === 'wide') && !this.facePut && blinking(this.t, this.faceSeed)) face = 'closed';
+    if (face !== this.faceNow) {
+      this.faceNow = face;
+      this.faceMap.offset.x = EXPRESSIONS.indexOf(face) / EXPRESSIONS.length;
+    }
   }
 
   /**
@@ -556,8 +662,22 @@ export class Character {
 
   update(dt: number): void {
     this.t += dt;
+    const phaseThen = this.phase;
     if (this.action === 'walk') this.phase = (this.phase + dt * (1.5 + this.speed * 1.4)) % 1;
     this.pluck = Math.max(0, this.pluck - dt * 3);
+    // The pose is changed every frame, or (lo-fi) a few times a second and at once on a new action.
+    this.sincePose += dt;
+    const look = Character.look;
+    const due = !look || this.posedAs !== this.action || poseDue(look, this.sincePose, this.action === 'walk', phaseThen, this.phase);
+    if (due) this.repose(this.sincePose);
+    this.group.updateMatrixWorld(true);
+    this.placeHeld();
+  }
+
+  /** Move the body on toward the pose it is after, by `dt` seconds' worth. */
+  private repose(dt: number): void {
+    this.sincePose = 0;
+    this.posedAs = this.action;
     const target = this.targetPose();
     // Ease toward the pose; quick for snappy actions.
     const quick = this.action === 'walk' || this.action === 'jump' || this.action === 'castThrow' || this.action === 'castBack' ? 18 : 9;
@@ -576,8 +696,6 @@ export class Character {
       this.body.rotation.y = this.baseYaw + this.twirl;
       this.body.position.y += this.tip * (0.14 * this.height + Math.abs(Math.sin(this.t * 7.5)) * 0.12);
     }
-    this.group.updateMatrixWorld(true);
-    this.placeHeld();
   }
 
   /** The character's own axes in the world. */
@@ -616,6 +734,7 @@ export class Character {
       this.hat.quaternion.copy(this.group.quaternion);
     }
     if (this.extra && this.rig?.ok) this.wear(this.extra, this.extraId);
+    this.placeFace();
     if (this.held) {
       const l = this.rig?.handL?.getWorldPosition(new THREE.Vector3()) ?? this.handPos;
       const mid = this.handPos.clone().add(l).multiplyScalar(0.5);
@@ -637,7 +756,8 @@ export class Character {
 
   /** Remove from the scene, with everything it was holding. */
   dispose(): void {
-    for (const o of [this.rod, this.hat, this.held, this.extra]) o?.parent?.remove(o);
+    for (const o of [this.rod, this.hat, this.held, this.extra, this.faceMesh]) o?.parent?.remove(o);
+    this.faceMap?.dispose();
     this.group.parent?.remove(this.group);
   }
 

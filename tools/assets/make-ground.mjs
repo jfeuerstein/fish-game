@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // The ground's textures, painted by Tripo's image model (GROUND in manifest.mjs) and made to
 // repeat without a seam: blended with a copy of itself moved half way, along a wavy edge so the
-// blend makes no straight cross. Saved as public/textures/<id>.webp.
+// blend makes no straight cross. Saved as art/textures/<id>.webp. (The lo-fi
+// look draws its ground tiles in code, in lofi.mjs, in these paintings' colours: they are kept
+// for reference and are no longer what the game wears.)
 //
 //   NODE_USE_ENV_PROXY=1 node tools/assets/make-ground.mjs [id ...] [--redo id,id] [--model chat_image_2.5_sunburst]
 import { execFileSync } from 'node:child_process';
@@ -28,7 +30,7 @@ async function make(id) {
     console.log(`painted ${id}`);
   }
   if (args.includes('--no-out')) return;
-  const out = `${ROOT}public/textures/${id}.webp`;
+  const out = `${ROOT}art/textures/${id}.webp`;
   execFileSync('python3', ['-I', '-c', `
 import numpy as np
 from PIL import Image

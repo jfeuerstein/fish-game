@@ -23,7 +23,7 @@ export interface Settings {
   ambience: number;
   clock: 'island' | 'real';
   quality: 'high' | 'low';
-  /** Draw in big soft pixels, for a lo-fi look. */
+  /** Draw the picture in bigger pixels still than the lo-fi look's own. */
   pixels: boolean;
   /** Everyone's heads much bigger. */
   bigHeads: boolean;

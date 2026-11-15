@@ -1,6 +1,7 @@
 // The island's secrets in the world: sea glass glinting in its nooks, bounce mushrooms, the
 // mound that shows where something is buried once the detector is close, and the little rain
 // cloud that follows a lucky angler about.
+import { lit } from '../look/material';
 import * as THREE from 'three';
 import { model } from '../assets/models';
 import { Heightfield } from './island';
@@ -17,7 +18,7 @@ export class Finds {
   private t = 0;
 
   constructor(private field: Heightfield) {
-    this.mound = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x8a6440, flatShading: true }));
+    this.mound = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lit({ color: 0x7d5436, flatShading: true }));
     this.mound.scale.y = 0.4;
     this.mound.visible = false;
     this.group.add(this.mound);
@@ -28,12 +29,12 @@ export class Finds {
     SEA_GLASS.forEach(([x, z], i) => {
       if (found.includes(i)) return;
       const g = new THREE.Group();
-      const piece = glass ? glass.clone(true) : new THREE.Mesh(new THREE.OctahedronGeometry(0.1), new THREE.MeshLambertMaterial());
+      const piece = glass ? glass.clone(true) : new THREE.Mesh(new THREE.OctahedronGeometry(0.1), lit());
       // Each piece its own soft colour, a little see-through-looking and glowing.
       const colour = new THREE.Color(GLASS_COLOURS[i % GLASS_COLOURS.length]);
       piece.traverse((o) => {
         const m = o as THREE.Mesh;
-        if (m.isMesh) m.material = new THREE.MeshLambertMaterial({ color: colour, emissive: colour.clone().multiplyScalar(0.45), flatShading: true });
+        if (m.isMesh) m.material = lit({ color: colour, emissive: colour.clone().multiplyScalar(0.45), flatShading: true });
       });
       piece.scale.multiplyScalar(2.2);
       g.add(piece);
@@ -42,7 +43,7 @@ export class Finds {
       this.glass.set(i, g);
     });
     for (const s of SHROOMS) {
-      const m = shroom ? shroom.clone(true) : new THREE.Mesh(new THREE.CylinderGeometry(1, 0.4, 1), new THREE.MeshLambertMaterial({ color: 0xe8553c }));
+      const m = shroom ? shroom.clone(true) : new THREE.Mesh(new THREE.CylinderGeometry(1, 0.4, 1), lit({ color: 0xd65a3c }));
       m.position.set(s.x, this.field.heightAt(s.x, s.z) - 0.05, s.z);
       m.rotation.y = s.yaw;
       this.group.add(m);
@@ -53,7 +54,7 @@ export class Finds {
         const m = o as THREE.Mesh;
         if (m.isMesh) {
           m.castShadow = false;
-          m.material = new THREE.MeshLambertMaterial({ color: 0x9aa6b4, map: (m.material as THREE.MeshLambertMaterial).map });
+          m.material = lit({ color: 0x9aa6b4, map: (m.material as THREE.MeshLambertMaterial).map });
         }
       });
       cloud.visible = false;
