@@ -1,0 +1,8 @@
+node_modules
+dist
+tools/assets/cache
+*.log
+.env
+.blender
+__pycache__
+tools/scratch/

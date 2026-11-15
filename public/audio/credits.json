@@ -1,0 +1,62 @@
+{
+ "jingle-small": {
+  "id": "kenney:music-jingles/jingles_PIZZI00.ogg",
+  "title": "Pizzicato jingle 1 (medium length, medium)",
+  "license": "CC0-1.0",
+  "credit": "music-jingles/jingles_PIZZI00.ogg (\"Pizzicato jingle 1 (medium length, medium)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/music-jingles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "jingle-big": {
+  "id": "kenney:music-jingles/jingles_STEEL00.ogg",
+  "title": "Steel drum jingle 1 (medium length, medium)",
+  "license": "CC0-1.0",
+  "credit": "music-jingles/jingles_STEEL00.ogg (\"Steel drum jingle 1 (medium length, medium)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/music-jingles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "jingle-huge": {
+  "id": "kenney:music-jingles/jingles_STEEL01.ogg",
+  "title": "Steel drum jingle 2 (long, medium)",
+  "license": "CC0-1.0",
+  "credit": "music-jingles/jingles_STEEL01.ogg (\"Steel drum jingle 2 (long, medium)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/music-jingles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "jingle-jackpot": {
+  "id": "kenney:music-jingles/jingles_STEEL12.ogg",
+  "title": "Steel drum jingle 13 (long, medium)",
+  "license": "CC0-1.0",
+  "credit": "music-jingles/jingles_STEEL12.ogg (\"Steel drum jingle 13 (long, medium)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/music-jingles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "jingle-lose": {
+  "id": "kenney:music-jingles/jingles_SAX09.ogg",
+  "title": "Saxophone jingle 10 (medium length, soft)",
+  "license": "CC0-1.0",
+  "credit": "music-jingles/jingles_SAX09.ogg (\"Saxophone jingle 10 (medium length, soft)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/music-jingles), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "tick": {
+  "id": "kenney:interface-sounds/tick_002.ogg",
+  "title": "Tick 2 (very short, medium)",
+  "license": "CC0-1.0",
+  "credit": "interface-sounds/tick_002.ogg (\"Tick 2 (very short, medium)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/interface-sounds), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "chip": {
+  "id": "kenney:casino-audio/chips-stack-1.ogg",
+  "title": "Chips stack 1 (short, soft)",
+  "license": "CC0-1.0",
+  "credit": "casino-audio/chips-stack-1.ogg (\"Chips stack 1 (short, soft)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/casino-audio), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "chips": {
+  "id": "kenney:casino-audio/chips-handle-1.ogg",
+  "title": "Chips handle 1 (medium length, soft)",
+  "license": "CC0-1.0",
+  "credit": "casino-audio/chips-handle-1.ogg (\"Chips handle 1 (medium length, soft)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/casino-audio), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "shuffle": {
+  "id": "kenney:casino-audio/card-shuffle.ogg",
+  "title": "Card shuffle (long, soft)",
+  "license": "CC0-1.0",
+  "credit": "casino-audio/card-shuffle.ogg (\"Card shuffle (long, soft)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/casino-audio), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ },
+ "card": {
+  "id": "kenney:casino-audio/card-place-1.ogg",
+  "title": "Card place 1 (medium length, soft)",
+  "license": "CC0-1.0",
+  "credit": "casino-audio/card-place-1.ogg (\"Card place 1 (medium length, soft)\", title by Patch) by Kenney (Kenney, https://kenney.nl/assets/casino-audio), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: credit added to the Ogg comments (not re-encoded)."
+ }
+}
