@@ -16,7 +16,7 @@ npm run build          # type-check and build to dist/
 node tools/shot.mjs out.png "at=pier&time=dusk"             # screenshot the built game (upright phone)
 node tools/shot.mjs out.png "at=shop" 402 874 1 "window.__cove.open('shop')"   # ...after a script
 node tools/play-check.mjs outdir                             # three scripted casts from the pier, with pictures
-node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons
+node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons, and a dragged thumb walks and turns
 node tools/icons.mjs [prefix]                                # render menu icons from the models (into art/icons)
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
@@ -129,7 +129,8 @@ the owner's: do not route a deploy round it.
 - **Menus** are bottom sheets (`src/ui/`): shop, journal, bag, board, chests, more, fun; plus the
   ukulele pads and the chalk board. The HUD (`hud.ts`) has money and level at the top, the action
   buttons by the right thumb, and Bag/Journal/Fun/More along the bottom. The bottom third is the
-  movement stick; anywhere higher turns the camera.
+  movement stick; anywhere higher turns the camera. A thumb lands on the canvas, not on `#app`
+  under it: `Controls.onGame` takes both, and the touch check drags a thumb to hold it to that.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
   the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
   and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;
