@@ -58,7 +58,7 @@ import { PlacedThings, ghostOf } from '../world/placed';
 import type { Seat } from '../world/props';
 import { World } from '../world/world';
 import { bitesAt, dayNumber, hourAt, pinnedHour, sayHour, weatherAt, type Weather } from './clock';
-import { FURNITURE, HATS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
+import { FURNITURE, HATS, PAINTS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
 import { SEASON_LOOK, pinnedSeason, seasonAt, type Season } from '../look/season';
 import { STYLE_SAYS } from '../fishing/reel';
 import { RARE_SAYS, RARE_SKIES, rareSkyAt, type RareSky } from '../look/rare';
@@ -250,6 +250,7 @@ export class Game implements Session {
     this.board.set(boardAt.x + Math.sin(boardAt.yaw ?? 0) * 1.6, 0, boardAt.z + Math.cos(boardAt.yaw ?? 0) * 1.6);
     if (models) {
       await this.body.setRod(this.save.rod);
+      this.body.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm);
       await this.body.setHat(this.save.hat);
       await Promise.all([this.gus.load(new THREE.Vector3(shop.x + 2.6, this.world.field.heightAt(shop.x + 2.6, this.shopFront.z - 0.4), this.shopFront.z - 0.4), 0), ...this.npcs.map((n) => n.load())]);
     }
@@ -741,6 +742,13 @@ export class Game implements Session {
     this.changed();
   }
 
+  dressRod(paint: string | null, charm: string | null): void {
+    this.save.rodPaint = paint;
+    this.save.charm = charm;
+    this.body.setRodLook(PAINTS.find((q) => q.id === paint)?.colour ?? null, charm);
+    this.changed();
+  }
+
   showTitle(title: string | null): void {
     this.save.title = title;
     this.changed();
@@ -768,6 +776,7 @@ export class Game implements Session {
       this.body = fresh;
       (this.player as unknown as { body: Character }).body = fresh;
       await fresh.setRod(this.save.rod);
+      fresh.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm);
       await fresh.setHat(this.save.hat);
       await fresh.setExtra(this.save.extra);
       // The old body's line and bobber go with it.
@@ -1164,12 +1173,12 @@ export class Game implements Session {
     this.mode = 'inside';
     this.player.free = false;
     this.outsideYaw = this.rig.yaw;
-    this.indoors.scene.add(this.body.group);
+    this.body.moveTo(this.indoors.scene);
     if (room === 'shop') {
       // Gus comes in from his window to stand behind the counter.
       const g = this.gus.body.group;
       this.gusOutside = { pos: g.position.clone(), yaw: g.rotation.y };
-      this.indoors.scene.add(g);
+      this.gus.body.moveTo(this.indoors.scene);
       g.position.copy(this.indoors.at(GUS_INSIDE.fx, GUS_INSIDE.fz));
       g.rotation.y = GUS_INSIDE.yaw;
     }
@@ -1183,10 +1192,10 @@ export class Game implements Session {
 
   private leaveInside(): void {
     if (this.mode !== 'inside') return;
-    this.scene.add(this.body.group);
+    this.body.moveTo(this.scene);
     if (this.gusOutside) {
       const g = this.gus.body.group;
-      this.scene.add(g);
+      this.gus.body.moveTo(this.scene);
       g.position.copy(this.gusOutside.pos);
       g.rotation.y = this.gusOutside.yaw;
       this.gusOutside = null;

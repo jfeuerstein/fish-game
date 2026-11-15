@@ -15,6 +15,8 @@ export interface Session {
   /** Put on a hat (or take it off), become another character. */
   wear(hat: string | null): void;
   wearExtra(id: string | null): void;
+  /** Paint the rod and hang a charm from it (null for neither). */
+  dressRod(paint: string | null, charm: string | null): void;
   showTitle(title: string | null): void;
   /** Switch the metal detector on or off. */
   toggleDetector(): void;

@@ -147,6 +147,10 @@ export class Character {
   /** Where the hands are, in the world. */
   readonly handPos = new THREE.Vector3();
   private rod: THREE.Object3D | null = null;
+  /** How the rod is dressed: the colour it is painted (or null), and the charm hung from it. */
+  private rodPaint: number | null = null;
+  private charmId: string | null = null;
+  private charm: THREE.Sprite | null = null;
   private rodId = '';
   private rodLen = 1.5;
   /** How the model must be turned so it faces +z. */
@@ -396,6 +400,46 @@ export class Character {
     this.rod = alongY(m, this.rodLen);
     this.rod.visible = this.rodOut;
     this.group.parent?.add(this.rod);
+    this.paintRod();
+  }
+
+  /** Paint the rod a colour (null for its own) and hang a charm from it (null for none). */
+  setRodLook(paint: number | null, charm: string | null): void {
+    this.rodPaint = paint;
+    this.paintRod();
+    if (charm === this.charmId) return;
+    this.charmId = charm;
+    if (this.charm) {
+      this.charm.parent?.remove(this.charm);
+      this.charm.material.map?.dispose();
+      this.charm.material.dispose();
+      this.charm = null;
+    }
+    if (!charm) return;
+    const map = pixelled(new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}icons/${charm}.webp`));
+    map.colorSpace = THREE.SRGBColorSpace;
+    this.charm = new THREE.Sprite(new THREE.SpriteMaterial({ map, alphaTest: 0.5 }));
+    this.charm.scale.set(0.26, 0.26, 1);
+    this.group.parent?.add(this.charm);
+  }
+
+  /** The rod's own colours, multiplied by its paint. Its materials are its own copies, so no other rod is painted. */
+  private paintRod(): void {
+    this.rod?.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      if (!mesh.userData.painted) {
+        mesh.material = (mesh.material as THREE.Material).clone();
+        mesh.userData.painted = true;
+      }
+      (mesh.material as THREE.MeshToonMaterial).color.set(this.rodPaint ?? 0xffffff);
+    });
+  }
+
+  /** Into another scene (a room, and back out), with everything worn and held. */
+  moveTo(parent: THREE.Object3D): void {
+    parent.add(this.group);
+    for (const o of [this.rod, this.hat, this.held, this.extra, this.charm]) if (o) parent.add(o);
   }
 
   async setHat(id: string | null): Promise<void> {
@@ -839,6 +883,11 @@ export class Character {
       this.rod.position.copy(this.handPos);
       this.rod.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       this.rodTip.copy(this.handPos).addScaledVector(dir, this.rodLen);
+      // The charm hangs a little below the rod, most of the way up it, and swings in steps.
+      if (this.charm) {
+        this.charm.visible = this.rod.visible;
+        this.charm.position.copy(this.handPos).addScaledVector(dir, this.rodLen * 0.78).addScaledVector(up, -0.16).addScaledVector(right, Math.round(Math.sin(this.t * 3) * 2) * 0.012);
+      }
     } else this.rodTip.copy(this.handPos).addScaledVector(up, 1);
     if (this.hat && this.rig?.ok) this.wear(this.hat, this.hatId);
     if (SOCKETS && this.rig?.ok) this.showSocket();
@@ -869,7 +918,7 @@ export class Character {
 
   /** Remove from the scene, with everything it was holding. */
   dispose(): void {
-    for (const o of [this.rod, this.hat, this.held, this.extra]) o?.parent?.remove(o);
+    for (const o of [this.rod, this.hat, this.held, this.extra, this.charm]) o?.parent?.remove(o);
     this.faceMaterial?.dispose();
     this.group.parent?.remove(this.group);
   }

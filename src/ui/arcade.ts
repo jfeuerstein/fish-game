@@ -3,7 +3,7 @@
 // watching it: the Gull Wheel (a strip of prizes slowing onto yours), the Bait Bandit (three reels
 // landing on it), Flying Fish (a fish leaping as high as the prize is rare) and a scratch card.
 import { FLIGHT_BANDS, RARITIES, bandAt, peakFor, reelStrips } from '../game/arcade';
-import { PULL_COST, type Prize, RARITY_COLOR, RARITY_LABEL } from '../game/crates';
+import { type GameId, PULL_COST, type Prize, RARITY_COLOR, RARITY_LABEL } from '../game/crates';
 import type { Session } from '../game/session';
 import { oddsRow, prizeGrid, pull, showPrize, stripReveal } from './chests';
 import type { Fanfare } from './fanfare';
@@ -49,12 +49,12 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     refreshPurse();
   };
   /** The button that starts a show: pay and roll, then hand the prize to the show. */
-  const goButton = (label: string, show: (got: Got, button: HTMLButtonElement) => void): HTMLButtonElement => {
+  const goButton = (game: GameId, label: string, show: (got: Got, button: HTMLButtonElement) => void): HTMLButtonElement => {
     const b = el('button', 'big-btn casino-go', `${label} · ${cost}`);
     b.disabled = busy;
     b.onclick = () => {
       if (busy) return;
-      const got = pull(s);
+      const got = pull(s, game);
       if (!got) return;
       busy = true;
       b.disabled = true;
@@ -70,7 +70,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     const art = el('div', 'wheel-art', `<img src="${icon('gull')}" alt=""><div class="wheel-art-strip">${['hat-crown', 'hat-pirate', 'hat-top', 'hat-duck', 'f-flamingo'].map((id) => `<img src="${icon(id)}" alt="">`).join('')}</div>`);
     body.append(art);
     const spin = (): void => {
-      const got = pull(s);
+      const got = pull(s, 'wheel');
       if (!got) return;
       busy = true;
       refreshPurse();
@@ -82,7 +82,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
         refreshPurse();
         sheet.refresh();
       });
-    body.append(goButton('Spin the wheel', (got) => start(got)));
+    body.append(goButton('wheel', 'Spin the wheel', (got) => start(got)));
   }
 
   // ---------- The Bait Bandit ----------
@@ -106,7 +106,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
     body.append(machine);
     const out = el('div', 'casino-out');
     body.append(
-      goButton('Pull the lever', (got) => {
+      goButton('bandit', 'Pull the lever', (got) => {
         const strips = reelStrips(got.prize, Date.now() % 1e9);
         const rare = RARITIES.indexOf(got.prize.rarity) >= 3;
         s.audio.play('cast', { volume: 0.4, rate: 0.8 });
@@ -229,7 +229,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       draw(1, 0, 0, null);
     });
     body.append(
-      goButton('Launch a fish', (got) => {
+      goButton('fish', 'Launch a fish', (got) => {
         const peak = peakFor(got.prize.rarity, Math.random);
         // Longer in the air the higher it goes; a drum roll as it nears a rare band.
         const up = quick() ? 600 : 1400 + Math.log(peak) * 900;
@@ -295,7 +295,7 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
       else if (tab === 'Slots') slots(body);
       else if (tab === 'Flying Fish') flying(body);
       else scratch(body);
-      prizeGrid(body, s);
+      prizeGrid(body, s, tab === 'Wheel' ? 'wheel' : tab === 'Slots' ? 'bandit' : tab === 'Flying Fish' ? 'fish' : 'scratch');
     },
     ['Wheel', 'Slots', 'Flying Fish', 'Scratch'],
   );

@@ -115,6 +115,14 @@ the owner's: do not route a deploy round it.
   leaping through bands of rarity and peaking in your prize's), and a scratch card of nine with
   yours three times (`src/ui/scratch.ts`). No bets, no choices, no coins. The prize pool
   (`PRIZES`) holds only things never sold for coins (`prize` in `economy.ts`); a test holds it.
+  **Most of what there is to wear is won, not bought**: the owner asked for fewer cosmetics in
+  the shop and more from the games. Gus sells four plain hats, a pin and a scarf; everything
+  else is a prize. **Each game has prizes of its own** (`only` on a `Prize`, `prizesOf(game)`):
+  the wheel the grand hats, the bandit things for the rod, Flying Fish the sea and the sky, the
+  scratch cards the silly things, each with one of every rarity, beside what any game gives.
+  A game's sheet lists its own first. **The rod can be dressed**: six paints and six charms
+  (`PAINTS`, `CHARMS`), all prizes; `Character.setRodLook` multiplies the rod's colours by the
+  paint and hangs the charm's sprite from it; More > Wardrobe has them once any is won.
   `showPrize` is the card every game ends on; `src/ui/fanfare.ts` celebrates by rarity. Coins are
   only for Gus's shop.
 - **Sounds from patch.gg**: `tools/assets/get-patch-sounds.mjs` fetches Kenney's CC0 casino

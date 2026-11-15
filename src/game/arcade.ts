@@ -3,7 +3,7 @@
 // land on the prize, a fish that leaps as high as the prize is rare, a scratch card of three.
 // These are the shapes of those shows, decided once the prize is known. Pure.
 import { rng } from '../core/rng';
-import { type Prize, type Rarity, rollPrize } from './crates';
+import { type GameId, type Prize, type Rarity, rollPrize } from './crates';
 
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
@@ -13,7 +13,7 @@ export function reelStrips(winner: Prize, seed: number): Prize[][] {
   const rare = RARITIES.indexOf(winner.rarity) >= 3;
   return [0, 1, 2].map((i) => {
     const len = 18 + i * 7 + (i === 2 && rare ? 14 : 0);
-    const reel = Array.from({ length: len - 1 }, () => rollPrize(r));
+    const reel = Array.from({ length: len - 1 }, () => rollPrize(r, undefined, 'bandit' as GameId));
     reel.push(winner);
     return reel;
   });
@@ -47,7 +47,7 @@ export function scratchCard(winner: Prize, seed: number): Prize[] {
   const cells: Prize[] = [winner, winner, winner];
   const count = new Map<string, number>([[winner.id, 3]]);
   for (let guard = 0; cells.length < 9 && guard < 500; guard++) {
-    const p = rollPrize(r);
+    const p = rollPrize(r, undefined, 'scratch');
     const n = count.get(p.id) ?? 0;
     if (p.id === winner.id || n >= 2) continue;
     count.set(p.id, n + 1);

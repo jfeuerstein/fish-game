@@ -156,15 +156,15 @@ export const HATS: readonly Hat[] = [
   { id: 'hat-bucket', name: 'Bucket Hat', price: 120 },
   { id: 'hat-beanie', name: 'Pom Beanie', price: 150 },
   { id: 'hat-straw', name: 'Straw Hat', price: 220 },
-  { id: 'hat-sailor', name: 'Sailor Hat', price: 260 },
-  { id: 'hat-flowers', name: 'Flower Crown', price: 320 },
-  { id: 'hat-cowboy', name: 'Cowboy Hat', price: 420 },
-  { id: 'hat-cone', name: 'Traffic Cone', price: 380 },
-  { id: 'hat-lampshade', name: 'Lampshade', price: 460 },
-  { id: 'hat-bread', name: 'Loaf of Bread', price: 550 },
+  { id: 'hat-sailor', name: 'Sailor Hat', price: 0, prize: true },
+  { id: 'hat-flowers', name: 'Flower Crown', price: 0, prize: true },
+  { id: 'hat-cowboy', name: 'Cowboy Hat', price: 0, prize: true },
+  { id: 'hat-cone', name: 'Traffic Cone', price: 0, prize: true },
+  { id: 'hat-lampshade', name: 'Lampshade', price: 0, prize: true },
+  { id: 'hat-bread', name: 'Loaf of Bread', price: 0, prize: true },
   { id: 'hat-captain', name: "Captain's Hat", price: 0, prize: true },
   { id: 'hat-propeller', name: 'Propeller Cap', price: 0, prize: true },
-  { id: 'hat-chef', name: 'Chef Hat', price: 500 },
+  { id: 'hat-chef', name: 'Chef Hat', price: 0, prize: true },
   { id: 'hat-top', name: 'Top Hat', price: 0, prize: true },
   { id: 'hat-pirate', name: 'Pirate Hat', price: 0, prize: true },
   { id: 'hat-viking', name: 'Viking Helmet', price: 0, prize: true },
@@ -236,11 +236,11 @@ export const FURNITURE: readonly Furniture[] = [
 /** Things to wear besides hats. `prize` ones are won at the Lucky Gull, not sold. */
 export const EXTRAS: readonly { id: string; name: string; price: number; prize?: boolean }[] = [
   { id: 'x-flower', name: 'Flower Pin', price: 200 },
-  { id: 'x-bowtie', name: 'Bow Tie', price: 250 },
-  { id: 'x-glasses', name: 'Round Glasses', price: 300 },
+  { id: 'x-bowtie', name: 'Bow Tie', price: 0, prize: true },
+  { id: 'x-glasses', name: 'Round Glasses', price: 0, prize: true },
   { id: 'x-scarf', name: 'Cosy Scarf', price: 350 },
-  { id: 'x-shades', name: 'Sunglasses', price: 450 },
-  { id: 'x-backpack', name: 'Backpack', price: 700 },
+  { id: 'x-shades', name: 'Sunglasses', price: 0, prize: true },
+  { id: 'x-backpack', name: 'Backpack', price: 0, prize: true },
   { id: 'x-mustache', name: 'Fine Mustache', price: 0, prize: true },
   { id: 'x-snorkel', name: 'Snorkel Mask', price: 0, prize: true },
 ];
@@ -276,3 +276,23 @@ export function levelFor(xp: number): { level: number; into: number; need: numbe
 
 export const rodById = (id: string): Rod => RODS.find((r) => r.id === id) ?? RODS[0];
 export const baitById = (id: string): Bait => BAITS.find((b) => b.id === id) ?? BAITS[0];
+
+/** Paint for the rod: won at the Lucky Gull, never sold. The colour is what the rod's own is multiplied by. */
+export const PAINTS: readonly { id: string; name: string; colour: number }[] = [
+  { id: 'paint-coral', name: 'Coral Paint', colour: 0xf08c62 },
+  { id: 'paint-sea', name: 'Sea Blue Paint', colour: 0x7fbbe6 },
+  { id: 'paint-moss', name: 'Moss Paint', colour: 0x93b85a },
+  { id: 'paint-brass', name: 'Gilt Paint', colour: 0xecc77d },
+  { id: 'paint-rose', name: 'Rose Paint', colour: 0xf2a8b0 },
+  { id: 'paint-ink', name: 'Ink Paint', colour: 0x4f6d7c },
+];
+
+/** Charms to hang from the rod: won at the Lucky Gull, never sold. */
+export const CHARMS: readonly { id: string; name: string }[] = [
+  { id: 'charm-bell', name: 'Brass Bell' },
+  { id: 'charm-feather', name: 'Gull Feather' },
+  { id: 'charm-shell', name: 'Pink Shell' },
+  { id: 'charm-star', name: 'Lucky Star' },
+  { id: 'charm-fish', name: 'Wooden Fish' },
+  { id: 'charm-moon', name: 'Tin Moon' },
+];

@@ -11,7 +11,7 @@ import { el, icon } from './hud';
 
 /** Buy a card for a pearl and scratch it; the prize card follows. */
 export function buyCard(app: HTMLElement, s: Session, fanfare: Fanfare, after: () => void): void {
-  const got = pull(s);
+  const got = pull(s, 'scratch');
   if (!got) return;
   s.audio.play('shuffle', { volume: 0.5 });
   s.save.tickets.played++;

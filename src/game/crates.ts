@@ -6,43 +6,85 @@ import type { Variant } from '../fishing/fish';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
+/** The Lucky Gull's four games. */
+export type GameId = 'wheel' | 'bandit' | 'fish' | 'scratch';
+export const GAMES: readonly GameId[] = ['wheel', 'bandit', 'fish', 'scratch'];
+export const GAME_NAME: Record<GameId, string> = { wheel: 'the Gull Wheel', bandit: 'the Bait Bandit', fish: 'Flying Fish', scratch: 'the scratch cards' };
+
 export interface Prize {
   id: string;
   name: string;
   rarity: Rarity;
-  kind: 'hat' | 'character' | 'furniture' | 'extra';
+  kind: 'hat' | 'character' | 'furniture' | 'extra' | 'paint' | 'charm';
+  /** The one game it can be won at. Without this, any of them. */
+  only?: GameId;
 }
 
 /**
- * Everything the Lucky Gull's games and chests can give. None of it is sold for coins: these are
- * the things only pearls win (a few gift hats also wash up in treasure and in the sand).
+ * Everything the Lucky Gull's games can give. None of it is sold for coins: these are the
+ * things only pearls win (a few gift hats also wash up in treasure and in the sand). Most of
+ * what there is to wear is here, not in Gus's shop: the owner wanted cosmetics won, not bought.
+ * Each game has prizes that come from it alone (`only`), of every rarity, beside the ones any
+ * game gives: the wheel has the grand hats, the bandit dresses the rod, the flying fish has
+ * the sea and the sky, the scratch cards have the silly things.
  */
 export const PRIZES: readonly Prize[] = [
-  { id: 'hat-propeller', name: 'Propeller Cap', rarity: 'common', kind: 'hat' },
-  { id: 'hat-cake', name: 'Birthday Cake', rarity: 'common', kind: 'hat' },
+  // Any game.
   { id: 'f-flamingo', name: 'Lawn Flamingo', rarity: 'common', kind: 'furniture' },
   { id: 'f-radio', name: 'Radio', rarity: 'common', kind: 'furniture' },
-  { id: 'hat-captain', name: "Captain's Hat", rarity: 'uncommon', kind: 'hat' },
+  { id: 'paint-moss', name: 'Moss Paint', rarity: 'common', kind: 'paint' },
   { id: 'hat-duck', name: 'Rubber Duck', rarity: 'uncommon', kind: 'hat' },
-  { id: 'x-mustache', name: 'Fine Mustache', rarity: 'uncommon', kind: 'extra' },
   { id: 'f-gnome', name: 'Fishing Gnome', rarity: 'uncommon', kind: 'furniture' },
   { id: 'f-tiki', name: 'Tiki Torch', rarity: 'uncommon', kind: 'furniture' },
-  { id: 'hat-top', name: 'Top Hat', rarity: 'rare', kind: 'hat' },
+  { id: 'x-glasses', name: 'Round Glasses', rarity: 'uncommon', kind: 'extra' },
   { id: 'hat-mushroom', name: 'Mushroom Cap', rarity: 'rare', kind: 'hat' },
   { id: 'hat-frog', name: 'Frog Hat', rarity: 'rare', kind: 'hat' },
   { id: 'hat-crab', name: 'Grumpy Crab', rarity: 'rare', kind: 'hat' },
   { id: 'f-telescope', name: 'Telescope', rarity: 'rare', kind: 'furniture' },
-  { id: 'hat-pirate', name: 'Pirate Hat', rarity: 'epic', kind: 'hat' },
   { id: 'hat-viking', name: 'Viking Helmet', rarity: 'epic', kind: 'hat' },
-  { id: 'hat-fish', name: 'Fish Hat', rarity: 'epic', kind: 'hat' },
-  { id: 'hat-shark', name: 'Shark Hood', rarity: 'epic', kind: 'hat' },
   { id: 'x-snorkel', name: 'Snorkel Mask', rarity: 'epic', kind: 'extra' },
+  { id: 'x-backpack', name: 'Backpack', rarity: 'epic', kind: 'extra' },
+  { id: 'paint-ink', name: 'Ink Paint', rarity: 'epic', kind: 'paint' },
   { id: 'char-raccoon', name: 'Raccoon', rarity: 'epic', kind: 'character' },
-  { id: 'hat-crown', name: 'Little Crown', rarity: 'legendary', kind: 'hat' },
-  { id: 'hat-wizard', name: 'Wizard Hat', rarity: 'legendary', kind: 'hat' },
   { id: 'char-frog', name: 'Frog', rarity: 'legendary', kind: 'character' },
-  { id: 'f-snowman', name: 'Snowman', rarity: 'legendary', kind: 'furniture' },
+  // Only the Gull Wheel: the grand hats.
+  { id: 'hat-sailor', name: 'Sailor Hat', rarity: 'common', kind: 'hat', only: 'wheel' },
+  { id: 'hat-captain', name: "Captain's Hat", rarity: 'uncommon', kind: 'hat', only: 'wheel' },
+  { id: 'charm-feather', name: 'Gull Feather', rarity: 'uncommon', kind: 'charm', only: 'wheel' },
+  { id: 'hat-top', name: 'Top Hat', rarity: 'rare', kind: 'hat', only: 'wheel' },
+  { id: 'hat-pirate', name: 'Pirate Hat', rarity: 'epic', kind: 'hat', only: 'wheel' },
+  { id: 'hat-crown', name: 'Little Crown', rarity: 'legendary', kind: 'hat', only: 'wheel' },
+  // Only the Bait Bandit: things for the rod, and for someone who means business.
+  { id: 'x-bowtie', name: 'Bow Tie', rarity: 'common', kind: 'extra', only: 'bandit' },
+  { id: 'hat-cowboy', name: 'Cowboy Hat', rarity: 'uncommon', kind: 'hat', only: 'bandit' },
+  { id: 'paint-coral', name: 'Coral Paint', rarity: 'uncommon', kind: 'paint', only: 'bandit' },
+  { id: 'hat-chef', name: 'Chef Hat', rarity: 'rare', kind: 'hat', only: 'bandit' },
+  { id: 'charm-bell', name: 'Brass Bell', rarity: 'rare', kind: 'charm', only: 'bandit' },
+  { id: 'hat-fish', name: 'Fish Hat', rarity: 'epic', kind: 'hat', only: 'bandit' },
+  { id: 'charm-fish', name: 'Wooden Fish', rarity: 'epic', kind: 'charm', only: 'bandit' },
+  { id: 'paint-brass', name: 'Gilt Paint', rarity: 'legendary', kind: 'paint', only: 'bandit' },
+  // Only Flying Fish: the sea and the sky.
+  { id: 'hat-propeller', name: 'Propeller Cap', rarity: 'common', kind: 'hat', only: 'fish' },
+  { id: 'hat-flowers', name: 'Flower Crown', rarity: 'uncommon', kind: 'hat', only: 'fish' },
+  { id: 'paint-sea', name: 'Sea Blue Paint', rarity: 'uncommon', kind: 'paint', only: 'fish' },
+  { id: 'x-shades', name: 'Sunglasses', rarity: 'rare', kind: 'extra', only: 'fish' },
+  { id: 'charm-star', name: 'Lucky Star', rarity: 'rare', kind: 'charm', only: 'fish' },
+  { id: 'hat-shark', name: 'Shark Hood', rarity: 'epic', kind: 'hat', only: 'fish' },
+  { id: 'charm-moon', name: 'Tin Moon', rarity: 'epic', kind: 'charm', only: 'fish' },
+  { id: 'hat-wizard', name: 'Wizard Hat', rarity: 'legendary', kind: 'hat', only: 'fish' },
+  // Only the scratch cards: the silly things.
+  { id: 'hat-cake', name: 'Birthday Cake', rarity: 'common', kind: 'hat', only: 'scratch' },
+  { id: 'hat-cone', name: 'Traffic Cone', rarity: 'uncommon', kind: 'hat', only: 'scratch' },
+  { id: 'x-mustache', name: 'Fine Mustache', rarity: 'uncommon', kind: 'extra', only: 'scratch' },
+  { id: 'charm-shell', name: 'Pink Shell', rarity: 'uncommon', kind: 'charm', only: 'scratch' },
+  { id: 'hat-lampshade', name: 'Lampshade', rarity: 'rare', kind: 'hat', only: 'scratch' },
+  { id: 'paint-rose', name: 'Rose Paint', rarity: 'rare', kind: 'paint', only: 'scratch' },
+  { id: 'hat-bread', name: 'Loaf of Bread', rarity: 'epic', kind: 'hat', only: 'scratch' },
+  { id: 'f-snowman', name: 'Snowman', rarity: 'legendary', kind: 'furniture', only: 'scratch' },
 ];
+
+/** What a game can give: what any game gives, and what only it does. */
+export const prizesOf = (game?: GameId): Prize[] => PRIZES.filter((p) => !p.only || p.only === game);
 
 /** Rarities, commonest first. */
 export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -80,11 +122,11 @@ function pickRarity(odds: Record<Rarity, number>, r: number): Rarity {
 }
 
 /**
- * A prize of a rarity, from everything a chest or game can give. What the player does not have
- * yet is three times as likely, so the shelves fill rather than repeat.
+ * A prize of a rarity, from everything a game can give. What the player does not have yet is
+ * three times as likely, so the shelves fill rather than repeat.
  */
-export function pickPrize(rarity: Rarity, owned: (p: Prize) => boolean, rand: () => number): Prize {
-  const pool = PRIZES.filter((p) => p.rarity === rarity);
+export function pickPrize(rarity: Rarity, owned: (p: Prize) => boolean, rand: () => number, game?: GameId): Prize {
+  const pool = prizesOf(game).filter((p) => p.rarity === rarity);
   const weights = pool.map((p) => (owned(p) ? 1 : 3));
   let r = rand() * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < pool.length; i++) {
@@ -94,9 +136,9 @@ export function pickPrize(rarity: Rarity, owned: (p: Prize) => boolean, rand: ()
   return pool[pool.length - 1];
 }
 
-/** The roll: a prize, by the odds, favouring what is not owned yet. */
-export function rollPrize(rand: () => number, owned: (p: Prize) => boolean = () => false): Prize {
-  return pickPrize(pickRarity(ODDS, rand()), owned, rand);
+/** The roll: a prize, by the odds, favouring what is not owned yet. At a game, from that game's prizes. */
+export function rollPrize(rand: () => number, owned: (p: Prize) => boolean = () => false, game?: GameId): Prize {
+  return pickPrize(pickRarity(ODDS, rand()), owned, rand, game);
 }
 
 /** How many tiles the strip has, and where the winner sits on it. */
@@ -104,13 +146,13 @@ export const STRIP_LENGTH = 56;
 export const WIN_AT = 48;
 
 /** The strip that spins past: random prizes (by the odds), with the winner at WIN_AT. */
-export function makeStrip(winner: Prize, seed: number): Prize[] {
+export function makeStrip(winner: Prize, seed: number, game: GameId = 'wheel'): Prize[] {
   const r = rng(seed);
   const strip: Prize[] = [];
-  for (let i = 0; i < STRIP_LENGTH; i++) strip.push(i === WIN_AT ? winner : rollPrize(r));
+  for (let i = 0; i < STRIP_LENGTH; i++) strip.push(i === WIN_AT ? winner : rollPrize(r, undefined, game));
   // A near miss just after the winner makes the stop more exciting.
   if (winner.rarity !== 'legendary' && r() < 0.5) {
-    const shiny = PRIZES.filter((p) => p.rarity === 'legendary');
+    const shiny = prizesOf(game).filter((p) => p.rarity === 'legendary');
     strip[WIN_AT + 1] = shiny[Math.floor(r() * shiny.length)];
   }
   return strip;

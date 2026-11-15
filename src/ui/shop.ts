@@ -197,7 +197,7 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         };
         grid.append(t);
       }
-      body.append(el('p', '', 'Something to wear with your hat.'), grid);
+      body.append(el('p', '', '"A pin and a scarf, that is my lot. The gull at the Lucky Gull has the rest, a pearl a go."'), grid);
     } else if (tab === 'Hats') {
       const grid = el('div', 'grid');
       for (const h of HATS.filter((x) => !x.gift && !x.prize)) {
@@ -214,7 +214,7 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
         };
         grid.append(t);
       }
-      body.append(el('p', '', 'The rarest hats are only won at the Lucky Gull, for pearls.'), grid);
+      body.append(el('p', '', '"Three plain hats to keep the sun off. Anything grander is won at the Lucky Gull, for pearls: each of its games has hats of its own."'), grid);
     } else if (tab === 'Camp' || tab === 'Things') {
       const camp = tab === 'Camp';
       body.append(el('p', '', camp ? '"Pitch a camp anywhere you like. A tent, a fire and somewhere to sit, and it\'s a camp. The rest is making it yours." Find what you buy in your bag.' : 'Things to set down anywhere on the island. Find them in your bag.'));

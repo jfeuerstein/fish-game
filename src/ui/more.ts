@@ -1,5 +1,5 @@
 // More: the wardrobe, settings, the save code, and how to play.
-import { CHARACTERS, EXTRAS, HATS } from '../game/economy';
+import { CHARACTERS, EXTRAS, HATS, CHARMS, PAINTS } from '../game/economy';
 import { TITLES } from '../game/titles';
 import { SAVE_KEY, fromCode, newSave, toCode } from '../game/save';
 import type { Session } from '../game/session';
@@ -62,6 +62,36 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void, 
         extras.append(t);
       }
       body.append(extras);
+      // The rod: its paint and its charm, once any has been won.
+      if (save.rodPaints.length || save.charms.length) {
+        body.append(el('div', 'section', 'Your rod'));
+        const looks = el('div', 'grid');
+        const plain = el('button', `tile${save.rodPaint === null && save.charm === null ? ' on' : ''}`, '<div style="height:64px;font-size:40px;line-height:64px">∅</div>Plain');
+        plain.onclick = () => {
+          s.dressRod(null, null);
+          sheet.refresh();
+        };
+        looks.append(plain);
+        for (const q of PAINTS.filter((x) => save.rodPaints.includes(x.id))) {
+          const t = el('button', `tile${save.rodPaint === q.id ? ' on' : ''}`);
+          t.innerHTML = `<img src="${icon(q.id)}" alt="">${q.name}`;
+          t.onclick = () => {
+            s.dressRod(save.rodPaint === q.id ? null : q.id, save.charm);
+            sheet.refresh();
+          };
+          looks.append(t);
+        }
+        for (const q of CHARMS.filter((x) => save.charms.includes(x.id))) {
+          const t = el('button', `tile${save.charm === q.id ? ' on' : ''}`);
+          t.innerHTML = `<img src="${icon(q.id)}" alt="">${q.name}`;
+          t.onclick = () => {
+            s.dressRod(save.rodPaint, save.charm === q.id ? null : q.id);
+            sheet.refresh();
+          };
+          looks.append(t);
+        }
+        body.append(looks);
+      }
       body.append(el('div', 'section', 'Title'));
       for (const t of TITLES) {
         const got = save.titles.includes(t.name);

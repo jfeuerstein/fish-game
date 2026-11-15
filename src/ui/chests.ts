@@ -1,17 +1,21 @@
 // The Lucky Gull's prizes: the one roll every game makes (`pull`), the card that shows what was
 // won, and the Gull Wheel's show, a strip of prizes slowing past a marker.
-import { ODDS, PRIZES, PULL_COST, type Prize, RARITIES, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, pickPrize, rollPrize } from '../game/crates';
+import { GAME_NAME, type GameId, ODDS, PULL_COST, type Prize, RARITIES, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, pickPrize, prizesOf, rollPrize } from '../game/crates';
 import type { Session } from '../game/session';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
 
 import { GRAND } from '../game/arcade';
 
+/** The list in the save a prize of each kind is kept in (furniture is counted, not listed). */
+const kept = (s: Session, p: Prize): string[] => {
+  const save = s.save;
+  return p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : p.kind === 'paint' ? save.rodPaints : p.kind === 'charm' ? save.charms : save.characters;
+};
+
 /** Whether the player already has a prize (furniture is never 'had': another is always welcome). */
 export function owns(s: Session, p: Prize): boolean {
-  const save = s.save;
-  if (p.kind === 'furniture') return false;
-  return (p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : save.characters).includes(p.id);
+  return p.kind !== 'furniture' && kept(s, p).includes(p.id);
 }
 
 /** Give a prize: whether it was already owned, and the pearls given back if so. */
@@ -21,7 +25,7 @@ export function award(s: Session, p: Prize): { owned: boolean; refund: number } 
     save.furniture[p.id] = (save.furniture[p.id] ?? 0) + 1;
     return { owned: false, refund: 0 };
   }
-  const list = p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : save.characters;
+  const list = kept(s, p);
   if (list.includes(p.id)) {
     save.tokens += REFUND[p.rarity];
     return { owned: true, refund: REFUND[p.rarity] };
@@ -42,6 +46,8 @@ function said(prize: Prize, owned: boolean, refund: number): string {
   if (prize.kind === 'character') return 'A new friend to play as! Change in More › Wardrobe.';
   if (prize.kind === 'hat') return 'A new hat!';
   if (prize.kind === 'extra') return 'Something new to wear!';
+  if (prize.kind === 'paint') return 'Paint for your rod!';
+  if (prize.kind === 'charm') return 'A charm to hang from your rod!';
   return 'In your bag, ready to set down.';
 }
 
@@ -50,11 +56,13 @@ export function prizeCard(card: HTMLElement, s: Session, prize: Prize, owned: bo
   card.style.setProperty('--rar', RARITY_COLOR[prize.rarity]);
   card.innerHTML = `<div class="rr-glow"></div><img src="${icon(prize.id)}" alt=""><div class="rr-rar">${RARITY_LABEL[prize.rarity]}</div><div class="rr-name">${prize.name}</div><div class="rr-sub">${said(prize, owned, refund)}</div>`;
   const actions = el('div', 'rr-actions');
-  if (!owned && (prize.kind === 'hat' || prize.kind === 'extra' || prize.kind === 'character')) {
-    const use = el('button', 'btn green', prize.kind === 'character' ? 'Play as' : 'Wear it');
+  if (!owned && prize.kind !== 'furniture') {
+    const use = el('button', 'btn green', prize.kind === 'character' ? 'Play as' : prize.kind === 'paint' || prize.kind === 'charm' ? 'Use it' : 'Wear it');
     use.onclick = () => {
       if (prize.kind === 'hat') s.wear(prize.id);
       else if (prize.kind === 'extra') s.wearExtra(prize.id);
+      else if (prize.kind === 'paint') s.dressRod(prize.id, s.save.charm);
+      else if (prize.kind === 'charm') s.dressRod(s.save.rodPaint, prize.id);
       else s.become(prize.id);
       close();
     };
@@ -91,7 +99,7 @@ const TILE = 104;
 const pearlGlyph = '<b class="pearl"></b>';
 
 /** Pay a pearl and roll: the prize is given at once (nothing is lost if the game closes mid-show). Null if there are not enough pearls. */
-export function pull(s: Session): { prize: Prize; owned: boolean; refund: number } | null {
+export function pull(s: Session, game: GameId): { prize: Prize; owned: boolean; refund: number } | null {
   if (s.save.tokens < PULL_COST) {
     s.hud.toast('Not enough pearls. Golden, prismatic and legendary fish bring them.');
     return null;
@@ -99,7 +107,7 @@ export function pull(s: Session): { prize: Prize; owned: boolean; refund: number
   s.save.tokens -= PULL_COST;
   s.save.arcade.played++;
   s.audio.play('chip', { volume: 0.8 });
-  const prize = rollPrize(Math.random, (p) => owns(s, p));
+  const prize = rollPrize(Math.random, (p) => owns(s, p), game);
   s.save.arcade.rarest = Math.max(s.save.arcade.rarest, RARITIES.indexOf(prize.rarity) + 1);
   const got = { prize, ...award(s, prize) };
   s.hud.hold = true;
@@ -114,17 +122,23 @@ export function oddsRow(): HTMLElement {
   return row;
 }
 
-/** Everything that can turn up, owned or not. */
-export function prizeGrid(body: HTMLElement, s: Session): void {
-  body.append(el('div', 'section', 'What can turn up'));
-  const grid = el('div', 'grid');
-  for (const p of PRIZES) {
-    const t = el('div', 'tile');
-    t.style.boxShadow = `inset 0 -3px 0 ${RARITY_COLOR[p.rarity]}`;
-    t.innerHTML = `<img src="${icon(p.id)}" alt="">${p.name}<small style="color:${RARITY_COLOR[p.rarity]}">${RARITY_LABEL[p.rarity]}${owns(s, p) ? ' · owned' : ''}</small>`;
-    grid.append(t);
+/** Everything that can turn up at a game, owned or not: what only it gives first. */
+export function prizeGrid(body: HTMLElement, s: Session, game: GameId): void {
+  const all = prizesOf(game);
+  for (const [title, list] of [
+    [`Only from ${GAME_NAME[game]}`, all.filter((p) => p.only)],
+    ['From any game', all.filter((p) => !p.only)],
+  ] as const) {
+    body.append(el('div', 'section', title));
+    const grid = el('div', 'grid');
+    for (const p of list) {
+      const t = el('div', 'tile');
+      t.style.boxShadow = `inset 0 -3px 0 ${RARITY_COLOR[p.rarity]}`;
+      t.innerHTML = `<img src="${icon(p.id)}" alt="">${p.name}<small style="color:${RARITY_COLOR[p.rarity]}">${RARITY_LABEL[p.rarity]}${owns(s, p) ? ' · owned' : ''}</small>`;
+      grid.append(t);
+    }
+    body.append(grid);
   }
-  body.append(grid);
 }
 
 /**
