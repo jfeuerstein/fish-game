@@ -30,6 +30,8 @@ export interface Config {
   warp: number;
   /** `smooth` draws the game full size with soft light and fluid movement, as it was before the lo-fi look. */
   look: string | null;
+  /** `eyes=0` draws no eyes on anyone, to see what a model has painted beneath them. */
+  eyes: boolean;
 }
 
 export function parseConfig(search: string): Config {
@@ -52,5 +54,6 @@ export function parseConfig(search: string): Config {
     zoo: p.get('zoo'),
     warp: Math.min(8, Math.max(1, Number(p.get('warp')) || 1)),
     look: p.get('look'),
+    eyes: p.get('eyes') !== '0',
   };
 }

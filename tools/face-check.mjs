@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Photograph every character's head from the front, three-quarters on and the side, on one
-// sheet: for placing the drawn eyes (FACES in src/player/face.ts) and looking at expressions.
+// sheet: for looking at the drawn eyes (src/player/face.ts) and their expressions. `eyes=0` in
+// the query shows what is painted beneath them.
 //
-//   npm run build && node tools/face-check.mjs out.png [--chars char-otter,npc-duck] [--face happy] [--query "look=smooth"]
+//   npm run build && node tools/face-check.mjs out.png [--chars char-otter,npc-duck] [--face happy] [--query "eyes=0"]
 import sharp from 'sharp';
 import { preview } from 'vite';
 import { launchBrowser } from './browser.mjs';

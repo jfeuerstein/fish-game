@@ -19,7 +19,8 @@ import { dedup, meshopt, prune, simplify, weld } from '@gltf-transform/functions
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import sharp from 'sharp';
-import { INKS, calm, inkFor, inked } from './palette.mjs';
+import { eyesOnCorners, eyesOnTexture, readBody, trianglesOnTexture } from './eyes.mjs';
+import { INKS, calm, inkFor, inked, inkedSmall } from './palette.mjs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 await Promise.all([MeshoptDecoder.ready, MeshoptEncoder.ready, MeshoptSimplifier.ready]);
@@ -30,7 +31,8 @@ const io = new NodeIO().setLogger(new Logger(Logger.Verbosity.WARN)).registerExt
  * and how many colours of its own the texture keeps before they are moved to inks.
  */
 const CUT = {
-  char: { tris: 1500, tex: 128, colours: 14 },
+  // A character is looked at more closely than anything else: a finer texture keeps its face clean.
+  char: { tris: 1500, tex: 256, colours: 16 },
   big: { tris: 1400, tex: 256, colours: 16 },
   prop: { tris: 420, tex: 64, colours: 10 },
   plant: { tris: 220, tex: 64, colours: 8 },
@@ -45,6 +47,71 @@ const PLANT = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm', 'bu
 const index = JSON.parse(readFileSync(`${ROOT}public/models/index.json`, 'utf8'));
 const cutFor = (id) => CUT[BIG.has(id) ? 'big' : PLANT.has(id) ? 'plant' : (index[id]?.kind ?? 'prop')] ?? CUT.prop;
 
+/** A primitive's triangles, as three corner numbers each. */
+function trisOf(prim) {
+  const idx = prim.getIndices();
+  const n = idx ? idx.getCount() : prim.getAttribute('POSITION').getCount();
+  const tris = [];
+  for (let i = 0; i < n; i += 3) tris.push(idx ? [idx.getScalar(i), idx.getScalar(i + 1), idx.getScalar(i + 2)] : [i, i + 1, i + 2]);
+  return tris;
+}
+
+/**
+ * A texture made small, counting only the pixels the model uses. A generated texture is many
+ * small pieces with margins between them, and a margin is filled with whatever piece is nearest:
+ * shrunk the plain way, a shirt's margin runs into the edge of an ear and leaves red specks on
+ * it. So each small pixel is the average of the used pixels under it, and one with none under
+ * it takes its colour from its neighbours. Returns a PNG, or null if the sizes do not divide.
+ */
+async function shrunk(raw, width, height, used, size) {
+  const f = width / size;
+  if (width !== height || !Number.isInteger(f) || f < 1) return null;
+  const out = new Uint8Array(size * size * 4);
+  const have = new Uint8Array(size * size);
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const c = [0, 0, 0];
+      let n = 0;
+      for (let dy = 0; dy < f; dy++)
+        for (let dx = 0; dx < f; dx++) {
+          const i = (y * f + dy) * width + x * f + dx;
+          if (used[i] < 0) continue;
+          for (let k = 0; k < 3; k++) c[k] += raw[i * 4 + k];
+          n++;
+        }
+      if (!n) continue;
+      const o = (y * size + x) * 4;
+      for (let k = 0; k < 3; k++) out[o + k] = Math.round(c[k] / n);
+      out[o + 3] = 255;
+      have[y * size + x] = 1;
+    }
+  for (let pass = 0; pass < size; pass++) {
+    const fill = [];
+    for (let y = 0; y < size; y++)
+      for (let x = 0; x < size; x++) {
+        if (have[y * size + x]) continue;
+        const c = [0, 0, 0];
+        let n = 0;
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= size || ny >= size || !have[ny * size + nx]) continue;
+            for (let k = 0; k < 3; k++) c[k] += out[(ny * size + nx) * 4 + k];
+            n++;
+          }
+        if (n) fill.push([y * size + x, c.map((v) => Math.round(v / n))]);
+      }
+    if (!fill.length) break;
+    for (const [i, c] of fill) {
+      out.set([c[0], c[1], c[2], 255], i * 4);
+      have[i] = 1;
+    }
+  }
+  for (let i = 0; i < size * size; i++) out[i * 4 + 3] = 255;
+  return sharp(out, { raw: { width: size, height: size, channels: 4 } }).png().toBuffer();
+}
+
 export async function lofiModel(id) {
   const cut = cutFor(id);
   const doc = await io.read(`${ROOT}art/models/${id}.glb`);
@@ -52,12 +119,37 @@ export async function lofiModel(id) {
   const root = doc.getRoot();
   let tris = 0;
   for (const m of root.listMeshes()) for (const p of m.listPrimitives()) tris += (p.getIndices()?.getCount() ?? p.getAttribute('POSITION').getCount()) / 3;
+  // A character's own painted eyes are found and painted out while it is still whole (eyes.mjs):
+  // the game draws eyes of its own exactly there.
+  const body = index[id]?.rig ? readBody(doc) : null;
+  // Every texture's pixels, and which of them the model uses, read while it is still whole.
+  const whole = new Map();
+  for (const tex of root.listTextures()) {
+    if (!tex.getImage()) continue;
+    const { data, info } = await sharp(Buffer.from(tex.getImage())).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const used = new Int32Array(info.width * info.height).fill(-1);
+    for (const m of root.listMeshes())
+      for (const p of m.listPrimitives()) {
+        if (p.getMaterial()?.getBaseColorTexture() !== tex) continue;
+        const on = trianglesOnTexture(p, trisOf(p), info.width, info.height);
+        for (let i = 0; i < on.length; i++) if (on[i] >= 0) used[i] = on[i];
+      }
+    whole.set(tex, { data, width: info.width, height: info.height, used });
+  }
+  let eyes = [];
+  if (body?.texture && whole.has(body.texture)) {
+    const t = whole.get(body.texture);
+    eyes = eyesOnTexture(body, t.data, t.width, t.height);
+  } else if (body) eyes = eyesOnCorners(body);
+  if (body && eyes.length !== 2) console.warn(`${id}: no painted eyes found; the game will guess where they go`);
+  if (eyes.length === 2) root.listScenes()[0]?.setExtras({ eyes });
   const ratio = Math.min(1, cut.tris / tris);
   await doc.transform(dedup(), weld(), ...(ratio < 1 ? [simplify({ simplifier: MeshoptSimplifier, ratio, error: 0.08, lockBorder: false })] : []), prune());
   for (const tex of root.listTextures()) {
-    const image = tex.getImage();
-    if (!image) continue;
-    const px = await inked(Buffer.from(image), cut.tex, cut.colours);
+    const t = whole.get(tex);
+    if (!t) continue;
+    const small = await shrunk(t.data, t.width, t.height, t.used, cut.tex);
+    const px = small ? await inkedSmall(small, cut.colours) : await inked(await sharp(t.data, { raw: { width: t.width, height: t.height, channels: 4 } }).png().toBuffer(), cut.tex, cut.colours);
     const png = await sharp(calm(px.data, px.width, px.height), { raw: { width: px.width, height: px.height, channels: 4 } }).png({ palette: true, colours: 64, dither: 0, compressionLevel: 9 }).toBuffer();
     tex.setImage(png).setMimeType('image/png');
   }
@@ -81,7 +173,7 @@ export async function lofiModel(id) {
   for (const ext of root.listExtensionsUsed()) if (ext.extensionName === 'EXT_texture_webp') ext.dispose();
   await doc.transform(prune(), meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   await io.write(`${ROOT}public/models/${id}.glb`, doc);
-  return { tris, now: Math.round(tris * ratio) };
+  return { tris, now: Math.round(tris * ratio), eyes: eyes.length };
 }
 
 const INK = [16, 24, 31];

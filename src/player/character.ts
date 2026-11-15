@@ -6,7 +6,8 @@ import { fit, model } from '../assets/models';
 import * as P from './poses';
 import { Rig } from './rig';
 import { type Look, poseDue } from '../look/look';
-import { EXPRESSIONS, type Expression, blinking, faceFor, faceOf, faceSheet } from './face';
+import { INK } from '../look/inks';
+import { DARK_FUR, EXPRESSIONS, type Expression, GUESS, type PaintedEye, blinking, eyeHeight, eyeShader, faceFor, readEyes } from './face';
 import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headOf, measureHat, placeHat, placeFor } from './fit';
 
 /** Draw each skull's ellipsoid (`socket=1` in the address), to tune HEADS by eye. */
@@ -69,6 +70,32 @@ export function alongY(root: THREE.Object3D, length: number): THREE.Object3D {
 }
 
 
+const EYE_VERTEX = /* glsl */ `
+#include <common>
+#include <fog_pars_vertex>
+attribute vec2 at;
+attribute float side;
+varying vec2 vAt;
+varying float vSide;
+void main() {
+  vAt = at;
+  vSide = side;
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+const EYE_FRAGMENT = /* glsl */ `
+#include <common>
+#include <fog_pars_fragment>
+${eyeShader}
+void main() {
+  vec4 c = eyeColour();
+  if (c.a < 0.5) discard;
+  gl_FragColor = vec4(c.rgb, 1.0);
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+
 export class Character {
   readonly group = new THREE.Group();
   /** The model, turned to face +z. */
@@ -99,13 +126,13 @@ export class Character {
   static look: Look | null = null;
   private sincePose = Math.random() * 0.08;
   private posedAs: Action | null = null;
-  /** The drawn face: both eyes as one small mesh that follows the head. */
-  private faceMesh: THREE.Mesh | null = null;
-  private faceMap: THREE.Texture | null = null;
+  /** The drawn eyes: one small mesh hung on the head's bone, and the material that draws their shape. */
+  private faceMaterial: THREE.ShaderMaterial | null = null;
   private faceSeed = Math.floor(Math.random() * 1000);
   private faceNow: Expression | null = null;
   private facePut: { face: Expression; until: number } | null = null;
-  private static sheet: THREE.DataTexture | null = null;
+  /** Whether anyone is given eyes (`eyes=0` in the address goes without). */
+  static eyes = true;
   /** Everyone's heads, much bigger (a setting). */
   static bigHeads = false;
   /** Whether the rod is out. */
@@ -139,7 +166,7 @@ export class Character {
     if (this.rig.ok) this.faceForward();
     m.rotation.y += this.facing;
     this.baseYaw = m.rotation.y;
-    if (this.rig.ok) this.drawFace();
+    if (this.rig.ok && Character.eyes) this.drawFace();
   }
 
   /** Wear an expression for a moment, whatever the body is doing (a bite, being honked at). */
@@ -148,88 +175,123 @@ export class Character {
   }
 
   /**
-   * Put the drawn eyes on the head: a ray is cast at the head from where each eye looks out, and
-   * a small flat picture is stood just off the surface where it lands, facing out.
+   * Draw the eyes on the head, where the model's own painted ones were (its file says where:
+   * see face.ts). Each eye is a small square of mesh laid over the head and pressed onto it: a
+   * ray is cast at the head for every corner of its grid, so it follows the head's shape like
+   * paint, and it is hung on the head's bone, so it goes wherever the head does.
    */
   private drawFace(): void {
-    const m = this.measure();
     const body = this.body;
     const head = this.rig?.headBone;
-    if (!m || !body || !head) return;
-    const spec = faceOf(this.id);
+    const m = this.measure();
+    if (!body || !head || !m) return;
     const h = this.height;
+    this.group.updateMatrixWorld(true);
     const toWorld = this.group.matrixWorld;
     const toLocal = toWorld.clone().invert();
     const ray = new THREE.Raycaster();
-    // From `from` (in the character's frame) in along `dir`: the last surface met on the way to the
-    // head's middle, so that a hat's brim or an ear in front of the eye is passed through.
-    const land = (from: THREE.Vector3, dir: THREE.Vector3): THREE.Vector3 | null => {
-      ray.set(from.clone().addScaledVector(dir, 3).applyMatrix4(toWorld), dir.clone().negate().transformDirection(toWorld));
-      ray.far = 3;
-      const hit = ray.intersectObject(body, true).pop();
-      return hit ? hit.point.clone().applyMatrix4(toLocal) : null;
-    };
-    const pos: number[] = [];
-    const uv: number[] = [];
-    const idx: number[] = [];
-    const up = new THREE.Vector3(0, 1, 0);
-    const cols = EXPRESSIONS.length;
-    const quad = (at: THREE.Vector3, dir: THREE.Vector3, size: number, mirror: boolean): void => {
-      const right = new THREE.Vector3().crossVectors(up, dir).normalize().multiplyScalar(size / 2);
-      const rise = up.clone().multiplyScalar(size / 2);
-      const o = pos.length / 3;
-      const [u0, u1] = mirror ? [1 / cols, 0] : [0, 1 / cols];
-      const v0 = spec.rim ? 0.5 : 0;
-      for (const [sx, sy, u, v] of [[-1, -1, u0, v0], [1, -1, u1, v0], [1, 1, u1, v0 + 0.5], [-1, 1, u0, v0 + 0.5]] as const) {
-        const p = at.clone().addScaledVector(right, sx).addScaledVector(rise, sy);
-        pos.push(p.x, p.y, p.z);
-        uv.push(u, v);
+    let painted: [PaintedEye, PaintedEye] | null = null;
+    body.traverse((o) => {
+      painted ??= readEyes(o.userData.eyes);
+    });
+    const spots: { at: THREE.Vector3; dir: THREE.Vector3 }[] = [];
+    let size = GUESS.size * h;
+    let onDark = false;
+    if (painted) {
+      const [a, b] = painted as [PaintedEye, PaintedEye];
+      const scale = new THREE.Vector3().setFromMatrixScale(head.matrixWorld).x;
+      size = eyeHeight(((a.r + b.r) / 2) * scale, h);
+      onDark = Math.min(a.on, b.on) < DARK_FUR;
+      // The two look out the same way, mirrored: each takes the other's direction into account.
+      const na = new THREE.Vector3(...a.n).add(new THREE.Vector3(-b.n[0], b.n[1], b.n[2])).normalize();
+      const nb = new THREE.Vector3(-na.x, na.y, na.z);
+      for (const [eye, n] of [[a, na], [b, nb]] as const) spots.push({ at: new THREE.Vector3(...eye.p).applyMatrix4(head.matrixWorld), dir: n.clone().transformDirection(head.matrixWorld) });
+    } else {
+      // None painted: either side of straight ahead, at a likely height, wherever the head's surface is.
+      for (const side of [1, -1]) {
+        const dir = new THREE.Vector3(Math.sin(GUESS.az) * side, 0, Math.cos(GUESS.az));
+        const from = new THREE.Vector3(0, GUESS.y * h, m.headZ).addScaledVector(dir, 3).applyMatrix4(toWorld);
+        const out = dir.clone().transformDirection(toWorld);
+        ray.set(from, out.clone().negate());
+        ray.far = 3;
+        // The last surface met on the way in, so a brim or an ear in front of the eye is passed through.
+        const hit = ray.intersectObject(body, true).pop();
+        if (hit) spots.push({ at: hit.point.clone(), dir: out });
       }
-      idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
-    };
-    for (const side of [1, -1]) {
-      const dir = spec.x ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(Math.sin(spec.az) * side, 0, Math.cos(spec.az));
-      const at = land(new THREE.Vector3(spec.x ? spec.x * h * side : 0, spec.y * h, m.headZ), dir);
-      if (at) quad(at.addScaledVector(dir, 0.014 * h), dir, spec.size * h, side < 0);
     }
-    if (!pos.length) return;
-    if (!Character.sheet) {
-      const s = faceSheet();
-      Character.sheet = new THREE.DataTexture(s.data, s.width, s.height, THREE.RGBAFormat);
-      Character.sheet.colorSpace = THREE.SRGBColorSpace;
-      Character.sheet.magFilter = Character.sheet.minFilter = THREE.NearestFilter;
-      Character.sheet.needsUpdate = true;
+    if (!spots.length) return;
+    // A grid over each eye, a little bigger than the eye.
+    const N = 4;
+    const SPAN = 1.1;
+    const start = 0.07 * h;
+    const lift = 0.007 * h;
+    const pos: number[] = [];
+    const at: number[] = [];
+    const sides: number[] = [];
+    const idx: number[] = [];
+    const headInv = head.matrixWorld.clone().invert();
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    for (const spot of spots) {
+      const dir = spot.dir;
+      const right = new THREE.Vector3().crossVectors(worldUp, dir).normalize();
+      const up = new THREE.Vector3().crossVectors(dir, right).normalize();
+      const side = spot.at.clone().applyMatrix4(toLocal).x >= 0 ? 1 : -1;
+      /** How far in from the eye's own plane the head's surface is, under a point of the grid. */
+      const depth = (u: number, v: number): number | null => {
+        const p = spot.at.clone().addScaledVector(right, u * size).addScaledVector(up, v * size);
+        ray.set(p.addScaledVector(dir, start), dir.clone().negate());
+        ray.far = start + 0.6 * size;
+        const hit = ray.intersectObject(body, true)[0];
+        return hit ? hit.distance - start : null;
+      };
+      const middle = depth(0, 0) ?? 0;
+      const first = pos.length / 3;
+      for (let j = 0; j <= N; j++)
+        for (let i = 0; i <= N; i++) {
+          const u = (i / N - 0.5) * SPAN;
+          const v = (j / N - 0.5) * SPAN;
+          // Kept near the middle's depth, so an eye at the edge of a bump does not fall off it.
+          const d = Math.min(middle + 0.45 * size, Math.max(middle - 0.3 * size, depth(u, v) ?? middle));
+          const p = spot.at.clone().addScaledVector(right, u * size).addScaledVector(up, v * size).addScaledVector(dir, lift - d).applyMatrix4(headInv);
+          pos.push(p.x, p.y, p.z);
+          at.push(u, v);
+          sides.push(side);
+        }
+      for (let j = 0; j < N; j++)
+        for (let i = 0; i < N; i++) {
+          const o = first + j * (N + 1) + i;
+          idx.push(o, o + 1, o + N + 2, o, o + N + 2, o + N + 1);
+        }
     }
-    // Each character's own copy of the sheet, so each can show a different column of it.
-    this.faceMap = Character.sheet.clone();
-    this.faceMap.needsUpdate = true;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.setAttribute('at', new THREE.Float32BufferAttribute(at, 2));
+    geo.setAttribute('side', new THREE.Float32BufferAttribute(sides, 1));
     geo.setIndex(idx);
-    this.faceMesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: this.faceMap, alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-    this.faceMesh.matrixAutoUpdate = false;
-    this.faceMesh.frustumCulled = false;
-    this.group.parent?.add(this.faceMesh);
+    this.faceMaterial = new THREE.ShaderMaterial({
+      vertexShader: EYE_VERTEX,
+      fragmentShader: EYE_FRAGMENT,
+      fog: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uFace: { value: 0 }, uOnDark: { value: onDark ? 1 : 0 }, uInk: { value: new THREE.Color(INK.dark) }, uPale: { value: new THREE.Color(INK.pale) }, uSoft: { value: new THREE.Color(INK.soft) } }]),
+    });
+    const mesh = new THREE.Mesh(geo, this.faceMaterial);
+    mesh.frustumCulled = false;
+    mesh.name = 'eyes';
+    head.add(mesh);
   }
 
-  /** Keep the face on the head, and showing what the character feels. */
-  private placeFace(): void {
-    const mesh = this.faceMesh;
-    const head = this.rig?.headBone;
-    if (!mesh || !head || !this.faceMap) return;
-    if (!mesh.parent) this.group.parent?.add(mesh);
-    mesh.visible = this.group.visible;
-    const restInv = this.restInv.get(head);
-    if (!restInv) return;
-    mesh.matrix.copy(head.matrixWorld).multiply(restInv);
-    mesh.matrixWorldNeedsUpdate = true;
+  /** Show on the face what the character feels. */
+  private showFace(): void {
+    if (!this.faceMaterial) return;
     if (this.facePut && this.facePut.until < this.t) this.facePut = null;
     let face = this.facePut?.face ?? faceFor(this.action);
     if ((face === 'open' || face === 'wide') && !this.facePut && blinking(this.t, this.faceSeed)) face = 'closed';
     if (face !== this.faceNow) {
       this.faceNow = face;
-      this.faceMap.offset.x = EXPRESSIONS.indexOf(face) / EXPRESSIONS.length;
+      this.faceMaterial.uniforms.uFace.value = EXPRESSIONS.indexOf(face);
     }
   }
 
@@ -734,7 +796,7 @@ export class Character {
       this.hat.quaternion.copy(this.group.quaternion);
     }
     if (this.extra && this.rig?.ok) this.wear(this.extra, this.extraId);
-    this.placeFace();
+    this.showFace();
     if (this.held) {
       const l = this.rig?.handL?.getWorldPosition(new THREE.Vector3()) ?? this.handPos;
       const mid = this.handPos.clone().add(l).multiplyScalar(0.5);
@@ -756,8 +818,8 @@ export class Character {
 
   /** Remove from the scene, with everything it was holding. */
   dispose(): void {
-    for (const o of [this.rod, this.hat, this.held, this.extra, this.faceMesh]) o?.parent?.remove(o);
-    this.faceMap?.dispose();
+    for (const o of [this.rod, this.hat, this.held, this.extra]) o?.parent?.remove(o);
+    this.faceMaterial?.dispose();
     this.group.parent?.remove(this.group);
   }
 

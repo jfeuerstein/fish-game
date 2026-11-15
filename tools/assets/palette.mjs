@@ -75,8 +75,11 @@ export function inkFor(r, g, b) {
  */
 export async function inked(input, size, colours = 12) {
   const [w, h] = Array.isArray(size) ? size : [size, size];
-  const small = await sharp(input).ensureAlpha().resize(w, h, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer();
-  // Colours are chosen from what can be seen: a clear pixel's colour must not use one up.
+  return inkedSmall(await sharp(input).ensureAlpha().resize(w, h, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer(), colours);
+}
+
+/** The same for a picture that is already the size wanted (a PNG). */
+export async function inkedSmall(small, colours = 12) {
   const few = await sharp(small).png({ palette: true, colours, dither: 0, effort: 10 }).toBuffer();
   const { data, info } = await sharp(few).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   for (let i = 0; i < data.length; i += 4) {

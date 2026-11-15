@@ -28,4 +28,4 @@ export const INKS = [
   '#24282c', '#474e54', '#737b80', '#a4abac', '#d2d6d2',
 ] as const;
 
-export const INK = { dark: '#10181f', pale: '#fffdf6' } as const;
+export const INK = { dark: '#10181f', pale: '#fffdf6', soft: '#86a1ab' } as const;

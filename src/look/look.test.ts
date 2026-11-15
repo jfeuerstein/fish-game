@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { EXPRESSIONS, FACES, CELL, blinking, faceFor, faceSheet } from '../player/face';
+import { EXPRESSIONS, EYE_MAX, EYE_MIN, type Expression, GROW, SHAPE, blinking, eyeAt, eyeHeight, eyeShader, faceFor, readEyes } from '../player/face';
 import { INKS } from './inks';
 import { lookFor, pictureSize, poseDue } from './look';
 
@@ -45,30 +45,88 @@ describe('the look', () => {
   });
 });
 
-describe('drawn faces', () => {
-  it('has eyes for every character with a rig', () => {
-    const index = JSON.parse(readFileSync(new URL('../../public/models/index.json', import.meta.url), 'utf8')) as Record<string, { rig?: boolean }>;
+/** The extras of a model file's scene: a .glb is a header, then a chunk of JSON. */
+function sceneExtras(id: string): Record<string, unknown> {
+  const glb = readFileSync(new URL(`../../public/models/${id}.glb`, import.meta.url));
+  const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8')) as { scene?: number; scenes: { extras?: Record<string, unknown> }[] };
+  return json.scenes[json.scene ?? 0].extras ?? {};
+}
+
+describe('drawn eyes', () => {
+  it('knows where every character with a rig had its eyes painted', () => {
+    const index = JSON.parse(readFileSync(new URL('../../public/models/index.json', import.meta.url), 'utf8')) as Record<string, { rig?: boolean; h: number }>;
     const rigged = Object.keys(index).filter((id) => index[id].rig);
     expect(rigged.length).toBeGreaterThan(0);
-    for (const id of rigged) expect(FACES[id], id).toBeDefined();
-    for (const f of Object.values(FACES)) {
-      expect(f.y).toBeGreaterThan(0.5);
-      expect(f.y).toBeLessThan(1);
-      expect(f.size).toBeGreaterThan(0.05);
+    for (const id of rigged) {
+      const eyes = readEyes(sceneExtras(id).eyes);
+      expect(eyes, id).not.toBeNull();
+      const [a, b] = eyes!;
+      // A mirror pair in the head bone's frame: either side of its middle, level, alike in size.
+      expect(a.p[0] * b.p[0], id).toBeLessThan(0);
+      expect(Math.abs(a.p[0] + b.p[0]) / Math.abs(a.p[0] - b.p[0]), id).toBeLessThan(0.4);
+      expect(Math.abs(a.p[1] - b.p[1]), id).toBeLessThan(0.05);
+      expect(Math.min(a.r, b.r) / Math.max(a.r, b.r), id).toBeGreaterThan(0.6);
     }
   });
 
-  it('draws every expression, each different, in ink', () => {
-    const sheet = faceSheet();
-    expect(sheet.width).toBe(CELL * EXPRESSIONS.length);
-    const cell = (col: number): string => {
-      let s = '';
-      for (let y = 0; y < CELL; y++) for (let x = 0; x < CELL; x++) s += sheet.data[(y * sheet.width + col * CELL + x) * 4 + 3] ? '#' : '.';
-      return s;
-    };
-    const cells = EXPRESSIONS.map((_, i) => cell(i));
-    for (const c of cells) expect(c).toContain('#');
-    expect(new Set(cells).size).toBe(EXPRESSIONS.length);
+  it('reads nothing from a file that has no eyes, or broken ones', () => {
+    expect(readEyes(undefined)).toBeNull();
+    expect(readEyes([{ p: [0, 0, 0], n: [0, 0, 1], r: 0.1 }])).toBeNull();
+    expect(readEyes([{ p: [0, 0], n: [0, 0, 1], r: 0.1 }, { p: [0, 0, 0], n: [0, 0, 1], r: 0.1 }])).toBeNull();
+    expect(readEyes([{ p: [1, 0, 0], n: [0, 0, 1], r: 0.1 }, { p: [-1, 0, 0], n: [0, 0, 1], r: 0.1, on: 0.2 }])?.[1].on).toBe(0.2);
+  });
+
+  it('draws eyes a little too big, and every islander\'s about alike', () => {
+    expect(eyeHeight(0.001, 1)).toBe(EYE_MIN);
+    expect(eyeHeight(0.5, 1)).toBe(EYE_MAX);
+    expect(eyeHeight(0.035, 1)).toBeCloseTo(0.035 * 2 * GROW);
+  });
+
+  /** An eye as it lands on a grid of pixels `n` tall: a row of text for each row of pixels. */
+  const pixels = (face: Expression, n: number, side: 1 | -1 = 1, onDark = false): string[] => {
+    const rows: string[] = [];
+    for (let j = 0; j < n; j++) {
+      let row = '';
+      for (let i = 0; i < n; i++) row += { none: '.', ink: '#', pale: 'o', soft: '+' }[eyeAt(face, (i + 0.5) / n - 0.5, 0.5 - (j + 0.5) / n, side, onDark)];
+      rows.push(row);
+    }
+    return rows;
+  };
+
+  it('draws every expression, each different, at the size they are seen in play', () => {
+    // Five or six pixels tall at the camera's usual distance.
+    for (const n of [5, 6, 12]) {
+      const drawn = EXPRESSIONS.map((e) => pixels(e, n).join('\n'));
+      for (const d of drawn) expect((d.match(/#/g) ?? []).length, d).toBeGreaterThanOrEqual(4);
+      expect(new Set(drawn).size).toBe(EXPRESSIONS.length);
+    }
+    // A lid and a smile are lines that do not break: every column they span has ink.
+    for (const e of ['closed', 'happy'] as const)
+      for (const n of [5, 6, 7, 9]) {
+        const rows = pixels(e, n);
+        for (let i = 1; i < n - 1; i++) expect(rows.some((r) => r[i] === '#'), `${e} at ${n}, column ${i}\n${rows.join('\n')}`).toBe(true);
+      }
+    // An open eye is a tall oval with a glint up and to the left.
+    const open = pixels('open', 12);
+    expect(open[5][6]).toBe('#');
+    expect(open.join('')).toContain('o');
+    expect(open[0][0]).toBe('.');
+  });
+
+  it('mirrors a squint, and on dark fur shows an eye by its glint and its lines paler', () => {
+    for (const [x, y] of [[0.2, 0.1], [-0.3, 0], [0.1, -0.25]]) expect(eyeAt('squint', x, y, 1)).toBe(eyeAt('squint', -x, y, -1));
+    expect(eyeAt('squint', -0.3, 0, 1)).toBe('ink');
+    expect(eyeAt('open', 0, 0, 1)).toBe('ink');
+    expect(eyeAt('open', 0.2, -0.2, 1, true)).toBe('ink');
+    expect(eyeAt('open', -0.06, 0.14, 1, true)).toBe('pale');
+    expect(eyeAt('closed', 0, -0.06, 1)).toBe('ink');
+    expect(eyeAt('closed', 0, -0.06, 1, true)).toBe('soft');
+    expect(eyeAt('open', 0.37, 0, 1, true)).toBe('none');
+  });
+
+  it('gives the graphics card the same shapes', () => {
+    const numbers = (o: unknown): number[] => (typeof o === 'number' ? [o] : Object.values(o as object).flatMap(numbers));
+    for (const n of numbers(SHAPE)) expect(eyeShader, String(n)).toContain(Number.isInteger(n) ? `${Math.abs(n)}.0` : `${Math.abs(n)}`);
   });
 
   it('blinks briefly, and not everyone at once', () => {

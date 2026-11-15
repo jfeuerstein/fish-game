@@ -19,7 +19,8 @@ node tools/play-check.mjs outdir                             # three scripted ca
 node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons
 node tools/icons.mjs [prefix]                                # render menu icons from the models (into art/icons)
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
-node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, for placing the drawn eyes
+node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
+node tools/assets/eyes.mjs [id ...]                          # say where each character's painted eyes are found (lofi.mjs does this itself)
 NODE_USE_ENV_PROXY=1 node tools/assets/make-tripo.mjs id ... # Tripo direct: picture -> model -> slimmed GLB + icon (--kinds hat,extra,prop,fish)
 NODE_USE_ENV_PROXY=1 node tools/assets/make-ground.mjs       # Tripo: the ground's painted textures, made to repeat
 node tools/fit-check.mjs outdir [items] [--chars ...] [--socket]   # every hat/accessory on every character, front and side
@@ -39,7 +40,7 @@ deploys to GitHub Pages.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `look=smooth` (draw full size with soft light, as before the lo-fi look). `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes). `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button), `open(sheet, tab)`, `give(coins, tokens)`, `catchNow`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
   `Heightfield.heightAt` uses the same triangle split as the terrain mesh. `waterAt` says which
@@ -128,7 +129,8 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
 - **Two folders.** The asset tools write soft, detailed models and pictures into `art/`
   (`art/models`, `art/icons`, `art/textures`, `art/title.webp`). Nothing there is shipped.
   `tools/assets/lofi.mjs` cuts each down to what the game draws, in `public/`: a model to a few
-  hundred triangles (`CUT`, by kind) with a 64 to 256 pixel texture in the island's inks; an
+  hundred triangles (`CUT`, by kind) with a 64 to 256 pixel texture in the island's inks (a
+  character's painted eyes found and painted out on the way: see The look); an
   icon to a 48-pixel sprite with a dark line round it; the title picture to 201 pixels across.
   It draws the five ground tiles itself, as pixel art. It costs nothing and takes ten seconds;
   the Tripo and fal tools run it when they finish. Never edit `public/models`, `public/icons` or
@@ -181,11 +183,26 @@ this genre, made the island's own. Six things make it, and anything new must tak
 - **Movement on twos.** A character's pose is changed twelve times a second, and a stride is
   always the same eight frames (`poseDue`), as a toy is moved by hand. Where it stands still
   moves every frame.
-- **Drawn eyes.** Each character wears a pair of flat dark eyes on its head (`src/player/face.ts`,
-  pure, tested: where they go on each head, the sheet of five expressions, when to blink, which
-  expression goes with which action). `Character.drawFace` casts a ray at the head to stand each
-  eye just off its surface; `express()` puts on a face for a moment (wide at a bite, squinting
-  when slapped). A new character needs a line in `FACES`; tune it with `tools/face-check.mjs`.
+- **Drawn eyes.** Every generated character comes with eyes painted on its head; cut down they
+  are smudges. So `tools/assets/eyes.mjs` (run by `lofi.mjs` for anything with a rig) finds the
+  two painted eyes on the full-detail model (dark, level, a mirror pair either side of the head
+  bone's middle), paints them out of the texture before it is made small, and writes where they
+  were into the model file (`eyes` in the scene's extras: place, facing and radius in the head
+  bone's frame, and how light the fur round them is). `Character.drawFace` draws the game's own
+  eyes exactly there: a small grid of mesh for each, pressed onto the head by casting a ray for
+  every corner so it follows the surface like paint, and hung on the head's bone. Their shapes
+  are not pictures: `src/player/face.ts` (pure, tested) gives each of five expressions as a
+  distance, for the tests and, as `eyeShader`, for the graphics card, so an eye is as crisp five
+  pixels tall (its size in play) as fifty. Eyes are sized from the painted ones, between
+  `EYE_MIN` and `EYE_MAX` of the character's height. On dark fur (the raccoon's mask) the eyes
+  are not painted out and show by a bigger glint, with paler lines. They blink, and change with
+  what the character is doing (`faceFor`); `express()` puts on a face for a moment (wide at a
+  bite, squinting when slapped). A new character needs nothing: if its file has no eyes the
+  tool says so and the game guesses (`GUESS`). Look with `tools/face-check.mjs`, and always at
+  the size seen in play as well as close up; `eyes=0` in the address draws none.
+- **Textures are shrunk counting only the pixels a model uses** (`shrunk` in `lofi.mjs`): a
+  generated texture is many small pieces with margins filled from whichever piece is nearest,
+  and shrunk the plain way a shirt's margin leaves specks on an ear.
 
 The interface (`src/style.css`, top) is the same harbour chart room, drawn the same way: bone
 paper and deep ink, brass for what is precious and a red-orange enamel for the button to press,

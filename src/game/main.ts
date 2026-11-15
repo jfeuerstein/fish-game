@@ -148,6 +148,7 @@ export class Game implements Session {
     const look = (this.look = lookFor(this.cfg.look, this.save.settings.pixels));
     setLook(look);
     Character.look = look;
+    Character.eyes = this.cfg.eyes;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !look.lofi, powerPreference: 'high-performance' });
     this.screen = new Screen(this.renderer, look);
     this.renderer.shadowMap.enabled = !low;
