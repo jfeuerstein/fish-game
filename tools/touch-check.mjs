@@ -52,9 +52,15 @@ await small('playing');
   const walked = await where();
   if (!ring) problems.push('the stick did not appear under a thumb in the bottom third');
   if (Math.hypot(walked.pos[0] - before.pos[0], walked.pos[2] - before.pos[2]) < 0.5) problems.push('dragging the stick did not move the player');
+  // The stick pushed right walks to the right of the screen...
+  await drag(width * 0.3, height * 0.78, 60, 0, 1200);
+  const sidestepped = await where();
+  const right = (sidestepped.pos[0] - walked.pos[0]) * Math.cos(walked.yaw) - (sidestepped.pos[2] - walked.pos[2]) * Math.sin(walked.yaw);
+  if (right < 0.5) problems.push(`pushing the stick right walked ${right.toFixed(1)} m to the right of the screen`);
+  // ...and a finger dragged right above it carries the world with it (the camera's yaw goes up).
   await drag(width * 0.5, height * 0.35, 120, 0, 200);
   const turned = await where();
-  if (Math.abs(turned.yaw - walked.yaw) < 0.1) problems.push('dragging above the stick did not turn the camera');
+  if (turned.yaw - sidestepped.yaw < 0.1) problems.push(`dragging right above the stick turned the camera by ${(turned.yaw - sidestepped.yaw).toFixed(2)}, the wrong way or not at all`);
   // Back to the counter, where the rest of the check expects to be.
   await page.evaluate(() => window.__cove.teleport('shop'));
   await page.waitForTimeout(400);

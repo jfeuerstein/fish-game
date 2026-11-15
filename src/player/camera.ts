@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { clamp } from '../core/rng';
 import type { Heightfield } from '../world/island';
+import { turned } from './steer';
 
 export class CameraRig {
   yaw = 0;
@@ -27,7 +28,7 @@ export class CameraRig {
   constructor(readonly camera: THREE.PerspectiveCamera, private field: Heightfield) {}
 
   turn(dx: number, dy: number): void {
-    this.yaw -= dx * 0.0065;
+    this.yaw = turned(this.yaw, dx);
     this.pitch = clamp(this.pitch + dy * 0.004, 0.08, 1.25);
   }
 

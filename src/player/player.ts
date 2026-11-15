@@ -5,6 +5,7 @@ import { Colliders } from '../world/colliders';
 import { Heightfield, standHeight, walkable, waterAt } from '../world/island';
 import { floorAt } from '../world/layout';
 import type { Character } from './character';
+import { heading } from './steer';
 
 export const WALK_SPEED = 3.0;
 export const RUN_SPEED = 5.4;
@@ -70,14 +71,8 @@ export class Player {
     const want = push < 0.08 ? 0 : (push > 0.82 ? RUN_SPEED : WALK_SPEED * Math.max(0.45, push / 0.82)) * (wading ? 0.6 : 1);
     this.speed += (want - this.speed) * (1 - Math.exp(-dt * (want > this.speed ? 7 : 10)));
     if (push >= 0.08) {
-      // Stick up is away from the camera.
-      const fx = -Math.sin(cameraYaw);
-      const fz = -Math.cos(cameraYaw);
-      const rx = -fz;
-      const rz = fx;
-      const dx = fx * stick.y - rx * stick.x;
-      const dz = fz * stick.y - rz * stick.x;
-      const target = Math.atan2(dx, dz);
+      // Stick up is away from the camera; stick right is the screen's right.
+      const target = heading(stick, cameraYaw);
       let d = target - this.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.yaw += d * (1 - Math.exp(-dt * 12));

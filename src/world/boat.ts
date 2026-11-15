@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { model } from '../assets/models';
 import { Heightfield, floatable } from './island';
 import { BOAT_MOORING } from './layout';
+import { heading } from '../player/steer';
 
 export class Boat {
   readonly group = new THREE.Group();
@@ -48,11 +49,7 @@ export class Boat {
       const push = Math.min(1, Math.hypot(stick.x, stick.y));
       this.effort += (push - this.effort) * (1 - Math.exp(-dt * 4));
       if (push > 0.1) {
-        const fx = -Math.sin(cameraYaw);
-        const fz = -Math.cos(cameraYaw);
-        const dx = fx * stick.y + fz * stick.x;
-        const dz = fz * stick.y - fx * stick.x;
-        const want = Math.atan2(dx, dz);
+        const want = heading(stick, cameraYaw);
         let turn = want - this.yaw;
         turn = Math.atan2(Math.sin(turn), Math.cos(turn));
         this.yaw += turn * (1 - Math.exp(-dt * 1.8));

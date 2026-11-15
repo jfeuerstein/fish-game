@@ -131,6 +131,14 @@ the owner's: do not route a deploy round it.
   buttons by the right thumb, and Bag/Journal/Fun/More along the bottom. The bottom third is the
   movement stick; anywhere higher turns the camera. A thumb lands on the canvas, not on `#app`
   under it: `Controls.onGame` takes both, and the touch check drags a thumb to hold it to that.
+  Which way a push or a drag goes is `src/player/steer.ts` (pure, tested): the stick pushed right
+  walks (or rows) to the right of the screen, and a finger dragged right above it carries the
+  world with it. The owner asked for both that way round; the touch check holds them.
+- **Trees are never taken away.** The owner did not want them vanishing as the player came near.
+  One whose crown really crosses the line from the player to the camera (`sightCrosses` in
+  `src/world/sight.ts`, pure, tested: beside the line, beyond the player, or only its bare trunk
+  in the way, does not count) is drawn as a veil, every other pixel (`Props.clearView`, `aVeil`),
+  so the player shows through it and it still casts its shadow.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
   the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
   and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;

@@ -2,6 +2,7 @@
 // mesh, however many there are. Also records what is solid, what can be sat on, and what can
 // be used.
 import * as THREE from 'three';
+import { sightCrosses } from './sight';
 import { model } from '../assets/models';
 import { Colliders } from './colliders';
 import { Heightfield } from './island';
@@ -71,9 +72,8 @@ export class Props {
   /** The size of each kind, as loaded. */
   readonly sizes = new Map<string, THREE.Vector3>();
 
-  /** Trees (and cliffs) that step out of the camera's way, with where each one stands. */
-  private thinnable: { inst: THREE.InstancedMesh; list: Placed[]; kept: THREE.Matrix4[]; size: THREE.Vector3; hidden: Uint8Array }[] = [];
-  private zero = new THREE.Matrix4().makeScale(0, 0, 0);
+  /** Trees (and cliffs) that can be seen through when they are in the way, with where each one stands. */
+  private thinnable: { list: Placed[]; kept: THREE.Matrix4[]; size: THREE.Vector3; veil: THREE.InstancedBufferAttribute; trunk: number }[] = [];
 
   /** The wind's clock, shared by everything that sways, and how many times a second what sways is moved (0: every frame). */
   private wind = { value: 0 };
@@ -118,41 +118,55 @@ export class Props {
   }
 
   /**
-   * Hide any tree that would stand between the camera and the player, or crowd the camera
-   * itself, so the view is never a wall of leaves. Trees beyond the player are left alone.
+   * Trees are never taken away. One that really stands between the camera and the player (its
+   * crown across the line from one to the other, or round the camera itself) is drawn as a
+   * veil, every other pixel of it, so the player is seen through it and the tree is still there.
+   * Standing beside a tree, or under one that the camera looks past, does nothing to it.
    */
   clearView(camera: THREE.Vector3, target: THREE.Vector3): void {
+    // The line of sight: from the player's chest to the camera.
     const ax = target.x;
+    const ay = target.y + 0.9;
     const az = target.z;
-    const bx = camera.x;
-    const bz = camera.z;
-    const dx = bx - ax;
-    const dz = bz - az;
-    const len2 = dx * dx + dz * dz || 1;
+    const dx = camera.x - ax;
+    const dy = camera.y - ay;
+    const dz = camera.z - az;
     for (const t of this.thinnable) {
       let changed = false;
+      const veil = t.veil.array as Float32Array;
       t.list.forEach((p, i) => {
         const s = p.scale ?? 1;
-        const crown = Math.max(t.size.x, t.size.z) * 0.5 * s;
-        const u = Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.z - az) * dz) / len2));
-        const d = Math.hypot(p.x - (ax + dx * u), p.z - (az + dz * u));
-        const nearCam = Math.hypot(p.x - bx, p.z - bz) < crown + 5;
-        // Between the two (not right by the player), anywhere in the camera's view there: the view
-        // widens away from the camera, about a third of the distance either side on an upright screen.
-        const fromCam = (1 - u) * Math.sqrt(len2);
-        // A tree standing just past the player but tall enough to cover them counts too.
-        const between = u > 0.04 && d < crown + 0.8 + fromCam * 0.34;
-        // Or standing so close that its crown is over the player.
-        const over = Math.hypot(p.x - ax, p.z - az) < crown + 0.4;
-        const hide = nearCam || between || over ? 1 : 0;
-        if (hide !== t.hidden[i]) {
-          t.hidden[i] = hide;
-          t.inst.setMatrixAt(i, hide ? this.zero : t.kept[i]);
+        // Once veiled, a tree stays so until the line is well clear of it, so it does not flicker.
+        const on = sightCrosses(
+          { ax, ay, az, dx, dy, dz },
+          { x: p.x, z: p.z, base: t.kept[i].elements[13], height: t.size.y * s, radius: Math.max(t.size.x, t.size.z) * 0.5 * s * (veil[i] ? 1.05 : 0.85), trunk: t.trunk },
+        )
+          ? 1
+          : 0;
+        if (on !== veil[i]) {
+          veil[i] = on;
           changed = true;
         }
       });
-      if (changed) t.inst.instanceMatrix.needsUpdate = true;
+      if (changed) t.veil.needsUpdate = true;
     }
+  }
+
+  /** Let a material be drawn as a veil where its instance asks for one (`aVeil`): every other pixel, like a screen door. */
+  private veiled(material: THREE.Material): void {
+    if (material.userData.veils) return;
+    material.userData.veils = true;
+    const before = material.onBeforeCompile;
+    material.onBeforeCompile = (shader, renderer) => {
+      before?.call(material, shader, renderer);
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aVeil;\nvarying float vVeil;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vVeil = aVeil;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vVeil;')
+        .replace('void main() {', 'void main() {\n  if (vVeil > 0.5 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 0.5) discard;');
+    };
+    material.needsUpdate = true;
   }
 
   /** Stand a thing's feet on the ground: the lowest point under its footprint, so nothing floats on a slope. */
@@ -202,7 +216,12 @@ export class Props {
           if (id.startsWith('tree-') || id === 'cliff') {
             const kept: THREE.Matrix4[] = [];
             for (let i = 0; i < list.length; i++) kept.push(inst.instanceMatrix ? new THREE.Matrix4().fromArray(inst.instanceMatrix.array as Float32Array, i * 16) : new THREE.Matrix4());
-            this.thinnable.push({ inst, list, kept, size, hidden: new Uint8Array(list.length) });
+            // Whether each one is drawn as a veil, for the shader; a tree's crown begins a third of the way up.
+            const veil = new THREE.InstancedBufferAttribute(new Float32Array(list.length), 1);
+            veil.setUsage(THREE.DynamicDrawUsage);
+            geo.setAttribute('aVeil', veil);
+            this.veiled(mesh.material as THREE.Material);
+            this.thinnable.push({ list, kept, size, veil, trunk: id === 'cliff' ? 0 : 0.3 });
           }
         }
         for (const p of list) this.record(id, p, size);
