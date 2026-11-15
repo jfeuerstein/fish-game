@@ -1,6 +1,6 @@
 // The Lucky Gull's prizes: the one roll every game makes (`pull`), the card that shows what was
 // won, and the Gull Wheel's show, a strip of prizes slowing past a marker.
-import { ODDS, PRIZES, PULL_COST, type Prize, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, pickPrize, rollPrize } from '../game/crates';
+import { ODDS, PRIZES, PULL_COST, type Prize, RARITIES, RARITY_COLOR, RARITY_LABEL, type Rarity, REFUND, WIN_AT, makeStrip, pickPrize, rollPrize } from '../game/crates';
 import type { Session } from '../game/session';
 import type { Fanfare } from './fanfare';
 import { el, icon } from './hud';
@@ -100,6 +100,7 @@ export function pull(s: Session): { prize: Prize; owned: boolean; refund: number
   s.save.arcade.played++;
   s.audio.play('chip', { volume: 0.8 });
   const prize = rollPrize(Math.random, (p) => owns(s, p));
+  s.save.arcade.rarest = Math.max(s.save.arcade.rarest, RARITIES.indexOf(prize.rarity) + 1);
   const got = { prize, ...award(s, prize) };
   s.hud.hold = true;
   s.changed();

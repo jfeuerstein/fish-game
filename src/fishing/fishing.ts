@@ -124,6 +124,14 @@ export class Fishing {
     }
   }
 
+  /** Take the bobber and the line out of the world (the character holding the rod has been changed for another). */
+  dispose(): void {
+    this.cancel();
+    for (const o of [this.bobber, this.line]) o.parent?.remove(o);
+    this.line.geometry.dispose();
+    (this.line.material as THREE.Material).dispose();
+  }
+
   /** The main button came up. */
   release(rod: Rod): void {
     if (this.state === 'aiming') this.cast(rod);

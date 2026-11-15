@@ -48,6 +48,14 @@ describe('titles', () => {
     expect(newTitles(s)).toContain('Angler');
     expect(new Set(TITLES.map((t) => t.name)).size).toBe(TITLES.length);
   });
+  it('can all be earned: each asks for something the save keeps', () => {
+    // Lucky Duck once asked for a win on a scratch ticket that no longer pays coins.
+    const s = newSave();
+    expect(newTitles(s)).not.toContain('Lucky Duck');
+    s.arcade.rarest = 4;
+    expect(newTitles(s)).toContain('Lucky Duck');
+    for (const t of TITLES) expect(t.how).not.toMatch(/scratch ticket/i);
+  });
 });
 
 describe('secrets', () => {

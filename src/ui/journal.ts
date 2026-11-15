@@ -1,4 +1,5 @@
 // The journal: every fish there is, silhouettes until caught, with where and when to look.
+import { RARITIES, RARITY_LABEL } from '../game/crates';
 import { BY_ID, JOURNAL_SPECIES as SPECIES, TIER_COLOR, TIER_LABEL, VARIANTS, VARIANT_LABEL, WATCH_LABEL, ZONE_LABEL, sayLength, stars } from '../fishing/fish';
 import { candidates } from '../fishing/roll';
 import { baitById, lureById, rodById } from '../game/economy';
@@ -67,7 +68,7 @@ export function journalSheet(app: HTMLElement, s: Session): Sheet {
         ['Stars found', `${real.reduce((a, x) => a + (save.journal[x.id]?.variants.filter((v) => v !== 'normal').length ?? 0), 0)} / ${real.length * 4}`],
         ['Sea glass', `${save.glass.length} / 12`],
         ['Things dug up', String(save.dug.length)],
-        ['Scratch tickets', `${save.tickets.played} (best ${save.tickets.best.toLocaleString()})`],
+        ['Goes at the Lucky Gull', `${save.arcade.played}${save.arcade.rarest ? ` (rarest prize: ${RARITY_LABEL[RARITIES[save.arcade.rarest - 1]]})` : ''}`],
         ['Coins earned', save.stats.earned.toLocaleString()],
         ['Errands done', String(save.questsDone)],
         ['Lines snapped', String(save.stats.snapped)],

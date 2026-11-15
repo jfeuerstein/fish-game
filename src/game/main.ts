@@ -41,7 +41,7 @@ import { newTitles } from './titles';
 import { buriedToday, digUp, SHROOMS, SEA_GLASS } from '../world/secrets';
 import { Finds } from '../world/finds';
 import { applyCatch } from './progress';
-import { BACKUP_KEY, SAVE_KEY, type Save, parseSave } from './save';
+import { BACKUP_KEY, SAVE_KEY, type Save, backupFor, parseSave } from './save';
 import type { Emote, Session } from './session';
 
 type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk' | 'dig';
@@ -111,28 +111,19 @@ export class Game implements Session {
   private beepClock = 0;
   private beepGap = 1;
   private nearBuried: { x: number; z: number; key: string } | null = null;
+  /** What is being dug up. */
+  private digSpot: { x: number; z: number; key: string } | null = null;
   private titleClock = 0;
   private viewClock = 0;
 
   constructor() {
     let text: string | null = null;
     try {
-      text = this.cfg.fresh ? null : localStorage.getItem(SAVE_KEY);
       if (!this.cfg.fresh) {
-        // If the save is ever lost or broken, an older copy is still there.
-        let good = false;
-        try {
-          good = !!text && typeof JSON.parse(text) === 'object';
-        } catch {
-          good = false;
-        }
-        const backup = localStorage.getItem(BACKUP_KEY);
-        if (!good && backup) text = JSON.parse(backup).save;
-        else if (good) {
-          const kept = backup ? (JSON.parse(backup) as { day: number }).day : -1;
-          const today = Math.floor(Date.now() / 86_400_000);
-          if (kept !== today) localStorage.setItem(BACKUP_KEY, JSON.stringify({ day: today, save: text }));
-        }
+        // If the save is ever lost or broken, an older copy is still there (see backupFor).
+        const now = backupFor(localStorage.getItem(SAVE_KEY), localStorage.getItem(BACKUP_KEY), Math.floor(Date.now() / 86_400_000));
+        text = now.text;
+        if (now.backup) localStorage.setItem(BACKUP_KEY, now.backup);
       }
     } catch {
       /* No storage: the game plays and forgets. */
@@ -217,7 +208,7 @@ export class Game implements Session {
     this.player.place(at.x, at.z, at.yaw);
     this.player.onStep = (surface) => this.audio.play(surface === 'wood' ? 'stepwood' : surface === 'water' ? 'splashstep' : 'step', { volume: 0.18, rate: 0.9 + Math.random() * 0.2 });
     this.rig = new CameraRig(this.camera, this.world.field);
-    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|lighthouse|fishing-hut|tent|well)/.test(c.name));
+    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
     if (this.cfg.zoom) this.rig.zoom = this.cfg.zoom;
     this.controls = new Controls(this.app);
@@ -312,6 +303,15 @@ export class Game implements Session {
     this.ready = true;
     (window as unknown as Record<string, unknown>).__cove = this.api();
     this.renderer.setAnimationLoop(() => this.frame());
+    // The phone may take the picture away (another app wanted the graphics card, or the game
+    // was long in the background). Nothing can be drawn until it is given back, and what was
+    // built is gone with it: keep the save, and begin again when it returns.
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.renderer.setAnimationLoop(null);
+      this.keep(true);
+    });
+    canvas.addEventListener('webglcontextrestored', () => location.reload());
   }
 
   ready = false;
@@ -501,6 +501,8 @@ export class Game implements Session {
       await fresh.setRod(this.save.rod);
       await fresh.setHat(this.save.hat);
       await fresh.setExtra(this.save.extra);
+      // The old body's line and bobber go with it.
+      this.fishing.dispose();
       this.fishing = new Fishing(this.world.field, fresh, this.fx, this.fishingHooks(), this.scene);
       this.player.sync();
     });
@@ -902,6 +904,7 @@ export class Game implements Session {
         if (!this.save.hints.includes('tip-shroom')) {
           this.save.hints.push('tip-shroom');
           this.hud.toast('Boing!');
+          this.changed();
         }
       }
     }
@@ -963,12 +966,13 @@ export class Game implements Session {
     this.body.action = 'dig';
     this.digging = 1.4;
     this.nearBuried = spot;
-    (this as unknown as { digSpot: typeof spot }).digSpot = spot;
+    this.digSpot = spot;
     this.audio.play('splashstep', { rate: 0.6, volume: 0.6 });
   }
 
   private finishDig(): void {
-    const spot = (this as unknown as { digSpot: { x: number; z: number; key: string } }).digSpot;
+    const spot = this.digSpot;
+    this.digSpot = null;
     this.mode = 'walk';
     this.player.free = true;
     this.body.action = 'idle';
@@ -1068,8 +1072,13 @@ export class Game implements Session {
     this.rig.override = { pos: new THREE.Vector3(0, 2.4, 6 + Math.ceil(ids.length / cols) * 1.25), dist: 5 + ids.length * 0.3, pitch: 0.7 };
   }
 
+  /**
+   * What `window.__cove` offers scripts. Looking and getting about are there for anyone. Whatever
+   * changes the game (coins, catches, the game itself) is there only with `fresh=1`, on a save
+   * that is not kept, which is how every tool runs: the real save cannot be given anything.
+   */
   api(): Record<string, unknown> {
-    return {
+    const looking = {
       ready: true,
       state: () => ({
         frames: this.frames,
@@ -1097,6 +1106,10 @@ export class Game implements Session {
         this.openSheet(name);
         if (tab) this.sheets[name].show(tab);
       },
+    };
+    if (!this.cfg.fresh) return looking;
+    return {
+      ...looking,
       give: (coins: number, tokens = 0) => {
         this.save.coins += coins;
         this.save.tokens += tokens;

@@ -2,8 +2,8 @@
 
 A cozy fishing game for one person, played upright on an iPhone as a Home Screen web app. Walk
 round a small island, cast into the sea, the deep water off the pier, the pond and the creek,
-fill the journal, sell fish to Gus, do errands from the board, and spend tokens from shiny and
-golden fish on chests that spin a strip of prizes. It is in the genre of social fishing hangouts
+fill the journal, sell fish to Gus, do errands from the board, and spend pearls from the rarest
+fish at the Lucky Gull's arcade booth, where every go wins something to wear or set down. It is in the genre of social fishing hangouts
 but has its own island, characters, art and sound; keep it that way (no names, characters, art
 or music from any existing game).
 
@@ -44,7 +44,8 @@ the owner's: do not route a deploy round it.
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
   `warp=n` (run time faster, for the tools), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes). `window.__cove` exposes `state()`, `teleport`, `face`,
-  `press`/`release` (the big button), `open(sheet, tab)`, `give(coins, tokens)`, `catchNow`.
+  `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
+  the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
   `Heightfield.heightAt` uses the same triangle split as the terrain mesh. `waterAt` says which
   water is where (ocean, deep, pond, creek). Hand-placed buildings in `PLACED`, scattered trees and
@@ -101,8 +102,10 @@ the owner's: do not route a deploy round it.
   Patch's models are flat low-poly and do not match the Tripo look; its sounds do fit.
 - **Progress** (`src/game/`): `economy.ts` (rods, bait, coolers, hats, furniture, levels),
   `quests.ts` (the board), `crates.ts` (chests, odds, the strip), `progress.ts` (what a catch, a
-  sale or an errand does), `save.ts` (read defensively; add a field with a default, never change
-  the meaning of one). Saved in `localStorage` (`cove.save`; chalk in `cove.chalk`).
+  sale or an errand does), `save.ts` (read defensively, errands included; add a field with a default, never change
+  the meaning of one). Saved in `localStorage` (`cove.save`; chalk in `cove.chalk`). A copy is kept
+  once a day (`backupFor`: only a save that reads as the game's own, and a blank one never
+  replaces a copy with fish in it).
 - **Menus** are bottom sheets (`src/ui/`): shop, journal, bag, board, chests, more, fun; plus the
   ukulele pads and the chalk board. The HUD (`hud.ts`) has money and level at the top, the action
   buttons by the right thumb, and Bag/Journal/Fun/More along the bottom. The bottom third is the

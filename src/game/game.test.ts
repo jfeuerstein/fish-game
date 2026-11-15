@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SPECIES } from '../fishing/fish';
 import { BAITS, FURNITURE, HATS, RODS, levelFor, xpToNext } from './economy';
 import { type Quest, advance, describe as say, done, makeQuest } from './quests';
-import { fromCode, newSave, parseSave, record, toCode } from './save';
+import { claimQuest } from './progress';
+import { backupFor, fromCode, newSave, parseSave, record, toCode } from './save';
 import { bitesAt, hourAt, pinnedHour, rainingAt, watchOf } from './clock';
 
 describe('economy', () => {
@@ -54,6 +55,44 @@ describe('save', () => {
     expect(parseSave(null).coins).toBe(newSave().coins);
     expect(parseSave('not json').rod).toBe('rod-1');
     expect(parseSave('{"coins":-5,"bag":[{"species":"nope"},{"species":"trout","size":30}]}')).toMatchObject({ coins: 0, bag: [{ species: 'trout', size: 30 }] });
+  });
+  it('reads errands whole or not at all, so one can always be handed in', () => {
+    const good = newSave();
+    // An errand with no reward, one of no known kind, and one for a fish that does not exist.
+    const broken = JSON.stringify({ ...good, quests: [{ id: 1, kind: 'count', goal: 3, progress: 3 }, { id: 2, kind: 'dance', goal: 1, progress: 0, reward: { coins: 5, xp: 5 }, from: 'Gus' }, { id: 3, kind: 'species', species: 'kraken', goal: 1, progress: 0, reward: { coins: 5, xp: 5 }, from: 'Gus' }] });
+    const s = parseSave(broken);
+    expect(s.quests).toHaveLength(3);
+    for (const q of s.quests) {
+      expect(typeof q.reward.coins).toBe('number');
+      q.progress = q.goal;
+      expect(() => claimQuest(s, q.id)).not.toThrow();
+    }
+    // A sound set of errands is kept as it was.
+    const kept = parseSave(JSON.stringify(good));
+    expect(kept.quests).toEqual(good.quests);
+  });
+  it('keeps a copy once a day, of a real save only, and never a blank one over one with fish in it', () => {
+    const played = newSave();
+    played.stats.caught = 12;
+    played.xp = 300;
+    const text = JSON.stringify(played);
+    // No copy yet: one is made.
+    const first = backupFor(text, null, 100);
+    expect(first.text).toBe(text);
+    expect(JSON.parse(first.backup!)).toEqual({ day: 100, save: text });
+    // The same day: left alone. The next day: made again.
+    expect(backupFor(text, first.backup, 100).backup).toBeNull();
+    expect(JSON.parse(backupFor(text, first.backup, 101).backup!).day).toBe(101);
+    // The save is lost or broken: the copy is played from, and is not written over.
+    expect(backupFor(null, first.backup, 101)).toEqual({ text, backup: null });
+    expect(backupFor('{broken', first.backup, 101)).toEqual({ text, backup: null });
+    // Something that parses but is not a save, or a blank save, does not replace a copy with fish in it.
+    expect(backupFor('{}', first.backup, 101).backup).toBeNull();
+    expect(backupFor(JSON.stringify(newSave()), first.backup, 101).backup).toBeNull();
+    // A copy that cannot be read is replaced.
+    expect(backupFor(text, '{broken', 101).backup).not.toBeNull();
+    // Nothing anywhere: a new game.
+    expect(backupFor(null, null, 101)).toEqual({ text: null, backup: null });
   });
   it('round-trips through a save code', () => {
     const s = newSave();

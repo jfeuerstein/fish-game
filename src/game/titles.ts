@@ -24,7 +24,7 @@ export const TITLES: readonly Title[] = [
   { name: 'Collector', how: 'Fill the whole journal.', earned: (s) => JOURNAL_SPECIES.every((x) => has(s, x.id)) },
   { name: 'Beachcomber', how: 'Find every piece of sea glass.', earned: (s) => s.glass.length >= 12 },
   { name: 'Treasure Hunter', how: 'Dig up 15 buried things.', earned: (s) => s.dug.length >= 15 },
-  { name: 'Lucky Duck', how: 'Win 1,000 coins or more on a scratch ticket.', earned: (s) => s.tickets.best >= 1000 },
+  { name: 'Lucky Duck', how: 'Win an epic or legendary prize at the Lucky Gull.', earned: (s) => s.arcade.rarest >= 4 },
   { name: 'Tycoon', how: 'Earn 25,000 coins selling fish.', earned: (s) => s.stats.earned >= 25000 },
   { name: 'Busy Paws', how: 'Finish 20 errands.', earned: (s) => s.questsDone >= 20 },
 ];

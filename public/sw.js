@@ -2,12 +2,11 @@
 //
 // Everything is fetched from the network when there is one, so a new version is picked up at
 // once and nothing stale is ever shown; each answer is also kept, and served back when the
-// network cannot be reached. Only the game's own files are kept: the weather is asked for live
-// or not at all.
+// network cannot be reached. Only the game's own files are kept.
 //
 // The game also asks, once it is running, for the rest of itself to be kept (see `keepAll`):
-// the seasons not yet visited and the pictures not yet earned, so that a new season or a new
-// patch can turn up with no signal.
+// the models, pictures and music not yet met, so that a fish never caught before or a prize
+// never won can still turn up with no signal.
 const CACHE = 'cove-v1';
 /** Where the marks of the files already kept are written down, inside the cache. */
 const KEPT = '__kept.json';

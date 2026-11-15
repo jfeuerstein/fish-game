@@ -38,7 +38,6 @@ export function arcadeSheet(app: HTMLElement, s: Session, hooks: ArcadeHooks): S
   const reveal = (got: Got): void => {
     busy = false;
     s.hud.hold = false;
-    save.arcade.best++;
     if (got.prize.rarity === 'epic' || got.prize.rarity === 'legendary') {
       hooks.gull('shocked');
       hooks.cheer();

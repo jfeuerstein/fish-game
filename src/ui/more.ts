@@ -212,7 +212,7 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
         ['Lures', 'A lure changes which fish bites: the biggest of three, the rarest, two at once, more treasure. Buy them at the shop.'],
         ['Pearls', 'Only the rarest catches give pearls: golden and prismatic fish, and the legends. Spend them at the Lucky Gull by the plaza: a pearl a go, and every go wins a hat, something to wear, a new character or a thing to set down. Coins are for Gus.'],
         ['Credits', 'Models, pictures and ground painted with Tripo and fal. Arcade sounds and jingles: Kenney (CC0), found through patch.gg.'],
-        ['Luck', "Gus sells scratch tickets. Some casts bring up a treasure chest. A lucky catch can call a rain cloud that follows you, with rain fish under it."],
+        ['Luck', "Some casts bring up a treasure chest. A lucky catch can call a rain cloud that follows you, with rain fish under it. And there is always the Lucky Gull."],
         ['Secrets', "Twelve pieces of sea glass are hidden round the island. Big red mushrooms bounce you high. With a metal detector, buried things turn up every day."],
         ['Errands', 'The notice board by the shop has errands. Hand them in for coins.'],
       ];

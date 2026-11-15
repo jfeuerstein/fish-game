@@ -1,6 +1,7 @@
 // The save: everything the player has, read defensively. Pure.
 import { type Catch, type Variant, BY_ID, VARIANTS } from '../fishing/fish';
-import { type Quest, makeQuest } from './quests';
+import type { Zone } from '../world/island';
+import { type Quest, type QuestKind, makeQuest } from './quests';
 
 export interface JournalEntry {
   count: number;
@@ -76,8 +77,12 @@ export interface Save {
   chords: { root: number; kind: 'maj' | 'min' | '7' }[];
   /** Scratch tickets: how many, and the biggest win. */
   tickets: { played: number; best: number };
-  /** The arcade: games played, the biggest win in coins, and the last few wheel and flight results. */
-  arcade: { played: number; best: number; wheel: number[]; flights: number[] };
+  /**
+   * The arcade: goes had, and the rarest prize won (0 none yet, 1 common to 5 legendary). `best`,
+   * `wheel` and `flights` are from when its games paid coins; they are kept as they were read and
+   * nothing uses them.
+   */
+  arcade: { played: number; best: number; wheel: number[]; flights: number[]; rarest: number };
 }
 
 export const SAVE_KEY = 'cove.save';
@@ -131,7 +136,7 @@ export function newSave(): Save {
     extra: null,
     chords: DEFAULT_CHORDS.map((c) => ({ ...c })),
     tickets: { played: 0, best: 0 },
-    arcade: { played: 0, best: 0, wheel: [], flights: [] },
+    arcade: { played: 0, best: 0, wheel: [], flights: [], rarest: 0 },
   };
 }
 
@@ -139,6 +144,61 @@ const num = (v: unknown, d: number, lo = -Infinity, hi = Infinity): number => (t
 const str = (v: unknown, d: string): string => (typeof v === 'string' ? v : d);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
+
+const QUEST_KINDS: readonly QuestKind[] = ['count', 'zone', 'species', 'size', 'shiny', 'night', 'tier', 'sell', 'rain'];
+const ZONES: readonly Zone[] = ['ocean', 'deep', 'pond', 'creek'];
+const TIERS = ['junk', 'common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+/** An errand from a save, or null if any part of it is missing or makes no sense: it is handed in for its reward, so it must have one. */
+function readQuest(v: unknown): Quest | null {
+  const o = rec(v);
+  const reward = rec(o.reward);
+  if (typeof o.id !== 'number' || !QUEST_KINDS.includes(o.kind as QuestKind)) return null;
+  if (typeof o.goal !== 'number' || !(o.goal > 0) || typeof reward.coins !== 'number' || typeof reward.xp !== 'number') return null;
+  const q: Quest = { id: o.id, kind: o.kind as QuestKind, goal: o.goal, progress: num(o.progress, 0, 0), reward: { coins: Math.floor(num(reward.coins, 0, 0)), xp: Math.floor(num(reward.xp, 0, 0)) }, from: str(o.from, 'Gus') };
+  if (q.kind === 'zone') {
+    if (!ZONES.includes(o.zone as Zone)) return null;
+    q.zone = o.zone as Zone;
+  }
+  if (q.kind === 'species') {
+    if (typeof o.species !== 'string' || !BY_ID[o.species]) return null;
+    q.species = o.species;
+  }
+  if (q.kind === 'tier') {
+    if (!TIERS.includes(o.tier as string)) return null;
+    q.tier = o.tier as Quest['tier'];
+  }
+  return q;
+}
+
+/**
+ * The daily copy of the save, kept beside it in case it is ever lost or broken. Given the save
+ * and the copy as they are stored, and today's day number: `text` is what to play from (the
+ * copy, if the save cannot be read), and `backup` is what to store as the copy now, or null to
+ * leave it. A save is only copied if it reads as one of the game's own, once a day, and a blank
+ * one never takes the place of a copy with fish in it.
+ */
+export function backupFor(text: string | null, kept: string | null, today: number): { text: string | null; backup: string | null } {
+  const read = (t: string | null): Record<string, unknown> | null => {
+    try {
+      const o = t ? (JSON.parse(t) as unknown) : null;
+      return o && typeof o === 'object' && !Array.isArray(o) ? (o as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  };
+  const save = read(text);
+  const copy = read(kept);
+  const copied = copy && typeof copy.save === 'string' && read(copy.save) ? copy.save : null;
+  if (!save) return { text: copied ?? text, backup: null };
+  // One of the game's own, not just any JSON.
+  const real = save.v === 1 && !!save.journal && typeof save.journal === 'object' && !!save.stats && typeof save.stats === 'object';
+  const caught = (o: Record<string, unknown> | null): number => num(rec(o?.stats).caught, 0, 0);
+  const blank = caught(save) === 0 && num(save.xp, 0, 0) === 0;
+  const keepOld = copied !== null && blank && caught(read(copied)) > 0;
+  if (!real || keepOld || (copied !== null && copy!.day === today)) return { text, backup: null };
+  return { text, backup: JSON.stringify({ day: today, save: text }) };
+}
 
 function readCatch(v: unknown): Catch | null {
   const o = rec(v);
@@ -171,7 +231,7 @@ export function parseSave(text: string | null): Save {
     .map((p) => rec(p))
     .filter((p) => typeof p.id === 'string')
     .map((p) => ({ id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
-  const quests = (Array.isArray(o.quests) ? o.quests : []).map((q) => rec(q)).filter((q) => typeof q.kind === 'string' && typeof q.goal === 'number') as unknown as Quest[];
+  const quests = (Array.isArray(o.quests) ? o.quests : []).map(readQuest).filter((q): q is Quest => q !== null);
   const s = rec(o.settings);
   const st = rec(o.stats);
   const rods = strs(o.rods);
@@ -227,6 +287,7 @@ export function parseSave(text: string | null): Save {
       best: num(rec(o.arcade).best, 0, 0),
       wheel: (Array.isArray(rec(o.arcade).wheel) ? (rec(o.arcade).wheel as unknown[]) : []).filter((v): v is number => typeof v === 'number').slice(-14),
       flights: (Array.isArray(rec(o.arcade).flights) ? (rec(o.arcade).flights as unknown[]) : []).filter((v): v is number => typeof v === 'number').slice(-10),
+      rarest: Math.floor(num(rec(o.arcade).rarest, 0, 0, 5)),
     },
   };
 }

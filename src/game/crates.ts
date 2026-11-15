@@ -44,6 +44,9 @@ export const PRIZES: readonly Prize[] = [
   { id: 'f-snowman', name: 'Snowman', rarity: 'legendary', kind: 'furniture' },
 ];
 
+/** Rarities, commonest first. */
+export const RARITIES: readonly Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
 export const RARITY_COLOR: Record<Rarity, string> = { common: '#8d9aa6', uncommon: '#4aa85e', rare: '#3b82d6', epic: '#9b4fd0', legendary: '#e0a020' };
 export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
 
