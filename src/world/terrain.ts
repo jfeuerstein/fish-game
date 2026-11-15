@@ -47,24 +47,29 @@ function splatTexture(field: Heightfield, splat: Float32Array): THREE.DataTextur
 }
 
 /**
- * How the lo-fi ground is coloured: as pixel art, sixteen pixels to the metre. Every tile is 64
- * pixels and repeats every four metres, so their pixels share one grid; what ground a pixel is
- * (grass, sand, earth, rock, paving) is decided once for the whole pixel, so one ground meets
- * the next along a stair of pixels and nothing is blended.
+ * How the lo-fi ground is coloured: as pixel art, sixteen pixels to the metre, so every tile's
+ * pixels share one grid. What ground a pixel is (grass, sand, earth, rock, paving) is decided
+ * once for the whole pixel, so one ground meets the next along a stair of pixels and nothing is
+ * blended. Grass, sand and earth each have two tiles (four metres square), laid in patches
+ * among each other so no stretch is one tile over and over; rock and paving, whose stones must
+ * fit together, have one tile twice the size.
  */
 const LOFI_GROUND = /* glsl */ `vec2 wuv = vGround.xz;
 vec2 cell = (floor(wuv * 16.0) + 0.5) / 16.0;
 float big = fbm(cell / 9.0);
 float mid = fbm(cell / 2.6 + 11.0) * 0.7 + vnoise(cell * 1.1 + 5.0) * 0.3;
 vec2 tile = wuv / 4.0;
-vec3 grass = texture2D(tGrass, tile).rgb;
+// Which of its two tiles each soft ground wears here: patches some metres across, each ground's its own.
+float kindA = fbm(cell / 5.5 + 21.0);
+float kindB = fbm(cell / 7.0 - 13.0);
+vec3 grass = kindA > 0.5 ? texture2D(tGrassB, tile).rgb : texture2D(tGrass, tile).rgb;
 // Patches of sunnier and deeper green, each one flat.
 float patchy = fbm(cell / 14.0 + 3.0);
 grass *= patchy > 0.6 ? vec3(1.1, 1.07, 0.86) : (patchy < 0.42 ? vec3(0.84, 0.93, 0.8) : vec3(1.0));
-vec3 sand = texture2D(tSand, tile).rgb;
-vec3 dirt = texture2D(tDirt, tile).rgb;
-vec3 rock = texture2D(tRock, tile).rgb;
-vec3 cob = texture2D(tPlaza, tile).rgb;
+vec3 sand = kindB > 0.5 ? texture2D(tSandB, tile).rgb : texture2D(tSand, tile).rgb;
+vec3 dirt = kindA < 0.47 ? texture2D(tDirtB, tile).rgb : texture2D(tDirt, tile).rgb;
+vec3 rock = texture2D(tRock, tile * 0.5).rgb;
+vec3 cob = texture2D(tPlaza, tile * 0.5).rgb;
 vec4 w = texture2D(tSplat, (cell + uHalf) / (uHalf * 2.0) * uSplatScale + uSplatBias);
 vec3 ground = grass;
 ground = mix(ground, sand, step(0.5, w.x + (mid - 0.5) * 0.7));
@@ -116,6 +121,9 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
     shader.uniforms.tDirt = { value: tex.dirt };
     shader.uniforms.tRock = { value: tex.rock };
     shader.uniforms.tPlaza = { value: tex.plaza };
+    shader.uniforms.tGrassB = { value: look?.lofi ? loadTexture('grass-b') : null };
+    shader.uniforms.tSandB = { value: look?.lofi ? loadTexture('sand-b') : null };
+    shader.uniforms.tDirtB = { value: look?.lofi ? loadTexture('dirt-b') : null };
     shader.uniforms.tSplat = { value: look?.lofi ? splatTexture(field, splat) : null };
     shader.uniforms.uHalf = { value: half };
     // Texel centres: the splat's first sample is at the island's edge, half a texel in.
@@ -128,7 +136,7 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
       .replace(
         '#include <common>',
         `#include <common>
-uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza, tSplat;
+uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza, tSplat, tGrassB, tSandB, tDirtB;
 uniform float uHalf, uSplatScale, uSplatBias;
 varying vec4 vSplat;
 varying vec3 vGround;

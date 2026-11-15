@@ -231,7 +231,8 @@ function chance(seed) {
   };
 }
 
-const TILE = 64;
+/** How many pixels square the tile being drawn is: 64 (four metres) or 128 (eight). */
+let TILE = 64;
 const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 /** A tile to draw on: 64 pixels square, wrapping at its edges so it repeats without a seam. */
@@ -335,25 +336,93 @@ const GROUND = {
       if (rand() < 0.25) t.set(x, y - 1, '#d6cbb2');
     }
   },
+  // A second kind of each soft ground, laid in patches among the first (terrain.ts), so that
+  // no stretch of it is the same tile over and over.
+  'grass-b'(t, rand) {
+    const n = lumps(rand, 5);
+    const m = lumps(rand, 9);
+    for (let y = 0; y < TILE; y++)
+      for (let x = 0; x < TILE; x++) {
+        const v = n(x, y) * 0.6 + m(x, y) * 0.4;
+        if (v > 0.63) t.set(x, y, '#93b85a');
+        else if (v < 0.33) t.set(x, y, '#35633a');
+      }
+    // Clover, and a few small flowers: a pale head on a dark stalk.
+    for (let i = 0; i < 46; i++) {
+      const x = Math.floor(rand() * TILE);
+      const y = Math.floor(rand() * TILE);
+      t.set(x, y, '#35633a');
+      t.set(x + 1, y, '#35633a');
+      t.set(x, y - 1, '#cbdc8e');
+    }
+    for (let i = 0; i < 9; i++) {
+      const x = Math.floor(rand() * TILE);
+      const y = Math.floor(rand() * TILE);
+      const head = ['#fffdf6', '#f8e6b0', '#f2a8b0'][i % 3];
+      t.set(x, y, '#35633a');
+      t.set(x, y - 1, head);
+      t.set(x - 1, y - 1, head);
+      t.set(x + 1, y - 1, head);
+      t.set(x, y - 2, head);
+      t.set(x, y - 1, '#c8963e');
+    }
+  },
+  'sand-b'(t, rand) {
+    // Smoother sand: a few long ripples, pebbles and bits of shell.
+    for (let row = 0; row < 4; row++) {
+      let y = row * 16 + rand() * 8;
+      for (let x = 0; x < TILE; x++) {
+        y += Math.sin(x * 0.2 + row * 2.3) * 0.22;
+        if ((x + row * 9) % 23 < 15) t.set(x, y, '#f8e6b0');
+      }
+    }
+    for (let i = 0; i < 14; i++) {
+      const x = Math.floor(rand() * TILE);
+      const y = Math.floor(rand() * TILE);
+      const c = i % 3 ? '#cfa57a' : '#fffdf6';
+      t.set(x, y, c);
+      t.set(x + 1, y, c);
+      if (i % 3 === 0) t.set(x, y + 1, '#d6cbb2');
+    }
+  },
+  'dirt-b'(t, rand) {
+    const n = lumps(rand, 5);
+    for (let y = 0; y < TILE; y++)
+      for (let x = 0; x < TILE; x++) {
+        const v = n(x, y);
+        if (v > 0.7) t.set(x, y, '#cfa57a');
+        else if (v < 0.27) t.set(x, y, '#7d5436');
+      }
+    // Bigger stones, with a light side.
+    for (let i = 0; i < 12; i++) {
+      const x = Math.floor(rand() * TILE);
+      const y = Math.floor(rand() * TILE);
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1], [2, 1]]) t.set(x + dx, y + dy, '#70685a');
+      t.set(x, y, '#a89c84');
+      t.set(x + 1, y, '#a89c84');
+    }
+  },
   rock(t, rand) {
-    stones(t, rand, 14, 1.3, ['#737b80', '#737b80', '#a4abac', '#70685a'], '#474e54');
+    stones(t, rand, 56, 1.3, ['#737b80', '#737b80', '#a4abac', '#70685a'], '#474e54');
     // Moss in a few of the joints.
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 160; i++) {
       const x = Math.floor(rand() * TILE);
       const y = Math.floor(rand() * TILE);
       if (t.get(x, y) === '#474e54') t.set(x, y, '#7d8438');
     }
   },
   plaza(t, rand) {
-    stones(t, rand, 46, 1.1, ['#d6cbb2', '#d6cbb2', '#f4eee3', '#a89c84', '#a4abac'], '#70685a');
+    stones(t, rand, 136, 1.1, ['#d6cbb2', '#d6cbb2', '#f4eee3', '#a89c84', '#a4abac'], '#70685a');
   },
 };
 
 export async function lofiGround(name) {
   for (const c of new Set(Object.values(GROUND).map(String).join().match(/#[0-9a-f]{6}/g))) if (!INKS.includes(c)) throw new Error(`${c} is not an ink`);
-  const base = { grass: '#5c8f44', sand: '#ecc77d', dirt: '#a97c52', rock: '#737b80', plaza: '#d6cbb2' }[name];
+  const base = { grass: '#5c8f44', sand: '#ecc77d', dirt: '#a97c52', rock: '#737b80', plaza: '#d6cbb2' }[name.replace(/-b$/, '')];
+  // Fitted stones are drawn twice the size, so the same stone comes round half as often.
+  TILE = name === 'rock' || name === 'plaza' ? 128 : 64;
   const t = tile(base);
-  GROUND[name](t, chance(name.length * 7919 + name.charCodeAt(0)));
+  GROUND[name](t, chance(name.length * 7919 + name.charCodeAt(0) + (name.endsWith('-b') ? 31 : 0)));
   const raw = Buffer.alloc(TILE * TILE * 4);
   t.px.forEach((c, i) => raw.set([...hexRgb(c), 255], i * 4));
   await sharp(raw, { raw: { width: TILE, height: TILE, channels: 4 } }).png({ palette: true, colours: 16, dither: 0 }).toFile(`${ROOT}public/textures/${name}.png`);
