@@ -939,6 +939,9 @@ button {
   font-size: 19px;
   font-weight: 700;
 }
+.act-third {
+  bottom: calc(var(--bottom-clear) + 232px);
+}
 
 .menu-row {
   position: absolute;
@@ -2733,4 +2736,112 @@ button {
 }
 .reel-cell img {
   filter: drop-shadow(0 2px 0 rgba(16, 24, 31, 0.4));
+}
+
+/* The telescope, up the lighthouse: a round glass, and ink round it. */
+.scope {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 300px;
+  height: 300px;
+  margin: -150px 0 0 -150px;
+  border-radius: 50%;
+  border: 4px solid var(--brass-hi);
+  box-shadow: 0 0 0 2000px var(--ink);
+  pointer-events: none;
+  z-index: 3;
+}
+.scope::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid var(--brass-hi);
+}
+
+/* A line to type in (the camp's name). Flat, as everything is. */
+.name-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  height: 52px;
+  margin: 0 0 12px;
+  padding: 0 12px;
+  border: var(--edge);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 28px;
+  box-shadow: var(--press);
+}
+
+/* The chart: the island as a picture of its own pixels, with pins over it. */
+.chart {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border: var(--edge);
+  box-shadow: var(--press);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.chart canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.chart-pin {
+  position: absolute;
+  transform: translate(-4px, -4px);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.chart-pin i {
+  width: 6px;
+  height: 6px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  flex: none;
+}
+.chart-pin span {
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  padding: 1px 3px;
+}
+.chart-pin.camp i {
+  background: var(--coral);
+}
+.chart-pin.you i {
+  background: var(--brass-hi);
+  width: 8px;
+  height: 8px;
+}
+.chart-water {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  padding: 6px 0;
+  border-bottom: 2px solid var(--paper-2);
+}
+.chart-water b {
+  flex: 0 0 100%;
+  font-size: 17px;
+}
+.chart-water img {
+  width: 36px;
+  height: 36px;
+  image-rendering: pixelated;
 }

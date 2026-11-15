@@ -33,6 +33,13 @@ import { newSets } from './sets';
 import { FORAGE_GIVES, forageNow, type ForageSpot } from './forage';
 import { Foraging } from '../world/forage';
 import { Wildlife } from '../world/wildlife';
+import { GUS_INSIDE, Indoors, type RoomId } from '../world/indoors';
+import { aquariumSheet } from '../ui/aquarium';
+import { chestSheet, signSheet } from '../ui/chest';
+import { traderSheet } from '../ui/trader';
+import { Trader } from '../npc/trader';
+import { TRADER_NAME, traderHere } from './trader';
+import { SIGHTS, sighted, type Sight } from './lookout';
 import { feedGull, gullBrings, gullFish, gullGave, gullGift, gullHungry, gullSays } from './gull';
 import { floorAt } from '../world/layout';
 import { MS_PER_HOUR } from './clock';
@@ -44,14 +51,14 @@ import { BENCH_SECS, BENCH_SETTLE, BENCH_STEPS, benchReport, readout, summarise,
 import { shopSheet } from '../ui/shop';
 import { Uke } from '../ui/uke';
 import { Boat } from '../world/boat';
-import { fishingZone, shoreRadius, waterAt } from '../world/island';
+import { fishingZone, shoreRadius, standHeight, waterAt } from '../world/island';
 import { splatAt } from '../world/terrain';
-import { CAMP, PIER, PLACES, PLACED } from '../world/layout';
-import { PlacedThings } from '../world/placed';
+import { CAMP, CAVE, PIER, PLACES, PLACED, POND } from '../world/layout';
+import { PlacedThings, ghostOf } from '../world/placed';
 import type { Seat } from '../world/props';
 import { World } from '../world/world';
 import { bitesAt, dayNumber, hourAt, pinnedHour, sayHour, weatherAt, type Weather } from './clock';
-import { HATS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
+import { FURNITURE, HATS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
 import { SEASON_LOOK, pinnedSeason, seasonAt, type Season } from '../look/season';
 import { STYLE_SAYS } from '../fishing/reel';
 import { RARE_SAYS, RARE_SKIES, rareSkyAt, type RareSky } from '../look/rare';
@@ -59,10 +66,11 @@ import { newTitles } from './titles';
 import { buriedToday, digUp, SHROOMS, SEA_GLASS } from '../world/secrets';
 import { Finds } from '../world/finds';
 import { applyCatch } from './progress';
-import { BACKUP_KEY, SAVE_KEY, type Save, backupFor, parseSave } from './save';
+import { noteCatch } from './chart';
+import { BACKUP_KEY, SAVE_KEY, type PlacedThing, type Save, backupFor, parseSave } from './save';
 import type { Emote, Session } from './session';
 
-type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk' | 'dig';
+type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk' | 'dig' | 'inside' | 'tower';
 
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
 /** What islanders say when the player honks nearby, or slaps them with a fish. */
@@ -104,7 +112,7 @@ export class Game implements Session {
   private frames = 0;
   private dirty = false;
   private savedAt = 0;
-  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade' | 'tackle', Sheet>;
+  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade' | 'tackle' | 'aquarium' | 'chest' | 'sign' | 'trader', Sheet>;
   fanfare!: Fanfare;
   /** The arcade's counter, and its gull: what it is feeling, and for how much longer. */
   private arcadeFront = new THREE.Vector3(-14, 0, 9);
@@ -116,6 +124,17 @@ export class Game implements Session {
   private shouting: { text: string; until: number } | null = null;
   private app!: HTMLElement;
   private shopFront = new THREE.Vector3(0, 0, 9);
+  /** The fishing hut's door, and the lighthouse: where it stands, how wide it is and how high its gallery. */
+  private hutFront = new THREE.Vector3(48, 0, 6);
+  private tower = { x: 31, z: -37, r: 3, top: 20 };
+  /** The rooms that are gone into (src/world/indoors.ts), and where the camera was looking before. */
+  private indoors = new Indoors();
+  private outsideYaw = 0;
+  private gusOutside: { pos: THREE.Vector3; yaw: number } | null = null;
+  /** Up the lighthouse: the telescope is to the eye, and what it has been held on, for how long. */
+  private scope = false;
+  private scopeEl = document.createElement('div');
+  private held: { sight: Sight | null; secs: number } = { sight: null, secs: 0 };
   private board = new THREE.Vector3(10, 0, 9);
   private started = false;
   private lastStats = '';
@@ -218,6 +237,15 @@ export class Game implements Session {
         this.scene.add(g);
       });
     }
+    const hut = PLACED.find((p) => p.id === 'fishing-hut')!;
+    const hutDepth = this.world.props.sizes.get('fishing-hut')?.z ?? 4;
+    this.hutFront.set(hut.x + Math.sin(hut.yaw ?? 0) * (hutDepth / 2 + 1.2), 0, hut.z + Math.cos(hut.yaw ?? 0) * (hutDepth / 2 + 1.2));
+    const light = PLACED.find((p) => p.id === 'lighthouse')!;
+    const lightSize = this.world.props.sizes.get('lighthouse');
+    this.tower = { x: light.x, z: light.z, r: Math.max(lightSize?.x ?? 5, lightSize?.z ?? 5) / 2, top: this.world.field.heightAt(light.x, light.z) + (lightSize?.y ?? 12) * 0.74 };
+    this.scopeEl.className = 'scope';
+    this.scopeEl.hidden = true;
+    this.app.append(this.scopeEl);
     const boardAt = PLACED.find((p) => p.id === 'notice-board')!;
     this.board.set(boardAt.x + Math.sin(boardAt.yaw ?? 0) * 1.6, 0, boardAt.z + Math.cos(boardAt.yaw ?? 0) * 1.6);
     if (models) {
@@ -251,11 +279,14 @@ export class Game implements Session {
     this.uke.onNote = () => (this.body.pluck = 1);
     this.uke.onDone = () => this.stopActivity();
     this.placed = new PlacedThings(this.world, this.world.field);
+    this.placed.campName = this.save.campName;
     for (const p of this.save.placed) await this.placed.add(p);
     this.finds = new Finds(this.world.field);
     this.forage = new Foraging(this.world.field, (x, z) => this.openGround(x, z));
     this.scene.add(this.forage.group);
     this.world.group.add(this.finds.group);
+    this.trader = new Trader(this.scene, this.world.field);
+    if (models) void this.trader.load();
     this.wild = new Wildlife(this.world.field, { ring: (at, size) => this.fx.ring(at, size), splash: (at, amount) => this.fx.splash(at, amount), play: (n, o) => this.audio.play(n, o) });
     this.scene.add(this.wild.group);
     if (models) {
@@ -307,7 +338,11 @@ export class Game implements Session {
       bag: bagSheet(this.app, this),
       board: boardSheet(this.app, this),
       tackle: tackleSheet(this.app, this),
-      more: moreSheet(this.app, this, openChests),
+      chest: chestSheet(this.app, this),
+      trader: traderSheet(this.app, this),
+      sign: signSheet(this.app, this, (name) => this.placed.rename(name)),
+      aquarium: aquariumSheet(this.app, this, () => void this.indoors.stock(this.save.aquarium, (id) => `${import.meta.env.BASE_URL}icons/fish-${id}.webp`)),
+      more: moreSheet(this.app, this, openChests, { field: this.world.field, at: () => ({ x: this.player.pos.x, z: this.player.pos.z }), trader: () => (this.traderIn ? this.trader.pos : null) }),
       fun: funSheet(this.app, this, () => Chalk.near(this.player.pos)),
     };
     // The stick comes back when the last sheet goes, not when one sheet gives way to another.
@@ -489,6 +524,7 @@ export class Game implements Session {
     if (c.species === 'treasure') return this.treasure();
     const night = !bitesAt('day', this.hour);
     const r = applyCatch(this.save, c, zone, night, this.raining);
+    noteCatch(this.save, zone, c.species);
     this.lastCatch = { ...c, at: Date.now() };
     const s = BY_ID[c.species];
     const lure = lureById(this.save.lure);
@@ -587,6 +623,12 @@ export class Game implements Session {
   // ---------- Bait to be found ----------
 
   private forage!: Foraging;
+  /** The trader who comes by boat some days, and whether they are here and have been spoken of today. */
+  private trader!: Trader;
+  private traderIn = false;
+  private traderTold = -1;
+  /** A thing taken up to be set down somewhere: what it is, how it is turned from the way the player faces, and its ghost. */
+  private carrying: { id: string; turn: number; ghost: THREE.Object3D } | null = null;
   /** The rare sky last spoken of, so each is announced once as it comes. */
   private skyTold: RareSky | null = null;
   private wild!: Wildlife;
@@ -735,17 +777,73 @@ export class Game implements Session {
     });
   }
 
+  /**
+   * Take a thing out of the bag to set down. It is carried in front of the player, see-through,
+   * until they say where it goes: Set down, Turn, or Put away.
+   */
   setDown(id: string): void {
     if (!(this.save.furniture[id] > 0)) return;
+    this.putAway();
+    void this.carry(id, Math.PI);
+  }
+
+  /** Pick up something that is standing, to move it. */
+  private move(thing: PlacedThing): void {
+    this.putAway();
+    this.placed.remove(thing);
+    this.save.placed = this.save.placed.filter((x) => x !== thing);
+    // It is in the bag while it is carried: a game put away mid-carry loses nothing.
+    this.save.furniture[thing.id] = (this.save.furniture[thing.id] ?? 0) + 1;
+    void this.carry(thing.id, thing.yaw - this.player.yaw);
+    this.audio.play('click');
+    this.changed();
+  }
+
+  private async carry(id: string, turn: number): Promise<void> {
+    const ghost = await ghostOf(id, this.save.campName);
+    if (!ghost) return;
+    this.carrying = { id, turn, ghost };
+    this.scene.add(ghost);
+    if (!this.save.hints.includes('arrange')) {
+      this.save.hints.push('arrange');
+      this.hud.toast('Walk it to where you want it. Turn it, then Set down.');
+    }
+  }
+
+  /** Where the thing being carried would stand, and whether it may. */
+  private carriedTo(): { x: number; z: number; yaw: number; ok: boolean } {
     const yaw = this.player.yaw;
-    const x = this.player.pos.x + Math.sin(yaw) * 1.6;
-    const z = this.player.pos.z + Math.cos(yaw) * 1.6;
-    const thing = { id, x, z, yaw: yaw + Math.PI };
-    this.save.furniture[id]--;
+    const x = this.player.pos.x + Math.sin(yaw) * 1.7;
+    const z = this.player.pos.z + Math.cos(yaw) * 1.7;
+    const wet = waterAt(this.world.field, x, z) !== null && floorAt(x, z) === null;
+    return { x, z, yaw: yaw + (this.carrying?.turn ?? 0), ok: !wet && Math.abs(x) < this.world.field.half - 4 && Math.abs(z) < this.world.field.half - 4 };
+  }
+
+  private setCarried(): void {
+    const c = this.carrying;
+    if (!c) return;
+    const to = this.carriedTo();
+    if (!to.ok) {
+      this.hud.toast('Not in the water.');
+      return;
+    }
+    this.scene.remove(c.ghost);
+    this.carrying = null;
+    if (!(this.save.furniture[c.id] > 0)) return;
+    this.save.furniture[c.id]--;
+    const thing = { id: c.id, x: to.x, z: to.z, yaw: to.yaw };
     this.save.placed.push(thing);
     void this.placed.add(thing);
     this.audio.play('click');
     this.changed();
+  }
+
+  /** Back into the bag with whatever is being carried. */
+  private putAway(): void {
+    const c = this.carrying;
+    if (!c) return;
+    this.scene.remove(c.ghost);
+    this.carrying = null;
   }
 
   playUke(): void {
@@ -812,7 +910,7 @@ export class Game implements Session {
     const p = this.player.pos;
     const fwd = new THREE.Vector2(Math.sin(this.player.yaw), Math.cos(this.player.yaw));
     let any = false;
-    for (const who of [...this.npcs, this.gus]) {
+    for (const who of [...this.npcs, this.gus, ...(this.traderIn && this.trader.body ? [{ saying: this.trader.saying, body: this.trader.body }] : [])]) {
       const d = new THREE.Vector2(who.body.group.position.x - p.x, who.body.group.position.z - p.z);
       if (d.length() > reach) continue;
       if (inFront && d.normalize().dot(fwd) < 0.3) continue;
@@ -954,6 +1052,31 @@ export class Game implements Session {
       hud.setSecond(null);
       return;
     }
+    hud.setThird(null);
+    if (this.mode === 'inside') {
+      const spot = this.indoors.near();
+      hud.setSecond('Leave', () => this.leaveInside());
+      if (!spot) hud.setAction(null);
+      else if (spot.id === 'counter') hud.setAction('Shop', () => this.openSheet('shop'), undefined, 'green');
+      else if (spot.id === 'bench') hud.setAction('Tackle', () => this.openSheet('tackle'), undefined, 'green');
+      else if (spot.id === 'stove') hud.setAction('Warm hands', () => (this.body.action = 'warm'), undefined, 'blue');
+      else hud.setAction('Tank', () => this.openSheet('aquarium'), undefined, 'green');
+      return;
+    }
+    if (this.mode === 'tower') {
+      hud.setSecond('Climb down', () => this.climbDown());
+      hud.setAction(this.scope ? 'Lower' : 'Scope', () => this.setScope(!this.scope), undefined, 'blue');
+      return;
+    }
+    if (this.carrying && this.mode === 'walk') {
+      hud.setAction('Set down', () => this.setCarried(), undefined, 'green');
+      hud.setSecond('Turn', () => {
+        if (this.carrying) this.carrying.turn += Math.PI / 4;
+        this.audio.play('tick', { volume: 0.3 });
+      });
+      hud.setThird('Put away', () => this.putAway());
+      return;
+    }
     // Fishing comes first once a line is out.
     if (f.busy) {
       hud.setSecond(null);
@@ -998,27 +1121,163 @@ export class Game implements Session {
       hud.setSecond(ready >= 0 ? `Give ${BY_ID[this.save.bag[ready].species]?.name ?? 'fish'}` : 'Chat', () => this.speakTo(who, (words) => npc.chat(performance.now(), words), npc.def.lines));
     } else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.speakTo('npc-pelican', (words) => this.gus.chat(performance.now(), words), GUS_LINES));
     else if (this.mode === 'walk' && this.gullNear()) hud.setSecond('Feed gull', () => this.feedTheGull());
+    else if (this.mode === 'walk' && this.traderIn && this.trader.pos.distanceTo(p) < 3.2) hud.setSecond('Chat', () => this.trader.chat(performance.now()));
+    else if (this.mode === 'walk' && Math.hypot(p.x - this.shopFront.x, p.z - this.shopFront.z) < 3.2) hud.setSecond('Go inside', () => void this.goInside('shop'));
+    else if (this.mode === 'walk' && Math.hypot(p.x - this.hutFront.x, p.z - this.hutFront.z) < 2.4) hud.setSecond('Go inside', () => void this.goInside('hut'));
+    else if (this.mode === 'walk' && Math.hypot(p.x - this.tower.x, p.z - this.tower.z) < this.tower.r + 2.6) {
+      hud.setSecond('Climb', () => this.climb());
+      hud.setThird('Aquarium', () => void this.goInside('aquarium'));
+    }
     else if (found && this.mode === 'walk') hud.setSecond(found.kind === 'worms' ? 'Dig up' : 'Catch', () => this.takeForage(found));
     else if (seat) hud.setSecond('Sit', () => this.sitOn(seat));
     else if (this.mode === 'walk' && this.nearFire()) hud.setSecond('Warm hands', () => this.emote('warm'));
     else if (this.boat.nearMooring(p) && p.y > 2) hud.setSecond(this.save.boat ? 'Row' : 'Boat', () => (this.save.boat ? this.boardBoat() : this.hud.toast('The rowboat needs a licence. Gus sells them (Upgrades).')));
     else if (Chalk.near(p)) hud.setSecond('Draw', () => this.startChalk());
-    else if (thing) hud.setSecond('Pick up', () => {
-      this.placed.remove(thing);
-      this.save.placed = this.save.placed.filter((x) => x !== thing);
-      this.save.furniture[thing.id] = (this.save.furniture[thing.id] ?? 0) + 1;
-      this.audio.play('click');
-      this.changed();
-    });
     else hud.setSecond(null);
+    // Something set down is within reach: a chest is opened and a sign named; anything can be moved.
+    if (thing && this.mode === 'walk' && !this.detecting) {
+      const what = FURNITURE.find((q) => q.id === thing.id);
+      const extra: [string, () => void] | null = what?.store ? ['Open', () => this.openSheet('chest')] : thing.id === 'f-campsign' ? ['Name', () => this.openSheet('sign')] : null;
+      const offer = (label: string, tap: () => void): void => (hud.hasSecond ? hud.setThird(label, tap) : hud.setSecond(label, tap));
+      if (extra && !hud.hasSecond) {
+        hud.setSecond(extra[0], extra[1]);
+        hud.setThird('Move', () => this.move(thing));
+      } else offer('Move', () => this.move(thing));
+    }
     // The main button.
     const flat = new THREE.Vector3(p.x, 0, p.z);
-    if (this.mode !== 'boat' && flat.distanceTo(this.shopFront) < 3.2) hud.setAction('Shop', () => this.openSheet('shop'), undefined, 'green');
+    if (this.mode === 'walk' && this.traderIn && this.trader.pos.distanceTo(p) < 3.2) hud.setAction('Trade', () => this.openSheet('trader'), undefined, 'green');
+    else if (this.mode !== 'boat' && flat.distanceTo(this.shopFront) < 3.2) hud.setAction('Shop', () => this.openSheet('shop'), undefined, 'green');
     else if (this.mode !== 'boat' && flat.distanceTo(this.board) < 2.6) hud.setAction('Errands', () => this.openSheet('board'), undefined, 'green');
     else if (this.mode !== 'boat' && flat.distanceTo(this.arcadeFront) < 3.4) hud.setAction('Play', () => this.openSheet('arcade'), undefined, 'gold');
     else if (this.detecting && this.mode === 'walk') hud.setAction('Put away', () => this.toggleDetector(), undefined, 'blue');
     else if ((this.mode === 'walk' || this.mode === 'boat' || this.mode === 'emote') && this.waterAhead()) hud.setAction('Cast', cast, () => f.release(rod));
     else hud.setAction(null);
+  }
+
+  // ---------- Indoors, and up the lighthouse ----------
+
+  /** Go into a room. The island is not drawn while the player is in it. */
+  private async goInside(room: RoomId): Promise<void> {
+    this.stopActivity();
+    if (this.mode !== 'walk' || !(await this.indoors.enter(room))) return;
+    this.mode = 'inside';
+    this.player.free = false;
+    this.outsideYaw = this.rig.yaw;
+    this.indoors.scene.add(this.body.group);
+    if (room === 'shop') {
+      // Gus comes in from his window to stand behind the counter.
+      const g = this.gus.body.group;
+      this.gusOutside = { pos: g.position.clone(), yaw: g.rotation.y };
+      this.indoors.scene.add(g);
+      g.position.copy(this.indoors.at(GUS_INSIDE.fx, GUS_INSIDE.fz));
+      g.rotation.y = GUS_INSIDE.yaw;
+    }
+    if (room === 'aquarium') void this.indoors.stock(this.save.aquarium, (id) => `${import.meta.env.BASE_URL}icons/fish-${id}.webp`);
+    const v = this.indoors.view()!;
+    this.rig.override = { pos: v.pos, dist: v.dist, pitch: v.pitch };
+    this.rig.yaw = v.yaw;
+    this.rig.first = true;
+    this.audio.play('open', { volume: 0.4, rate: 0.8 });
+  }
+
+  private leaveInside(): void {
+    if (this.mode !== 'inside') return;
+    this.scene.add(this.body.group);
+    if (this.gusOutside) {
+      const g = this.gus.body.group;
+      this.scene.add(g);
+      g.position.copy(this.gusOutside.pos);
+      g.rotation.y = this.gusOutside.yaw;
+      this.gusOutside = null;
+    }
+    this.indoors.leave();
+    this.rig.override = null;
+    this.rig.yaw = this.outsideYaw;
+    this.rig.first = true;
+    this.mode = 'walk';
+    this.player.free = true;
+    this.body.action = 'idle';
+    this.player.sync();
+    this.audio.play('open', { volume: 0.4, rate: 0.7 });
+  }
+
+  /** Up to the lighthouse's gallery, to look out over the island and the sea. */
+  private climb(): void {
+    this.stopActivity();
+    if (this.mode !== 'walk') return;
+    this.mode = 'tower';
+    this.player.free = false;
+    this.body.group.visible = false;
+    this.outsideYaw = this.rig.yaw;
+    this.rig.pitch = 0.4;
+    this.audio.play('stepwood', { volume: 0.4, rate: 0.8 });
+    if (!this.save.hints.includes('tower')) {
+      this.save.hints.push('tower');
+      this.hud.toast('Drag to look round. The telescope picks things out, held still on them.');
+      this.changed();
+    }
+  }
+
+  private climbDown(): void {
+    if (this.mode !== 'tower') return;
+    this.setScope(false);
+    this.camera.fov = 58;
+    this.camera.updateProjectionMatrix();
+    this.body.group.visible = true;
+    this.mode = 'walk';
+    this.player.free = true;
+    this.rig.yaw = this.outsideYaw;
+    this.rig.pitch = 0.5;
+    this.rig.first = true;
+  }
+
+  private setScope(on: boolean): void {
+    this.scope = on;
+    this.scopeEl.hidden = !on;
+    this.held = { sight: null, secs: 0 };
+    this.audio.play('click', { volume: 0.4 });
+  }
+
+  /** The view from the gallery: the camera goes round the lantern, looking out the way it is turned. */
+  private lookout(dt: number): void {
+    const t = this.tower;
+    const out = this.rig.forward();
+    const lift = 0.14 - (this.rig.pitch - 0.08) * 0.42;
+    const cam = this.camera;
+    cam.position.set(t.x + out.x * (t.r * 0.5 + 0.5), t.top, t.z + out.z * (t.r * 0.5 + 0.5));
+    const dir = new THREE.Vector3(out.x * Math.cos(lift), Math.sin(lift), out.z * Math.cos(lift));
+    cam.lookAt(cam.position.clone().add(dir));
+    const fov = this.scope ? 9 : 58;
+    if (Math.abs(cam.fov - fov) > 0.05) {
+      cam.fov += (fov - cam.fov) * (1 - Math.exp(-dt * 9));
+      cam.updateProjectionMatrix();
+    }
+    if (!this.scope) return;
+    // What the glass is on: held there a moment, it is picked out.
+    const camp = this.save.placed.find((q) => q.id === 'f-tent');
+    const where: Record<Sight, THREE.Vector3 | null> = {
+      trawler: this.world.trawler,
+      pier: new THREE.Vector3(PIER.head.x1, PIER.deck + 1, PIER.z),
+      pond: new THREE.Vector3(POND.x, POND.level, POND.z),
+      cave: new THREE.Vector3(CAVE.x, 2, CAVE.z),
+      camp: camp ? new THREE.Vector3(camp.x, this.world.field.heightAt(camp.x, camp.z) + 1, camp.z) : null,
+    };
+    const on = sighted(cam.position, dir, where);
+    if (on !== this.held.sight) this.held = { sight: on, secs: 0 };
+    else if (on) {
+      this.held.secs += dt;
+      if (this.held.secs > 0.7 && this.held.secs - dt <= 0.7) {
+        const first = !this.save.spotted.includes(on);
+        if (first) {
+          this.save.spotted.push(on);
+          if (on === 'trawler') this.save.tokens += 1;
+          this.changed();
+        }
+        this.hud.toast(SIGHTS[on] + (first && on === 'trawler' ? ' +1 pearl' : ''), first ? 'gold' : '');
+        this.audio.play(first ? 'quest' : 'click', { volume: 0.4 });
+      }
+    }
   }
 
   /** Whether the pier's gull is close by and would take a fish today. */
@@ -1086,6 +1345,7 @@ export class Game implements Session {
   }
 
   openSheet(name: keyof Game['sheets']): void {
+    this.putAway();
     this.fishing.cancel();
     this.controls.release();
     this.controls.enabled = false;
@@ -1233,7 +1493,9 @@ export class Game implements Session {
     if (this.frames < 3) this.rain = skyRain ? 1 : 0;
 
     const look = this.controls.takeLook();
-    this.rig.turn(look.x, look.y);
+    // Indoors the camera keeps its place; through the telescope it turns a little at a time.
+    const fine = this.mode === 'tower' && this.scope ? 0.16 : 1;
+    if (this.mode !== 'inside') this.rig.turn(look.x * fine, look.y * fine);
     this.coachWatch(look.x * TURN);
     this.rig.zoomBy(look.zoom);
     const stick = this.controls.enabled && !this.benching ? this.controls.stick() : { x: 0, y: 0 };
@@ -1253,12 +1515,27 @@ export class Game implements Session {
         this.body.speed = this.boat.effort;
       }
       this.audio.loop('row', 0, 'sfx');
+      // The first time the boat comes under the cave's mouth.
+      if (!this.save.hints.includes('cave') && waterAt(this.world.field, seatAt.x, seatAt.z)?.zone === 'cave') {
+        this.save.hints.push('cave');
+        this.hud.toast('The water goes still and dark under the rock. Something lives in here that lives nowhere else.', 'gold');
+        this.changed();
+      }
       if (this.boat.effort > 0.3 && Math.floor(performance.now() / 950) !== Math.floor((performance.now() - dt * 1000) / 950)) this.audio.play('row', { volume: 0.35 });
     } else {
       this.boat.update(dt, { x: 0, y: 0 }, 0);
       if (this.mode === 'walk') this.player.update(dt, stick, this.rig.yaw);
       else this.player.update(dt, { x: 0, y: 0 }, this.rig.yaw);
       this.tread();
+    }
+    if (this.mode === 'inside') {
+      // The body is in the room, not where the player's place on the island says.
+      const pace = this.indoors.move(dt, stick, this.rig.yaw);
+      this.body.group.position.copy(this.indoors.pos);
+      this.body.group.rotation.y = this.indoors.yaw;
+      this.body.action = pace > 0 ? 'walk' : this.body.action === 'warm' ? 'warm' : 'idle';
+      this.body.speed = 0;
+      if (this.indoors.out) this.leaveInside();
     }
     if (this.mode === 'sit' && this.seat) this.body.group.position.y = this.seat.y + this.seat.lift - 0.36;
     if (this.mode === 'emote') {
@@ -1277,8 +1554,31 @@ export class Game implements Session {
     this.body.update(dt);
     for (const n of this.npcs) n.update(dt, this.player.pos, this.hour);
     this.gus.update(dt, this.player.pos);
+    // The trader: here by day on their days, gone by dark.
+    const here = !this.benching && (this.cfg.trader ?? traderHere(this.today, this.hour));
+    if (here !== this.traderIn) {
+      this.traderIn = here;
+      void this.trader.show(here, this.save.character);
+    }
+    if (here && this.started && this.traderTold !== this.today && !this.coach) {
+      this.traderTold = this.today;
+      this.hud.toast(`A second boat is pulled up on the beach: ${TRADER_NAME} the trader is in today.`, 'gold');
+    }
+    this.trader.update(dt, this.player.pos);
 
     this.rig.update(dt, this.mode === 'sit' || this.mode === 'boat' ? this.player.pos.clone().setY(this.player.pos.y - 0.2) : this.player.pos);
+    if (this.mode === 'tower') this.lookout(dt);
+    if (this.carrying) {
+      // Whatever is being carried goes where it would stand, a little off the ground; put away if the player does anything else.
+      if (this.mode !== 'walk' || this.fishing.busy) this.putAway();
+      else {
+        const to = this.carriedTo();
+        const g = this.carrying.ghost;
+        g.position.set(to.x, standHeight(this.world.field, to.x, to.z) + 0.12 + Math.round(Math.sin(performance.now() / 300)) * 0.03, to.z);
+        g.rotation.y = to.yaw;
+        g.visible = to.ok || Math.floor(performance.now() / 200) % 2 === 0;
+      }
+    }
     this.world.update(dt, this.hour, this.rain, this.player.pos, this.weather);
     this.animateGull(dt);
     this.viewClock -= dt;
@@ -1326,7 +1626,7 @@ export class Game implements Session {
       }
     }
     this.keep();
-    this.screen.render(this.scene, this.camera);
+    this.screen.render(this.mode === 'inside' ? this.indoors.scene : this.scene, this.camera);
   }
 
   /** Sea glass, bounce mushrooms, the metal detector, digging, and titles. */

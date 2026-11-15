@@ -244,6 +244,11 @@ export class World {
     this.air.fill.set(look.fill);
   }
 
+  /** Where the trawler is, out at sea. */
+  get trawler(): THREE.Vector3 {
+    return this.life.boat.position;
+  }
+
   /** The air: fog and storm are eased toward what the weather is; lightning comes and goes by itself in a storm. */
   readonly air: Air = { fog: 0, storm: 0, flash: 0, sun: new THREE.Color(0xffffff), fill: new THREE.Color(0xffffff) };
   private strikeIn = 6;

@@ -282,6 +282,16 @@ export const ICONS = {
   'hook-3': 'a round bronze circle fishing hook',
   'hook-4': 'a golden fishing hook with a tiny green clover charm on it',
   'bait-crawler': 'a little tin of fat pink night crawler worms in dark earth',
+  // A sign for the camp, the map, the trader, and paint for the rod
+  'f-campsign': 'a small wooden signboard on two short posts, a blank cream painted board with a rope trim',
+  'icon-map': 'a rolled sea chart partly unrolled, cream paper with a small island drawn on it and a red cross',
+  'icon-trader': 'a big travelling backpack with a bedroll on top, pots and a lantern hanging off it',
+  'paint-coral': 'a small open tin of red-orange paint with a little brush resting across it',
+  'paint-sea': 'a small open tin of sea blue paint with a little brush resting across it',
+  'paint-moss': 'a small open tin of moss green paint with a little brush resting across it',
+  'paint-brass': 'a small open tin of golden yellow paint with a little brush resting across it',
+  'paint-rose': 'a small open tin of pink paint with a little brush resting across it',
+  'paint-ink': 'a small open tin of black paint with a little brush resting across it',
   // Charms for the rod
   'charm-bell': 'a tiny brass bell on a loop of red string',
   'charm-feather': 'a blue and white feather tied to a loop of string',

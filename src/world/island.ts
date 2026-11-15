@@ -1,7 +1,7 @@
 // The island's ground: a height for every point, the water over it, and what kind of water a
 // bobber lands in. Pure, no three.js, so it runs under Vitest.
 import { clamp, fbm, smoothstep } from '../core/rng';
-import { BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, STEP, WORLD_SIZE, bridgeBank, creekLevel, floorAt, nearestOnLine } from './layout';
+import { CAVE, BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, STEP, WORLD_SIZE, bridgeBank, creekLevel, floorAt, nearestOnLine } from './layout';
 
 /** Distance from the centre to the shore at an angle (radians, atan2(z, x)). */
 export function shoreRadius(angle: number): number {
@@ -134,6 +134,8 @@ export function waterAt(field: Heightfield, x: number, z: number): { level: numb
     // Only the creek's own channel: where it opens into deep sea, it is the sea.
     if (level > 0.15 && ground < level && ground > -0.6) return { level, zone: 'creek', depth: level - ground };
   }
+  // Before the mouth of the sea cave the water is the cave's own.
+  if (ground < 0 && Math.hypot(x - CAVE.x, z - CAVE.z) < CAVE.r) return { level: 0, zone: 'cave', depth: -ground };
   if (ground < 0) return { level: 0, zone: ground < -5.5 ? 'deep' : 'ocean', depth: -ground };
   return null;
 }

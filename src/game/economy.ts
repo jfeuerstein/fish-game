@@ -194,6 +194,10 @@ export interface Furniture {
   music?: boolean;
   /** In the camp catalogue: the things a campsite is made of. */
   camp?: boolean;
+  /** Fish can be kept in it. */
+  store?: boolean;
+  /** Not sold by Gus: only by the trader who comes by boat. */
+  trader?: boolean;
   /** A fire: it has a flame, and throws a flickering light after dark. */
   fire?: boolean;
   /** Throws real light after dark, not only a glow. */
@@ -222,6 +226,11 @@ export const FURNITURE: readonly Furniture[] = [
   { id: 'f-woodpile', name: 'Woodpile', price: 140, camp: true },
   { id: 'f-lights', name: 'String Lights', price: 480, camp: true, glow: true, lamp: true },
   { id: 'f-washline', name: 'Washing Line', price: 200, camp: true },
+  { id: 'f-chest', name: 'Camp Chest', price: 450, camp: true, store: true },
+  { id: 'f-campsign', name: 'Camp Sign', price: 120, camp: true },
+  // Sold only by the trader who comes by boat (src/game/trader.ts).
+  { id: 'f-chime', name: 'Shell Wind Chime', price: 380, trader: true },
+  { id: 'f-shipbottle', name: 'Ship in a Bottle', price: 520, trader: true },
 ];
 
 /** Things to wear besides hats. `prize` ones are won at the Lucky Gull, not sold. */

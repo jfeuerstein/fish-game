@@ -98,6 +98,13 @@ function creekLevelAt(x: number, z: number): number {
   return creekLevel(nearestOnLine(CREEK, x, z).t);
 }
 
+/**
+ * The sea cave, in the cliffs of the north shore: a mound of rock with a dark mouth, standing in
+ * the water with its back in the hill. It can only be come at by boat. The water before the
+ * mouth, within `r` of the middle given here, is the cave's own (zone `cave`).
+ */
+export const CAVE = { x: -24.3, z: -60.3, r: 5.5, mouth: { x: -22.7, z: -56.1, yaw: -2.757 } } as const;
+
 export type PropId = string;
 
 /** One placed model: which, where, which way it faces (radians about +y), and an optional scale. */
@@ -162,6 +169,7 @@ export const PLACED: readonly Placed[] = [
   { id: 'cliff', x: -12, z: -60, yaw: 0.4 },
   { id: 'cliff', x: 6, z: -63, yaw: 2.4 },
   { id: 'cliff', x: 52, z: -42, yaw: 1.6 },
+  { id: 'cave-mouth', x: CAVE.mouth.x, z: CAVE.mouth.z, yaw: CAVE.mouth.yaw, y: -0.7 },
 ];
 
 /** Where the pier's deck sections go (each model is a square section about three metres across). */

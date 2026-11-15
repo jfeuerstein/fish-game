@@ -6,11 +6,13 @@ import type { Session } from '../game/session';
 import { PLACES } from '../world/layout';
 import { el, icon } from './hud';
 import { Sheet } from './sheet';
+import { type ChartOf, drawChart } from './chart';
 
-export function moreSheet(app: HTMLElement, s: Session, openChests: () => void): Sheet {
+export function moreSheet(app: HTMLElement, s: Session, openChests: () => void, chart: ChartOf): Sheet {
   const sheet: Sheet = new Sheet(app, 'More', (body, tab) => {
     const save = s.save;
-    if (tab === 'Wardrobe') {
+    if (tab === 'Chart') drawChart(body, s, chart);
+    else if (tab === 'Wardrobe') {
       body.append(el('div', 'section', 'Who you are'));
       const chars = el('div', 'grid');
       for (const c of CHARACTERS) {
@@ -236,6 +238,6 @@ export function moreSheet(app: HTMLElement, s: Session, openChests: () => void):
       }
       body.append(el('p', '', 'Models, pictures, sounds and music were made with fal and Tripo, and in Blender.'));
     }
-  }, ['Wardrobe', 'Settings', 'Save', 'How to play']);
+  }, ['Wardrobe', 'Chart', 'Settings', 'Save', 'How to play']);
   return sheet;
 }

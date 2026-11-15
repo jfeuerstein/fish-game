@@ -57,7 +57,8 @@ export function feathers(): THREE.Material {
 export class SkyLife {
   readonly group = new THREE.Group();
   private gulls: { body: THREE.Group; left: THREE.Mesh; right: THREE.Mesh }[] = [];
-  private boat: THREE.Mesh;
+  /** The trawler that goes round the island. */
+  readonly boat: THREE.Mesh;
   private lamp: THREE.Mesh;
   private star: THREE.InstancedMesh;
   private clock = 0;

@@ -71,7 +71,7 @@ const REACH: Record<string, number> = { flowers: 40, 'grass-tuft': 40, mushrooms
 
 /** Things too small to bother casting shadows. */
 /** What else is big enough to hide the player and so is opened over them like a tree (see src/look/spotlight.ts). */
-const WINDOWED = new Set(['cliff', 'shop', 'arcade', 'lighthouse', 'fishing-hut', 'tent', 'well', 'notice-board', 'rock-a']);
+const WINDOWED = new Set(['cliff', 'shop', 'arcade', 'lighthouse', 'fishing-hut', 'tent', 'well', 'notice-board', 'rock-a', 'cave-mouth']);
 
 const NO_SHADOW = new Set(['flowers', 'grass-tuft', 'mushrooms', 'lilypad', 'cattails', 'shell']);
 

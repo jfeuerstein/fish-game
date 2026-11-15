@@ -8,6 +8,8 @@ export interface Config {
   weather: 'clear' | 'rain' | 'fog' | 'storm' | null;
   /** Pin the season: spring, summer, fall or winter. */
   season: string | null;
+  /** `trader=1` has the trader in whatever the day (`trader=0`, never). */
+  trader: boolean | null;
   /** `sky=aurora|bloodmoon|sunrise` shows one of the rare skies, whatever the day. */
   sky: string | null;
   /** Hide the controls, for clean pictures. */
@@ -53,6 +55,7 @@ export function parseConfig(search: string): Config {
     weather: w === 'rain' || w === 'clear' || w === 'fog' || w === 'storm' ? w : null,
     season: p.get('season'),
     sky: p.get('sky'),
+    trader: p.has('trader') ? p.get('trader') !== '0' : null,
     hud: p.get('hud') !== '0',
     title: p.get('title') !== '0',
     fresh: p.get('fresh') === '1',

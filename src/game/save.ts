@@ -54,6 +54,23 @@ export interface Save {
   gull: GullKept;
   /** The rare skies seen (src/look/rare.ts). */
   skies: string[];
+  /** The kinds of fish given to the aquarium (src/game/aquarium.ts). */
+  aquarium: string[];
+  /** Fish kept in the camp chest (src/game/camp.ts). */
+  stored: Catch[];
+  /** What the camp is called, on its sign and the map. Empty until it is named. */
+  campName: string;
+  /** Which kinds have been caught in each water, for the map. */
+  caughtAt: Record<string, string[]>;
+  /** What has been picked out from the top of the lighthouse. */
+  spotted: string[];
+  /** The travelling trader: the day last bought from, and what was bought that day. */
+  trader: { day: number; bought: string[] };
+  /** How the rod is dressed: its paint and the charm hung from it, and those won. */
+  rodPaint: string | null;
+  rodPaints: string[];
+  charm: string | null;
+  charms: string[];
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -134,6 +151,16 @@ export function newSave(): Save {
     sets: [],
     gull: { ...NEW_GULL },
     skies: [],
+    aquarium: [],
+    stored: [],
+    campName: '',
+    caughtAt: {},
+    spotted: [],
+    trader: { day: -1, bought: [] },
+    rodPaint: null,
+    rodPaints: [],
+    charm: null,
+    charms: [],
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -280,6 +307,16 @@ export function parseSave(text: string | null): Save {
     hooks: [...new Set(['hook-1', ...strs(o.hooks)])],
     sets: strs(o.sets),
     skies: strs(o.skies),
+    aquarium: [...new Set(strs(o.aquarium).filter((id) => !!BY_ID[id]))],
+    stored: (Array.isArray(o.stored) ? o.stored : []).map(readCatch).filter((c): c is Catch => c !== null).slice(0, 60),
+    campName: str(o.campName, '').slice(0, 18),
+    caughtAt: Object.fromEntries(Object.entries(rec(o.caughtAt)).map(([zone, ids]) => [zone, [...new Set(strs(ids).filter((id) => !!BY_ID[id]))]])),
+    spotted: strs(o.spotted),
+    trader: { day: Math.floor(num(rec(o.trader).day, -1, -1)), bought: strs(rec(o.trader).bought) },
+    rodPaint: typeof o.rodPaint === 'string' ? o.rodPaint : null,
+    rodPaints: strs(o.rodPaints),
+    charm: typeof o.charm === 'string' ? o.charm : null,
+    charms: strs(o.charms),
     gull: { fed: Math.floor(num(rec(o.gull).fed, -1, -1)), streak: Math.floor(num(rec(o.gull).streak, 0, 0)), tame: rec(o.gull).tame === true, giftDay: Math.floor(num(rec(o.gull).giftDay, -1, -1)), gifts: Math.floor(num(rec(o.gull).gifts, 0, 0)) },
     bait: str(o.bait, 'bait-worm'),
     baits,

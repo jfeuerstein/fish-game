@@ -45,7 +45,7 @@ the owner's: do not route a deploy round it.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
   the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
@@ -247,6 +247,40 @@ the owner's: do not route a deploy round it.
   pixel or two, the three painted gulls are painted out and drawn again where they have
   drifted to, and the bobber dips. Where those things are in the picture is written down
   there: set them again if the title is ever repainted.
+
+- **Indoors** (`src/world/indoors.ts`): the shop, the fishing hut and the aquarium (under the
+  lighthouse) are rooms of their own, each a model made like a dolls' house (`room-*`: two or
+  three walls and a floor, open toward the camera). A room is a scene by itself with its own
+  light, drawn in place of the island while the player is in it (mode `inside`); the player's
+  place on the island stays at the door. Where the floor may be walked is found from the model,
+  by casting down on a grid for what is level with the floor. A room's spots (`ROOMS`) say what
+  the button does there: Gus's counter, the hut's tackle bench and stove, the tank. Walking out
+  of the open front leaves. `room-cave` was made and is not used.
+- **The aquarium** (`src/game/aquarium.ts`, pure, tested): one of every kind of fish, given
+  from the bag at the tank; it pays half again Gus's price and a pearl every five kinds, and
+  what is given swims behind the glass as its sprite. Only kinds already given are listed.
+- **Up the lighthouse** (`Game.climb`, `lookout`; `src/game/lookout.ts`, pure, tested): from
+  the gallery the camera goes round the lantern looking out. The telescope narrows the view
+  to nine degrees; a thing held in the middle of the glass a moment is picked out and named:
+  the trawler (a pearl the first time), the pier, the pond, the camp, and the sea cave, which
+  is how the cave gets onto the chart.
+- **The sea cave** (`CAVE` in `layout.ts`): a mound of rock with a dark mouth in the north
+  cliffs, come at only by boat. The water before the mouth is zone `cave`, with three fish
+  found nowhere else.
+- **Arranging** (`Game.setDown`, `move`, `carry`): a thing taken from the bag, or one standing
+  that is picked up with Move, is carried in front of the player as a see-through ghost until
+  it is Set down (Turn turns it an eighth; Put away sends it back to the bag). It counts as in
+  the bag while it is carried. A **camp chest** keeps thirty fish out of the bag (`store`,
+  `takeOut` in `camp.ts`; however many chests, one store). A **camp sign** is built in code so
+  that it can say the camp's name (`campSign` in `placed.ts`, `campName` in the save).
+- **The chart** (More > Chart; `src/ui/chart.ts`, `src/game/chart.ts`): the island from above in
+  flat inks with the places pinned, the camp by its name, the trader on their days, the cave
+  once found, and under it each water with the kinds caught there (`caughtAt` in the save,
+  kept as fish are landed). It shows only what has been caught: it never says where to find one.
+- **The trader** (`src/game/trader.ts`, pure, tested; `src/npc/trader.ts`): about two days in
+  seven, by day, a stall and a second rowboat are on the beach and Tansy beside them (whichever
+  character the player is not, in a straw hat and pack). She sells what Gus does not, each once
+  a visit: two things to set down, bait by the bundle, and one pearl for coins.
 
 ## What the game leans into
 

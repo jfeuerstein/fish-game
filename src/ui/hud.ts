@@ -50,6 +50,8 @@ export class Hud {
   private card = el('div', 'catch-card');
   private action = el('button', 'act-main');
   private second = el('button', 'act-second');
+  private third = el('button', 'act-second act-third');
+  private onThird: (() => void) | null = null;
   private meter = el('div', 'reel-meter');
   private meterFish = el('div', 'reel-fish');
   private meterFill = el('i', 'reel-fill');
@@ -151,6 +153,13 @@ export class Hud {
     this.action.addEventListener('pointerdown', press);
     this.action.addEventListener('pointerup', release);
     this.action.addEventListener('pointercancel', release);
+    this.third.hidden = true;
+    this.third.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onAnyTouch();
+      this.onThird?.();
+    });
     this.second.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -170,7 +179,7 @@ export class Hud {
       return b;
     };
     this.menu = { bag: make('bag', 'Bag', 'f-cooler'), journal: make('journal', 'Journal', 'fish-bluegill'), fun: make('fun', 'Fun', 'ukulele'), more: make('more', 'More', 'hat-captain') };
-    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.shoutEl, this.bang, this.blip, this.second, this.jumpBtn, this.baitChip, this.action, row);
+    parent.append(top, this.toasts, this.card, this.meter, this.power, this.tag, this.bubble, this.shoutEl, this.bang, this.blip, this.second, this.third, this.jumpBtn, this.baitChip, this.action, row);
   }
 
   /** While a prize is being revealed, the counters wait, so they don't give it away. */
@@ -237,6 +246,23 @@ export class Hud {
     if (this.second.textContent !== label) this.second.textContent = label;
     this.second.hidden = false;
     this.onSecond = onTap ?? null;
+  }
+
+  /** Whether the second button is taken. */
+  get hasSecond(): boolean {
+    return !this.second.hidden;
+  }
+
+  /** A third thing to do here, above the second: only where there are three (arranging the camp, the lighthouse). */
+  setThird(label: string | null, onTap?: () => void): void {
+    if (label === null) {
+      this.third.hidden = true;
+      this.onThird = null;
+      return;
+    }
+    if (this.third.textContent !== label) this.third.textContent = label;
+    this.third.hidden = false;
+    this.onThird = onTap ?? null;
   }
 
   toast(text: string, kind = ''): void {

@@ -219,7 +219,7 @@ export function shopSheet(app: HTMLElement, s: Session, openChests: () => void):
       const camp = tab === 'Camp';
       body.append(el('p', '', camp ? '"Pitch a camp anywhere you like. A tent, a fire and somewhere to sit, and it\'s a camp. The rest is making it yours." Find what you buy in your bag.' : 'Things to set down anywhere on the island. Find them in your bag.'));
       const grid = el('div', 'grid');
-      for (const f of FURNITURE.filter((x) => !x.prize && !!x.camp === camp)) {
+      for (const f of FURNITURE.filter((x) => !x.prize && !x.trader && !!x.camp === camp)) {
         const t = el('button', 'tile');
         const n = save.furniture[f.id] ?? 0;
         const out = save.placed.filter((p) => p.id === f.id).length;

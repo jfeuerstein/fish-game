@@ -12,7 +12,8 @@ export class CameraRig {
   zoom = 1;
   private target = new THREE.Vector3();
   private smoothed = new THREE.Vector3();
-  private first = true;
+  /** Set to go straight to where it is looking, without easing there (after a jump from one place to another). */
+  first = true;
   /** The distance actually used, eased toward what is wanted. */
   private held = 9;
   /** A place to look at instead of the player (the chalk board, the catch). */

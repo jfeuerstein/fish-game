@@ -59,6 +59,8 @@ const ITEM_SHEETS = [
   ['line-1', 'line-2', 'line-3', 'line-4', 'hook-1', 'hook-2', 'hook-3', 'hook-4', 'bait-crawler'],
   // Charms for the rod, and the last things to set down.
   ['charm-bell', 'charm-feather', 'charm-shell', 'charm-star', 'charm-fish', 'charm-moon', 'f-chest', 'f-chime', 'f-shipbottle'],
+  // The camp's sign, the map, the trader, and paint for the rod.
+  ['f-campsign', 'icon-map', 'icon-trader', 'paint-coral', 'paint-sea', 'paint-moss', 'paint-brass', 'paint-rose', 'paint-ink'],
 ];
 /** What an item is, as its model or picture was asked for, without the words about how a model wants it posed. */
 const itemSays = (id) => {
