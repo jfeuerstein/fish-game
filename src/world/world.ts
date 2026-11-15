@@ -7,6 +7,7 @@ import { Heightfield } from './island';
 import { PLACED, type Placed, pierSections, railPosts } from './layout';
 import { Props } from './props';
 import { FLOWER_RULES, RULES, lilypads, scatter } from './scatter';
+import { SkyLife } from './skyLife';
 import { Sky } from './sky';
 import { buildTerrain } from './terrain';
 import { Water } from './water';
@@ -24,14 +25,20 @@ export class World {
   /** What is lit after dark: lamps, the fire, the shop's counter, the lighthouse. */
   private lamps: { light: THREE.PointLight; strength: number; flickers: boolean }[] = [];
   private beam: THREE.Object3D | null = null;
+  private lofi = false;
+  private terrain!: THREE.Mesh;
+  /** Gulls, the boat on the horizon, shooting stars. */
+  private life = new SkyLife();
   private clock = 0;
 
   constructor(readonly scene: THREE.Scene, shadows: boolean, look?: Look) {
+    this.lofi = !!look?.lofi;
     if (look?.lofi) stepLamplight();
     this.sky = new Sky(scene, shadows, look);
     this.water = new Water(this.field, look);
     this.props = new Props(this.field, this.solid);
-    this.group.add(buildTerrain(this.field, look), this.water.group, this.props.group, this.sky.group);
+    this.terrain = buildTerrain(this.field, look);
+    this.group.add(this.terrain, this.water.group, this.props.group, this.sky.group, this.life.group);
     scene.add(this.group);
     // The bridge's rails are solid, so nobody walks off the side of it into the creek.
     for (const p of railPosts()) this.solid.addCircle({ x: p.x, z: p.z, r: 0.22 });
@@ -52,6 +59,8 @@ export class World {
     const proto = await model('cloud');
     tick();
     if (proto) {
+      // One material for every cloud, in a colour the sky sets: white by day, dim plum at night.
+      let paint: THREE.MeshBasicMaterial | null = null;
       for (let i = 0; i < 14; i++) {
         const c = proto.clone(true);
         c.traverse((o) => {
@@ -59,7 +68,9 @@ export class World {
           if (m.isMesh) {
             m.castShadow = false;
             m.receiveShadow = false;
-            m.material = new THREE.MeshBasicMaterial({ color: 0xffffff, map: (m.material as THREE.MeshLambertMaterial).map, fog: false });
+            paint ??= new THREE.MeshBasicMaterial({ color: 0xffffff, map: (m.material as THREE.MeshLambertMaterial).map, fog: false });
+            paint.color = this.sky.cloudInk;
+            m.material = paint;
           }
         });
         c.scale.setScalar(2.5 + r() * 3);
@@ -148,8 +159,11 @@ export class World {
 
   update(dt: number, hour: number, rain: number, focus: THREE.Vector3): void {
     const look = this.sky.update(dt, hour, rain, focus);
+    this.props.blow(dt * (1 + rain * 0.8), this.lofi ? 6 : 0);
+    (this.terrain.userData.wet as { value: number }).value = rain;
     this.water.update(dt, look, rain);
     const night = this.sky.palette.night;
+    this.life.update(dt, night, rain, focus);
     const on = Math.min(1, night * 1.2 + rain * 0.4);
     this.glowMat.opacity = on;
     for (const g of this.glows) g.visible = on > 0.02;

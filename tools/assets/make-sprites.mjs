@@ -1,16 +1,19 @@
 #!/usr/bin/env node
-// Pictures drawn for the purpose, for what the journal and the catch card show: the fish.
+// Pictures drawn for the purpose, for what the menus show: the fish, and everything sold, worn,
+// won or set down.
 //
-//   NODE_USE_ENV_PROXY=1 node tools/assets/make-sprites.mjs [--by fal|tripo] [--sheets 1,2] [--redo 2] [--cut-only]
+//   NODE_USE_ENV_PROXY=1 node tools/assets/make-sprites.mjs [fish|items] [--by fal|tripo] [--sheets 1,2] [--redo 2] [--cut-only]
 //
-// The fish's first icons were pictures of soft 3D toys, made for shaping models from; shrunk to
-// a 48-pixel sprite they are a little mushy. These are asked for as what they will be: flat,
-// outlined, side-on sprites. Sixteen are asked for at a time, on one sheet, so that a whole
+// The first icons were pictures of soft 3D toys, made for shaping models from; shrunk to a
+// 48-pixel sprite they are a little mushy. These are asked for as what they will be: flat,
+// outlined sprites. Sixteen are asked for at a time, on one sheet, so that a whole
 // sheet is in one hand; the sheet is cut into its sixteen squares, the white round each is cut
-// away, and each is saved as art/sprites/fish-<id>.png. tools/assets/lofi.mjs then makes the
+// away, and each is saved as art/sprites/<id>.png (a fish as fish-<id>.png). A sheet's drawings
+// are taken in reading order, whatever grid they came back in. tools/assets/lofi.mjs then makes the
 // 48-pixel sprite from that in place of the old picture (it is run at the end).
 //
-// Sheets are kept in art/sprites/sheets/ (sheet-<n>.png), so running this again costs nothing.
+// Sheets are kept in art/sprites/sheets/ (sheet-<n>.png for the fish, items-<n>.png for the
+// rest), so running this again costs nothing.
 // LOOK AT EVERY SHEET before keeping it: a model asked for
 // sixteen things in order sometimes leaves one out or draws two the same, and then every fish
 // after it is under the wrong name. `--redo n` asks for a sheet again.
@@ -19,7 +22,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import sharp from 'sharp';
 import { run, save as saveFal } from './fal.mjs';
 import { iconFrom } from './finish.mjs';
-import { FISH_ART, IMAGE_MODEL, TRIPO } from './manifest.mjs';
+import { FISH_ART, ICONS, IMAGE_MODEL, MODELS, TRIPO } from './manifest.mjs';
 import { save as saveTripo, task } from './tripo.mjs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
@@ -34,25 +37,60 @@ const only = (flag('--sheets') ?? '').split(',').filter(Boolean).map(Number);
 const redo = new Set((flag('--redo') ?? '').split(',').filter(Boolean).map(Number));
 const cutOnly = args.includes('--cut-only');
 
-const PER = 16;
-const SIDE = 4;
-const ids = Object.keys(FISH_ART);
-const sheets = [];
-for (let i = 0; i < ids.length; i += PER) sheets.push(ids.slice(i, i + PER));
+
+/**
+ * Everything the menus show that is not a fish, sheet by sheet, like things together. A sheet's
+ * list is what is on it, in reading order. Sixteen fish to a sheet come out right; sixteen
+ * things as different as these do not (a row comes back as something else, or is left off), so
+ * after the first sheet they are asked for nine at a time. The second and third sheets are what
+ * was right of two sheets of sixteen: their lists stop where the sheets went wrong.
+ */
+const ITEM_SHEETS = [
+  ['rod-1', 'rod-2', 'rod-3', 'rod-4', 'rod-5', 'bait-worm', 'bait-cricket', 'bait-minnow', 'bait-glow', 'bait-lure', 'bait-golden', 'lure-none', 'lure-big', 'lure-small', 'lure-sparkle', 'lure-magnet'],
+  ['lure-twin', 'lure-lucky', 'lure-rain', 'hat-party', 'hat-bucket', 'hat-beanie', 'hat-straw', 'hat-sailor', 'hat-flowers', 'hat-cowboy', 'hat-cone', 'hat-lampshade'],
+  ['hat-top', 'hat-pirate', 'hat-viking', 'hat-wizard', 'hat-cake', 'hat-duck', 'hat-crab', 'hat-shark', 'hat-frog', 'hat-mushroom', 'hat-fish', 'hat-crown'],
+  ['hat-bread', 'hat-captain', 'hat-propeller', 'hat-chef', 'f-chair', 'f-cooler', 'f-lantern', 'f-plant', 'f-umbrella'],
+  ['f-radio', 'f-flamingo', 'f-gnome', 'f-tiki', 'f-hammock', 'f-telescope', 'f-snowman', 'x-flower', 'x-bowtie'],
+  ['x-glasses', 'x-scarf', 'x-shades', 'x-backpack', 'x-mustache', 'x-snorkel', 'char-otter', 'char-frog', 'char-raccoon'],
+  ['coin', 'detector', 'upgrade-cooler', 'ukulele', 'ticket-lucky', 'gull', 'boat-ticket'],
+];
+/** What an item is, as its model or picture was asked for, without the words about how a model wants it posed. */
+const itemSays = (id) => {
+  const said = MODELS[id]?.what ?? MODELS[id]?.prompt ?? ICONS[id];
+  if (typeof said !== 'string') throw new Error(`nothing says what ${id} looks like`);
+  return said.replace(/,? as a chunky toy/g, '').replace(/,? lying diagonally/g, '').replace(/,? seen from the front/g, '');
+};
+
+/** In sixteens. */
+const sixteens = (ids) => {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 16) out.push(ids.slice(i, i + 16));
+  return out;
+};
+
+/** The two sets of sprites: their sheets, what each thing looks like, what its file is called, and how they are seen. */
+const SETS = {
+  fish: { sheets: sixteens(Object.keys(FISH_ART)), says: (id) => FISH_ART[id], name: (id) => `fish-${id}`, sheet: 'sheet', view: 'Every animal has one small round black eye. Seen from the side facing left unless said.' },
+  items: { sheets: ITEM_SHEETS, says: itemSays, name: (id) => id, sheet: 'items', view: 'Each thing whole and on its own, with nobody wearing or holding it, seen from the front and a little above, upright; a fishing rod lies on a slant. Animals have small round black eyes.' },
+};
+const which = args.find((a) => a in SETS) ?? 'fish';
+const set = SETS[which];
+const sheets = set.sheets;
 
 /** Tripo takes a prompt of at most this many characters. */
 const LIMIT = 1800;
 
 /** What a sheet is asked for as: the look, then each square by row, each thing cut short enough that all fit. */
 function brief(list) {
+  const SIDE = Math.ceil(Math.sqrt(list.length));
   const look =
     `A sprite sheet: exactly ${list.length} separate pixel art game sprites in a ${SIDE} by ${SIDE} grid on a pure white background. ` +
     'Each sprite is centred in its own equal square, filling two thirds of it, touching nothing. No grid lines, frames, numbers, words or shadows. ' +
-    'Chunky 16-bit pixel art item icons: big square pixels, flat muted colours with one shade tone, a dark navy outline, cute and a little odd; every animal has one small round black eye. ' +
-    'Seen from the side facing left unless said.';
+    'Chunky 16-bit pixel art item icons: big square pixels, flat muted colours with one shade tone, a dark navy outline, cute and a little odd. ' +
+    set.view;
   for (let most = 90; most > 20; most -= 4) {
     const short = (id) => {
-      const t = FISH_ART[id].replace(/^an? /, '');
+      const t = set.says(id).replace(/^an? /, '');
       return t.length <= most ? t : t.slice(0, t.lastIndexOf(' ', most)).replace(/[,;]? ?(and|with|a|an|the|of|on|its)?$/, '');
     };
     const rows = [];
@@ -67,7 +105,7 @@ function brief(list) {
 }
 
 async function paint(n, list) {
-  const file = `${SHEETS}/sheet-${n}.png`;
+  const file = `${SHEETS}/${set.sheet}-${n}.png`;
   if (existsSync(file) && !redo.has(n)) return file;
   const prompt = brief(list);
   if (by === 'tripo') {
@@ -138,18 +176,26 @@ async function cut(file, list) {
     patches.push(p);
   }
   mkdirSync(`${ROOT}art/sprites`, { recursive: true });
+  // The drawings, in reading order: specks dropped, then gathered into rows by how high they
+  // are, each row left to right. The list says what each is.
+  const big = patches.map((p, k) => ({ ...p, k })).filter((p) => p.area > 0);
+  const typical = [...big].sort((a, b) => b.area - a.area)[Math.min(big.length - 1, Math.floor(list.length / 2))]?.area ?? 0;
+  const real = big.filter((p) => p.area > typical * 0.12).sort((a, b) => a.sy / a.area - b.sy / b.area);
+  const rows = [];
+  for (const p of real) {
+    const row = rows[rows.length - 1];
+    const tall = p.y1 - p.y0;
+    if (row && p.sy / p.area - row.at < Math.max(tall, row.tall) * 0.6) {
+      row.all.push(p);
+      row.at = row.all.reduce((sum, q) => sum + q.sy / q.area, 0) / row.all.length;
+      row.tall = Math.max(row.tall, tall);
+    } else rows.push({ all: [p], at: p.sy / p.area, tall });
+  }
+  const inOrder = rows.flatMap((r) => r.all.sort((a, b) => a.sx / a.area - b.sx / b.area));
+  if (inOrder.length < list.length) throw new Error(`the sheet has ${inOrder.length} drawings on it and ${list.length} were asked for: look at it, and ask again with --redo`);
+  if (inOrder.length > list.length) console.warn(`${file.split('/').pop()}: ${inOrder.length} drawings, of which the first ${list.length} are kept`);
   for (const [i, id] of list.entries()) {
-    const cx0 = ((i % SIDE) * W) / SIDE;
-    const cy0 = (Math.floor(i / SIDE) * H) / SIDE;
-    let best = -1;
-    patches.forEach((p, k) => {
-      if (!p.area) return;
-      const mx = p.sx / p.area;
-      const my = p.sy / p.area;
-      if (mx < cx0 || mx >= cx0 + W / SIDE || my < cy0 || my >= cy0 + H / SIDE) return;
-      if (best < 0 || p.area > patches[best].area) best = k;
-    });
-    if (best < 0) throw new Error(`the sheet has nothing in the square for ${id}`);
+    const best = inOrder[i].k;
     const p = patches[best];
     const pad = 6;
     const w = p.x1 - p.x0 + 1 + pad * 2;
@@ -165,7 +211,7 @@ async function cut(file, list) {
     await sharp(out, { raw: { width: w, height: h, channels: 4 } }).png().toFile(cell);
     const webp = `${CACHE}/sprite-cell.webp`;
     await iconFrom(cell, webp);
-    await sharp(webp).png().toFile(`${ROOT}art/sprites/fish-${id}.png`);
+    await sharp(webp).png().toFile(`${ROOT}art/sprites/${set.name(id)}.png`);
   }
 }
 
@@ -175,10 +221,10 @@ const done = [];
 for (const [k, list] of sheets.entries()) {
   const n = k + 1;
   if (only.length && !only.includes(n)) continue;
-  const file = `${SHEETS}/sheet-${n}.png`;
+  const file = `${SHEETS}/${set.sheet}-${n}.png`;
   if (cutOnly && !existsSync(file)) continue;
   await cut(cutOnly ? file : await paint(n, list), list);
   done.push(...list);
 }
 console.log(`${done.length} sprites cut; look at art/sprites/sheets/ before keeping them`);
-if (done.length) execFileSync('node', [`${ROOT}tools/assets/lofi.mjs`, 'icons', ...done.map((id) => `fish-${id}`)], { stdio: 'inherit' });
+if (done.length) execFileSync('node', [`${ROOT}tools/assets/lofi.mjs`, 'icons', ...done.map(set.name)], { stdio: 'inherit' });

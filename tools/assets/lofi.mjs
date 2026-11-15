@@ -445,10 +445,12 @@ export async function lofiGround(name) {
  */
 export async function lofiTitle() {
   const meta = await sharp(`${ROOT}art/title.webp`).metadata();
-  const width = 201;
+  // The painting is pixel art already, four of its file's pixels to one of its own: every
+  // fourth is taken as it is, so that its pixels stay its pixels (smoothed down they blur).
+  const width = 256;
   const height = Math.round((meta.height / meta.width) * width);
-  const small = await sharp(`${ROOT}art/title.webp`).resize(width, height, { kernel: 'lanczos3' }).modulate({ saturation: 1.15 }).png().toBuffer();
-  const few = await sharp(small).png({ palette: true, colours: 28, dither: 0, effort: 10 }).toBuffer();
+  const small = await sharp(`${ROOT}art/title.webp`).resize(width, height, { kernel: 'nearest' }).png().toBuffer();
+  const few = await sharp(small).png({ palette: true, colours: 32, dither: 0, effort: 10 }).toBuffer();
   await sharp(few).webp({ lossless: true }).toFile(`${ROOT}public/art/title.webp`);
   // The Home Screen icon the same way: drawn 60 or 64 pixels square and blown up a whole number
   // of times, so every pixel of it is a square.

@@ -30,7 +30,8 @@ import { Sheet } from '../ui/sheet';
 import { shopSheet } from '../ui/shop';
 import { Uke } from '../ui/uke';
 import { Boat } from '../world/boat';
-import { fishingZone, shoreRadius } from '../world/island';
+import { fishingZone, shoreRadius, waterAt } from '../world/island';
+import { splatAt } from '../world/terrain';
 import { CAMP, PIER, PLACES, PLACED } from '../world/layout';
 import { PlacedThings } from '../world/placed';
 import type { Seat } from '../world/props';
@@ -162,6 +163,8 @@ export class Game implements Session {
     await loadIndex();
     this.world = new World(this.scene, !low, look);
     this.scene.add(this.fx.group);
+    // Rain lands on the ground, or on the water where there is water.
+    this.fx.ground = (x, z) => waterAt(this.world.field, x, z)?.level ?? this.world.field.heightAt(x, z);
     const bar = document.getElementById('load-bar')!;
     this.body = new Character(this.save.character, 1.1);
     this.scene.add(this.body.group);
@@ -206,7 +209,10 @@ export class Game implements Session {
     }
     const at = PLACES[this.cfg.at ?? 'plaza'] ?? PLACES.plaza;
     this.player.place(at.x, at.z, at.yaw);
-    this.player.onStep = (surface) => this.audio.play(surface === 'wood' ? 'stepwood' : surface === 'water' ? 'splashstep' : 'step', { volume: 0.18, rate: 0.9 + Math.random() * 0.2 });
+    this.player.onStep = (surface) => {
+      this.audio.play(surface === 'wood' ? 'stepwood' : surface === 'water' ? 'splashstep' : 'step', { volume: 0.18, rate: 0.9 + Math.random() * 0.2 });
+      this.footfall(surface);
+    };
     this.rig = new CameraRig(this.camera, this.world.field);
     this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
@@ -238,6 +244,13 @@ export class Game implements Session {
       if (v > 6) {
         this.audio.play('stepwood', { volume: 0.5, rate: 0.7 });
         this.rig.bump(Math.min(0.15, v * 0.01));
+      }
+      // A puff of dust (or a splash) where the feet come down.
+      if (v > 3.5) {
+        const p = this.player.pos;
+        const wet = waterAt(this.world.field, p.x, p.z);
+        if (wet && p.y < wet.level + 0.3) this.fx.splash(new THREE.Vector3(p.x, wet.level, p.z), 0.5);
+        else this.fx.puff(p, Math.min(1, v / 9));
       }
     };
     this.hud.onJump = () => this.jump();
@@ -435,6 +448,45 @@ export class Game implements Session {
       setTimeout(() => this.hud.toast(`New title: ${t}! Show it from More › Wardrobe.`, 'gold'), 2400);
       this.changed();
     }
+  }
+
+  private stepSide = 1;
+
+  /** What a step leaves in the shallows: a ring and a few drops. */
+  private footfall(surface: 'grass' | 'wood' | 'water'): void {
+    const p = this.player.pos;
+    this.stepSide = -this.stepSide;
+    // A little to the side of the middle, left foot then right.
+    const x = p.x + Math.cos(this.player.yaw) * 0.14 * this.stepSide;
+    const z = p.z - Math.sin(this.player.yaw) * 0.14 * this.stepSide;
+    if (surface === 'water') {
+      const level = waterAt(this.world.field, p.x, p.z)?.level ?? 0;
+      const at = new THREE.Vector3(x, level + 0.02, z);
+      this.fx.ring(at, 0.45);
+      this.fx.splash(at, 0.12);
+    }
+  }
+
+  private trod = new THREE.Vector2(NaN, NaN);
+  private trodFar = 0;
+  /**
+   * Prints in the sand: one for every short pace walked on it, left foot then right. (A step as
+   * the player's own clock counts it, which the sound goes by, is too long a stride to leave a trail.)
+   */
+  private tread(): void {
+    const p = this.player.pos;
+    const moved = Number.isNaN(this.trod.x) ? 0 : Math.hypot(p.x - this.trod.x, p.z - this.trod.y);
+    this.trod.set(p.x, p.z);
+    // Carried somewhere, not walked: no trail.
+    if (moved > 1 || this.mode !== 'walk' || this.player.airborne) return;
+    this.trodFar += moved;
+    if (this.trodFar < 0.36) return;
+    this.trodFar = 0;
+    this.stepSide = -this.stepSide;
+    const x = p.x + Math.cos(this.player.yaw) * 0.13 * this.stepSide;
+    const z = p.z - Math.sin(this.player.yaw) * 0.13 * this.stepSide;
+    if (waterAt(this.world.field, x, z) || splatAt(this.world.field, x, z)[0] < 0.6) return;
+    this.fx.print(x, this.world.field.heightAt(x, z), z, this.player.yaw);
   }
 
   private jump(): void {
@@ -839,6 +891,7 @@ export class Game implements Session {
       this.boat.update(dt, { x: 0, y: 0 }, 0);
       if (this.mode === 'walk') this.player.update(dt, stick, this.rig.yaw);
       else this.player.update(dt, { x: 0, y: 0 }, this.rig.yaw);
+      this.tread();
     }
     if (this.mode === 'sit' && this.seat) this.body.group.position.y = this.seat.y + this.seat.lift - 0.36;
     if (this.mode === 'emote') {
@@ -869,7 +922,7 @@ export class Game implements Session {
     this.finds.update(dt);
     this.finds.setCloud(cloud, this.player.pos);
     if (this.started) this.secrets(dt, now);
-    this.fx.update(dt, this.camera);
+    this.fx.update(dt, this.camera, this.player.pos);
 
     if (this.started) {
       this.context();

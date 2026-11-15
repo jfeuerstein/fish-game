@@ -1,5 +1,6 @@
 import './style.css';
 import { Game } from './game/main';
+import { drawLogo } from './ui/logo';
 
 /**
  * Launched from the Home Screen, iOS can lay the page out shorter than the screen it shows.
@@ -29,6 +30,9 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     setTimeout(() => (reg.active ?? navigator.serviceWorker.controller)?.postMessage('keep-all'), 20000);
   });
 }
+
+const name = document.querySelector<HTMLElement>('#title .title-name h1');
+if (name) void drawLogo(name);
 
 new Game().boot().catch((e) => {
   console.error(e);

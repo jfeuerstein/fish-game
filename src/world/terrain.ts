@@ -76,6 +76,8 @@ ground = mix(ground, sand, step(0.5, w.x + (mid - 0.5) * 0.7));
 ground = mix(ground, dirt, step(0.5, w.y + (mid - 0.5) * 0.7));
 ground = mix(ground, rock, step(0.5, w.z + (big - 0.5) * 0.7));
 ground = mix(ground, cob, step(0.5, w.w + (mid * 0.5 - 0.25) * 0.7));
+// Wet in the rain: darker, a little bluer, in two steps as the rain comes on.
+ground *= uWet > 0.66 ? vec3(0.74, 0.78, 0.84) : (uWet > 0.25 ? vec3(0.87, 0.89, 0.92) : vec3(1.0));
 // Darker and greener under the water, in two steps.
 ground *= vGround.y < -1.6 ? vec3(0.6, 0.76, 0.74) : (vGround.y < -0.25 ? vec3(0.8, 0.89, 0.86) : vec3(1.0));
 diffuseColor.rgb *= ground;`;
@@ -115,6 +117,8 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
 
   const tex = { grass: loadTexture('grass'), sand: loadTexture('sand'), dirt: loadTexture('dirt'), rock: loadTexture('rock'), plaza: loadTexture('plaza') };
   const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  // How hard it is raining, 0 to 1 (set through the mesh: `userData.wet.value`).
+  const wet = { value: 0 };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.tGrass = { value: tex.grass };
     shader.uniforms.tSand = { value: tex.sand };
@@ -126,6 +130,7 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
     shader.uniforms.tDirtB = { value: look?.lofi ? loadTexture('dirt-b') : null };
     shader.uniforms.tSplat = { value: look?.lofi ? splatTexture(field, splat) : null };
     shader.uniforms.uHalf = { value: half };
+    shader.uniforms.uWet = wet;
     // Texel centres: the splat's first sample is at the island's edge, half a texel in.
     shader.uniforms.uSplatScale = { value: (n - 1) / n };
     shader.uniforms.uSplatBias = { value: 0.5 / n };
@@ -137,7 +142,7 @@ export function buildTerrain(field: Heightfield, look?: Look): THREE.Mesh {
         '#include <common>',
         `#include <common>
 uniform sampler2D tGrass, tSand, tDirt, tRock, tPlaza, tSplat, tGrassB, tSandB, tDirtB;
-uniform float uHalf, uSplatScale, uSplatBias;
+uniform float uHalf, uSplatScale, uSplatBias, uWet;
 varying vec4 vSplat;
 varying vec3 vGround;
 float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -187,5 +192,6 @@ diffuseColor.rgb *= ground;`,
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.name = 'terrain';
+  mesh.userData.wet = wet;
   return mesh;
 }

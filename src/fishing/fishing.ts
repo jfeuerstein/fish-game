@@ -61,6 +61,10 @@ export class Fishing {
   private hookWindow = 1;
   /** For the HUD. */
   fishIcon = '';
+  /** Whatever is under the bobber: a dark shape in the water that comes closer as a bite nears. */
+  private shade: THREE.Mesh;
+  private shadeTurn = Math.random() * 6;
+  private shadeFar = 2;
   constructor(private field: Heightfield, private body: Character, private fx: Effects, private hooks: FishingHooks, scene: THREE.Scene) {
     this.bobber.visible = false;
     scene.add(this.bobber);
@@ -79,6 +83,10 @@ export class Fishing {
     this.line.frustumCulled = false;
     this.line.visible = false;
     scene.add(this.line);
+    this.shade = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.5).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: fishShadow(), color: 0x143c46, transparent: true, opacity: 0.6, depthWrite: false }));
+    this.shade.renderOrder = 2;
+    this.shade.visible = false;
+    scene.add(this.shade);
   }
 
   get busy(): boolean {
@@ -127,7 +135,7 @@ export class Fishing {
   /** Take the bobber and the line out of the world (the character holding the rod has been changed for another). */
   dispose(): void {
     this.cancel();
-    for (const o of [this.bobber, this.line]) o.parent?.remove(o);
+    for (const o of [this.bobber, this.line, this.shade]) o.parent?.remove(o);
     this.line.geometry.dispose();
     (this.line.material as THREE.Material).dispose();
   }
@@ -313,6 +321,32 @@ export class Fishing {
         break;
     }
     if (this.line.visible) this.drawLine();
+    this.lurk(dt);
+  }
+
+  /**
+   * The shape in the water. While the line waits it circles the bobber, wide at first and
+   * closer as the bite comes near (the only sign of how long there is to wait); at a bite it is
+   * under the bobber, and it stays there to be reeled in. It moves a pixel of the water at a time.
+   */
+  private lurk(dt: number): void {
+    const on = !!this.zone && (this.state === 'waiting' || this.state === 'bite' || this.state === 'reeling') && this.timer < 900;
+    this.shade.visible = on;
+    if (!on) {
+      this.shadeFar = 2;
+      return;
+    }
+    const near = this.state === 'waiting' ? 0.45 + Math.min(1.5, Math.max(0, this.timer) * 0.22) : 0.15;
+    this.shadeFar += (near - this.shadeFar) * (1 - Math.exp(-dt * 2.5));
+    this.shadeTurn += dt * (this.state === 'waiting' ? 0.9 + (2 - this.shadeFar) * 0.5 : 5);
+    const b = this.bobber.position;
+    const x = b.x + Math.cos(this.shadeTurn) * this.shadeFar;
+    const z = b.z + Math.sin(this.shadeTurn) * this.shadeFar;
+    this.shade.position.set(Math.round(x * 8) / 8, this.level + 0.012, Math.round(z * 8) / 8);
+    // Head first along the way it is going round.
+    this.shade.rotation.y = Math.atan2(Math.cos(this.shadeTurn), Math.sin(this.shadeTurn));
+    const size = this.fish ? Math.min(1.7, Math.max(0.45, this.fish.size / 55)) : 0.8;
+    this.shade.scale.setScalar(size);
   }
 
   private landBobber(): void {
@@ -409,3 +443,19 @@ export class Fishing {
   }
 }
 
+/** A fish seen from above, as a few dark pixels: a round body and a notched tail, head to the left. */
+function fishShadow(): THREE.DataTexture {
+  const w = 16;
+  const h = 8;
+  const data = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const body = ((x + 0.5 - 6) / 6) ** 2 + ((y + 0.5 - 4) / 2.6) ** 2 <= 1;
+      const tail = x >= 11 && Math.abs(y + 0.5 - 4) <= (x - 11) * 0.75 + 0.6 && !(x >= 14 && Math.abs(y + 0.5 - 4) < 1);
+      if (body || tail) data.set([255, 255, 255, 255], (y * w + x) * 4);
+    }
+  const t = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+  t.magFilter = t.minFilter = THREE.NearestFilter;
+  t.needsUpdate = true;
+  return t;
+}

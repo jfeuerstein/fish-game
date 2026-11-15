@@ -1,12 +1,12 @@
 // A character in the world: a rigged model, posed every frame, with a hat on its head and a rod
 // (or a ukulele, or a fish) in its hands.
-import { lit } from '../look/material';
 import * as THREE from 'three';
 import { fit, model } from '../assets/models';
 import * as P from './poses';
 import { Rig } from './rig';
 import { type Look, poseDue } from '../look/look';
 import { FIDGETS, Gaze, fidgetAt, lookToward } from './gaze';
+import { lit, pixelled } from '../look/material';
 import { INK } from '../look/inks';
 import { DARK_FUR, EXPRESSIONS, type Expression, GUESS, type PaintedEye, blinking, eyeHeight, eyeShader, faceFor, readEyes } from './face';
 import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headOf, measureHat, placeHat, placeFor } from './fit';
@@ -673,6 +673,23 @@ export class Character {
       this.held = null;
     }
     if (!id) return;
+    // In the lo-fi look a fish is held up as its picture, the one the journal has, on a flat
+    // card: the island's things are solid and its fish are drawings.
+    if (id.startsWith('fish-') && Character.look?.lofi) {
+      const side = length * 1.15;
+      const map = pixelled(new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}icons/${id}.webp`));
+      map.colorSpace = THREE.SRGBColorSpace;
+      const paper = lit({ map }) as THREE.MeshToonMaterial;
+      paper.alphaTest = 0.5;
+      paper.side = THREE.DoubleSide;
+      const card = new THREE.Mesh(new THREE.PlaneGeometry(side, side).translate(0, side * 0.38, 0), paper);
+      card.castShadow = true;
+      const holder = new THREE.Group();
+      holder.add(card);
+      this.held = holder;
+      this.group.parent?.add(holder);
+      return;
+    }
     const m = await model(id);
     if (!m || this.heldId !== id) return;
     const wrapped = fit(m, length, true);

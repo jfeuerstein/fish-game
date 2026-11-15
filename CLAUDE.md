@@ -21,7 +21,8 @@ node tools/icons.mjs [prefix]                                # render menu icons
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
 node tools/assets/eyes.mjs [id ...]                          # say where each character's painted eyes are found (lofi.mjs does this itself)
-NODE_USE_ENV_PROXY=1 node tools/assets/make-sprites.mjs [--by tripo|fal] [--sheets 1,2] [--redo n] [--cut-only]   # the fish's sprites, sixteen to a sheet
+NODE_USE_ENV_PROXY=1 node tools/assets/make-sprites.mjs [fish|items] [--by tripo|fal] [--sheets 1,2] [--redo n] [--cut-only]   # pixel sprites for the fish and for everything in the menus, a sheet at a time
+NODE_USE_ENV_PROXY=1 node tools/assets/make-title.mjs [--redo] [--keep name]   # Tripo: the title picture, as pixel art
 NODE_USE_ENV_PROXY=1 node tools/assets/make-tripo.mjs id ... # Tripo direct: picture -> model -> slimmed GLB + icon (--kinds hat,extra,prop,fish)
 NODE_USE_ENV_PROXY=1 node tools/assets/make-ground.mjs       # Tripo: the ground's painted textures, made to repeat
 node tools/fit-check.mjs outdir [items] [--chars ...] [--socket]   # every hat/accessory on every character, front and side
@@ -67,7 +68,26 @@ the owner's: do not route a deploy round it.
   (`stepLamplight` changes three.js's own falloff once), so each lamp throws a hard-edged pool.
 - **Sky** (`sky.ts`): hand-tuned palettes for moments of the day, blended by the hour, greyed by rain.
   A day on the island is 24 minutes (`clock.ts`); Settings can follow the real clock. Rain comes in
-  spells chosen from the clock alone.
+  spells chosen from the clock alone. The moon's light comes from high up, where the camera never
+  looks, so the moon itself is drawn lower in the same quarter of the sky (`MOON_SEEN`): a
+  crescent, a disc with a bite out of it. Clouds take the night sky's colour after dark.
+- **Life in the sky** (`src/look/skylife.ts`, pure, tested; `src/world/skyLife.ts`): three gulls
+  wheel over the island by day, flapping in four poses and gliding (fewer in rain, none at
+  night); a trawler goes round the island a third of a kilometre out, with a lamp after dark;
+  and on a clear night a shooting star falls in about half of every 24 seconds. Each is placed
+  from a clock alone: nothing is simulated. They are kept low enough to be seen.
+- **Wind** (`Props.blow`, `SWAY` in `props.ts`): trees, bushes, grass, flowers and cattails bend
+  in the vertex shader, each to its own time from where it stands, more the higher up, and in
+  the lo-fi look in six steps a second. More in rain.
+- **Rain** (`src/fx/particles.ts`) is short thick streaks in a box kept round the player, a pale
+  pixel where each drop lands (on the ground, or on the water where there is water) that widens
+  once and goes, and the ground darkened in two steps (`uWet` in `terrain.ts`).
+- **What feet leave** (`Game.tread`, `footfall`, `Effects.print`, `puff`): a print in the sand
+  for every short pace, laid to the slope and lit as the ground is, gone after half a minute;
+  a ring and a few drops for a step in the shallows; a puff of dust on landing from a jump.
+- **Under the water**: a fish's shadow circles the bobber while a cast waits and closes in at
+  the bite (`Fishing.lurk`); the water's shader draws rings round the pier's legs. In the lo-fi
+  look a caught fish is held up as its sprite on a flat card (`Character.hold`), not as its model.
 - **Hats** sit on each character's skull, an ellipsoid in `HEADS` (`src/player/fit.ts`) that
   leaves out ears and the frog's eyes; `socket=1` draws it. Each hat in `HATS` says how it is worn
   (`on`, `ring` or `perch`), how deep, and where its band and opening are, read off a cut through
@@ -150,8 +170,9 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
   hundred triangles (`CUT`, by kind) with a 64 to 512 pixel texture in the island's inks (the
   four buildings get the finest, since they fill the screen when stood beside; a
   character's painted eyes found and painted out on the way: see The look); an
-  icon to a 48-pixel sprite with a dark line round it; the title picture to 201 pixels across
-  and the Home Screen icon to 64.
+  icon to a 48-pixel sprite with a dark line round it; the title picture to 256 pixels across
+  (it is pixel art already, four of its file's pixels to one of its own, so every fourth is
+  taken as it is) and the Home Screen icon to 64.
   It draws the eight ground tiles itself, as pixel art. It costs nothing and takes ten seconds;
   the Tripo and fal tools run it when they finish. Never edit `public/models`, `public/icons` or
   `public/textures` by hand, and change how lo-fi a thing is in `lofi.mjs`, not in its source.
@@ -161,6 +182,18 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
   characters), cuts each sprite out by finding its drawing, and saves it in `art/sprites/`,
   which `lofi.mjs` uses before `art/icons/`. The sheets are kept in `art/sprites/sheets/`. Look
   at a new sheet before keeping it: one left out puts every fish after it under the wrong name.
+- **Everything else in the menus** (rods, bait, lures, hats, furniture, accessories, the
+  characters, the coin and the rest: 74 things) has a sprite made the same way:
+  `make-sprites.mjs items`, from `ITEM_SHEETS` in that file, seven sheets. Sixteen different
+  things to a sheet was too many (the model drew twelve, or the wrong hats), so later sheets
+  hold nine; a sheet's drawings are taken in reading order, and the tool stops if there are
+  too few. A new thing for a menu goes on a new sheet there. The props of the world have no
+  sprite: they are never shown in a menu.
+- **The title** is a pixel-art painting by Tripo's image model (`TITLE_PIXEL` in the manifest,
+  `make-title.mjs`, 10 credits; `--keep name` paints another to choose from). The name over it
+  is drawn by the game (`src/ui/logo.ts`, its inking pure and tested): each word set in the
+  pixel typeface at a whole multiple of its grid, cut to hard pixels, and inked with a pale top
+  edge, two tones, a dark foot, a line all round and a hard shadow.
 - **The inks** are one list of 54 colours: `tools/assets/palette.mjs` for the tools and
   `src/look/inks.ts` for the game, held together by a test. Every texture and icon is moved to
   them (`inkFor`: nearest by eye, hue before lightness).
@@ -184,7 +217,7 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
   ones when it is next run with balance.
 - Icons: the fal pictures with the background cut away, or rendered from the model in the game's
   light (`tools/icons.mjs`).
-- Textures, the title picture, the Home Screen icon, sounds and music: `make-media.mjs`.
+- Textures, the Home Screen icon, sounds and music: `make-media.mjs` (and the title as it first was, a soft poster).
 - Keys are never in the repo: the fal key is a network secret on the environment
   (`queue.fal.run`); run the asset tools with `NODE_USE_ENV_PROXY=1`.
 

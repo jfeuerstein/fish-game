@@ -208,7 +208,7 @@ button {
 #title .title-art {
   position: absolute;
   inset: 0;
-  background: url('/art/title.webp') 38% 100% / cover no-repeat;
+  background: url('/art/title.webp') 50% 100% / cover no-repeat;
   image-rendering: pixelated;
 }
 #title .title-name {
@@ -227,8 +227,14 @@ button {
   font-style: normal;
   letter-spacing: 0;
 }
+#title .title-name .logo {
+  display: block;
+  margin: 0 auto 6px;
+  image-rendering: pixelated;
+}
 #title .title-name .title-sub {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  text-shadow: none;
   font-family: var(--font);
   font-size: 15px;
   font-weight: 700;

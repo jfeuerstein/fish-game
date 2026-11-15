@@ -80,7 +80,7 @@ export function paletteAt(hour: number, rain: number): Palette {
   if (up > -0.08) p.dir.set(Math.cos(dayAngle), Math.max(0.12, up), 0.45).normalize();
   else {
     // The moon, high in the south-west.
-    p.dir.set(-0.4, 0.75, 0.5).normalize();
+    p.dir.copy(MOONLIGHT);
   }
   if (rain > 0) {
     const g = rain * 0.75;
@@ -95,6 +95,10 @@ export function paletteAt(hour: number, rain: number): Palette {
   return p;
 }
 
+/** Where the moon's light comes from, and where the moon is drawn. */
+const MOONLIGHT = new THREE.Vector3(-0.4, 0.75, 0.5).normalize();
+const MOON_SEEN = new THREE.Vector3(-0.4, 0.2, 0.5).normalize();
+
 const skyVertex = /* glsl */ `
 varying vec3 vDir;
 void main() {
@@ -104,6 +108,7 @@ void main() {
 }`;
 const skyFragment = /* glsl */ `
 uniform vec3 uTop, uHorizon, uSun, uSunDir;
+uniform float uMoon;
 uniform float uNight;
 varying vec3 vDir;
 float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
@@ -114,7 +119,13 @@ void main() {
   #ifdef LOFI
   // Bands of flat colour up from the horizon, and a sun with a hard edge and two flat rings.
   vec3 col = mix(uHorizon, uTop, floor(pow(smoothstep(-0.05, 0.75, h), 0.8) * 7.0 + 0.5) / 7.0);
-  col += uSun * (step(0.9968, s) * 1.6 + (step(0.989, s) * 0.1 + step(0.965, s) * 0.06) * (1.0 - uNight * 0.6));
+  // At night the disc is the moon: a little bigger, and bitten into a crescent by a second disc beside it.
+  float moon = uMoon;
+  float disc = step(mix(0.9968, 0.9974, moon), s);
+  vec3 sd = normalize(uSunDir);
+  vec3 bite = normalize(sd + normalize(cross(sd, vec3(0.0, 1.0, 0.0))) * 0.036 + vec3(0.0, 0.014, 0.0));
+  disc *= 1.0 - moon * step(0.998, dot(d, bite));
+  col += uSun * (disc * 1.6 + (step(0.989, s) * 0.1 + step(0.965, s) * 0.06) * (1.0 - uNight * 0.6));
   #else
   vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.05, 0.75, h), 0.8));
   // The sun's (or moon's) disc and glow.
@@ -123,6 +134,10 @@ void main() {
   // Stars, fading in at night.
   vec3 cell = floor(d * 160.0);
   float star = step(0.9975, hash(cell)) * smoothstep(0.05, 0.3, d.y);
+  #ifdef LOFI
+  // None inside the moon's round, lit or dark.
+  star *= 1.0 - uMoon * step(0.9974, s);
+  #endif
   col += vec3(star) * uNight * 0.9;
   gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
@@ -135,6 +150,8 @@ export class Sky {
   private dome: THREE.Mesh;
   private domeMat: THREE.ShaderMaterial;
   private clouds: THREE.Object3D[] = [];
+  /** The colour clouds are drawn in: white by day, the night sky's own a little lifted after dark. */
+  readonly cloudInk = new THREE.Color(0xffffff);
   readonly fog: THREE.Fog;
   palette: Palette = paletteAt(12, 0);
 
@@ -145,7 +162,7 @@ export class Sky {
       fragmentShader: skyFragment,
       side: THREE.BackSide,
       depthWrite: false,
-      uniforms: { uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uSun: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3() }, uNight: { value: 0 } },
+      uniforms: { uTop: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uSun: { value: new THREE.Color() }, uSunDir: { value: new THREE.Vector3() }, uNight: { value: 0 }, uMoon: { value: 0 } },
     });
     this.dome = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), this.domeMat);
     this.dome.renderOrder = -1;
@@ -191,7 +208,11 @@ export class Sky {
     u.uTop.value.copy(p.top);
     u.uHorizon.value.copy(p.horizon);
     u.uSun.value.copy(p.sun);
-    u.uSunDir.value.copy(p.dir);
+    // The moon lights the island from high up, where the camera never looks: it is drawn lower
+    // in the same quarter of the sky, as a storybook's moon is, so that it is seen.
+    const moon = p.dir.x === MOONLIGHT.x && p.dir.y === MOONLIGHT.y;
+    u.uSunDir.value.copy(moon ? MOON_SEEN : p.dir);
+    u.uMoon.value = moon ? 1 : 0;
     u.uNight.value = p.night * (1 - rain);
     this.dome.position.copy(focus);
     this.sun.color.copy(p.sun);
@@ -205,6 +226,7 @@ export class Sky {
     this.hemi.groundColor.copy(p.hemiGround);
     this.hemi.intensity = p.hemiI;
     this.fog.color.copy(p.horizon).lerp(p.top, 0.15);
+    this.cloudInk.set(0xffffff).lerp(p.top, p.night * 0.72).lerp(p.horizon, rain * 0.5);
     this.fog.near = lerp(120, 40, rain);
     this.fog.far = lerp(520, 230, rain);
     for (const [i, cl] of this.clouds.entries()) {

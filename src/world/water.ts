@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import type { Look } from '../look/look';
 import { Heightfield } from './island';
-import { CREEK, CREEK_WIDTH, POND, creekLevel } from './layout';
+import { CREEK, CREEK_WIDTH, PIER, POND, creekLevel } from './layout';
 
 export interface WaterLook {
   deep: THREE.Color;
@@ -90,6 +90,17 @@ void main() {
   float edge = depth - 0.1 - 0.08 * floor(sin(t * 1.4 + q.x * 0.3 + q.y * 0.2) * 2.0 + 0.5) / 2.0;
   float foam = 1.0 - step(0.22, edge);
   foam = max(foam, (1.0 - step(0.07, abs(edge - 0.5))) * step(0.5, vnoise(q * 1.2 + t * 0.2)));
+  // Rings spreading from the pier's legs, which stand at the corners of its three-metre sections.
+  if (shore.x > PIER_X0 - 0.8 && shore.x < PIER_X1 + 0.8) {
+    bool head = shore.x > PIER_HEAD;
+    float fx = mod(shore.x - (head ? PIER_HEAD : PIER_X0), 3.0);
+    float fz = mod(shore.y - PIER_Z0, 3.0);
+    float dx = min(abs(fx - 0.2), abs(fx - 2.8));
+    float dz = head ? ((shore.y > PIER_Z0 - 0.8 && shore.y < PIER_Z1 + 0.8) ? min(abs(fz - 0.2), abs(fz - 2.8)) : 9.0) : min(abs(shore.y - PIER_Z + 1.3), abs(shore.y - PIER_Z - 1.3));
+    float beat = fract(t * 0.45 + hash(floor(shore / 1.5)));
+    float ring = 1.0 - step(0.07, abs(length(vec2(dx, dz)) - 0.25 - 0.4 * beat));
+    foam = max(foam, ring * step(beat, 0.7) * 0.75);
+  }
   col = mix(col, uFoam, foam);
   float alpha = max(depth < 0.5 ? 0.62 : 0.92, foam);
   gl_FragColor = vec4(col, alpha);
@@ -143,10 +154,11 @@ void main() {
 export class Water {
   readonly group = new THREE.Group();
   readonly material: THREE.ShaderMaterial;
-  private defines: Record<string, number>;
+  private defines: Record<string, number | string>;
 
   constructor(field: Heightfield, look?: Look) {
-    const defines: Record<string, number> = look?.lofi ? { LOFI: 1 } : {};
+    const f = (n: number): string => n.toFixed(2);
+    const defines: Record<string, number | string> = look?.lofi ? { LOFI: 1, PIER_X0: f(PIER.x0), PIER_X1: f(PIER.head.x1), PIER_HEAD: f(PIER.head.x0), PIER_Z: f(PIER.z), PIER_Z0: f(PIER.head.z0), PIER_Z1: f(PIER.head.z1) } : {};
     this.defines = defines;
     this.material = new THREE.ShaderMaterial({
       defines,

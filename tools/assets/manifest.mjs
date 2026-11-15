@@ -240,6 +240,19 @@ export const ICONS = {
   'lure-rain': 'a little charm shaped like a blue rain cloud with a raindrop on a fishing hook',
 };
 
+/**
+ * The title picture as the game wears it: pixel art, asked for as pixel art, so that cut down to
+ * the 256 pixels across the game shows, its pixels are still its own. (The `title` below is the soft poster it
+ * was first made as.) Painted by Tripo's image model: tools/assets/make-title.mjs.
+ */
+export const TITLE_PIXEL = {
+  size: '1024x1536',
+  prompt:
+    'Pixel art, tall portrait poster for a cosy fishing video game, in the style of a 16-bit handheld game title screen: big chunky square pixels, flat colours, hard edges, a short palette of about twenty colours, dark outlines, no gradients, no blur, no anti-aliasing. ' +
+    'A small green island cove at golden hour seen from the water. Lower third: calm teal sea in flat bands with a few white pixel glints, and a wooden pier coming in from the left; at the end of the pier sits a small chubby brown otter in a light blue shirt and a straw hat, seen from behind, holding a fishing rod, its red and white bobber floating on the water. Middle: a sandy beach, round green trees and dark pines, a little blue bait shop with a red striped awning, and on a grassy hill to the right a short red and white striped lighthouse. Upper half: a wide empty evening sky in flat bands from warm peach at the horizon to soft blue above, with two small pixel clouds and three tiny gulls. ' +
+    'Nothing in the top third but sky. No text, no letters, no logo, no border, no frame, no interface.',
+};
+
 /** Flat pictures: the title, the Home Screen icon. */
 export const PICTURES = {
   title: { size: '1024x1536', prompt: 'a cosy illustrated poster of a small green island cove at golden hour: a short red and white lighthouse on a grassy hill, a little wooden pier reaching into calm turquoise water with a tiny rowboat, pine trees, a small blue bait shop with a striped awning, a chubby otter in a light blue shirt sitting at the end of the pier with a fishing rod, soft low poly 3D look, pastel colours, warm light, lots of empty sky at the top, no text, no lettering' },

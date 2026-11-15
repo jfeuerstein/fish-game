@@ -46,6 +46,21 @@ const SOLID: Record<string, { circle?: number; box?: number }> = {
   fence: { box: 0.9 },
 };
 
+/**
+ * What moves in the wind, and how: `bend` is how far a point a metre up is pushed, and `power`
+ * how the push grows with height (2: a trunk that is still at its foot and swings at its top).
+ */
+const SWAY: Record<string, { bend: number; power: number }> = {
+  'tree-pine': { bend: 0.0022, power: 2 },
+  'tree-round': { bend: 0.003, power: 2 },
+  'tree-birch': { bend: 0.0036, power: 2 },
+  'tree-palm': { bend: 0.0045, power: 2 },
+  bush: { bend: 0.035, power: 1 },
+  'grass-tuft': { bend: 0.13, power: 1 },
+  flowers: { bend: 0.11, power: 1 },
+  cattails: { bend: 0.1, power: 1 },
+};
+
 /** Things too small to bother casting shadows. */
 const NO_SHADOW = new Set(['flowers', 'grass-tuft', 'mushrooms', 'lilypad', 'cattails', 'shell']);
 
@@ -60,7 +75,47 @@ export class Props {
   private thinnable: { inst: THREE.InstancedMesh; list: Placed[]; kept: THREE.Matrix4[]; size: THREE.Vector3; hidden: Uint8Array }[] = [];
   private zero = new THREE.Matrix4().makeScale(0, 0, 0);
 
+  /** The wind's clock, shared by everything that sways, and how many times a second what sways is moved (0: every frame). */
+  private wind = { value: 0 };
+  private gust = { value: 0 };
+
   constructor(private field: Heightfield, private solid: Colliders) {}
+
+  /**
+   * Let the wind move what grows. In the lo-fi look it is moved a few times a second, like the
+   * islanders, not smoothly.
+   */
+  blow(dt: number, steps: number): void {
+    this.wind.value += dt;
+    this.gust.value = steps;
+  }
+
+  /** Make a material bend what it is on in the wind: each instance to its own time, from where it stands. */
+  private sway(material: THREE.Material, how: { bend: number; power: number }): void {
+    if (material.userData.sways) return;
+    material.userData.sways = true;
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.uWind = this.wind;
+      shader.uniforms.uGust = this.gust;
+      shader.uniforms.uBend = { value: new THREE.Vector2(how.bend, how.power) };
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uWind, uGust;\nuniform vec2 uBend;')
+        .replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+#ifdef USE_INSTANCING
+  vec3 swayAt = instanceMatrix[3].xyz;
+#else
+  vec3 swayAt = vec3(0.0);
+#endif
+  float swayT = uGust > 0.0 ? floor(uWind * uGust) / uGust : uWind;
+  float swayK = uBend.x * pow(max(transformed.y, 0.0), uBend.y);
+  transformed.x += sin(swayT * 1.7 + swayAt.x * 0.9 + swayAt.z * 1.3) * swayK;
+  transformed.z += cos(swayT * 1.3 + swayAt.x * 1.1 - swayAt.z * 0.7) * swayK * 0.6;`,
+        );
+    };
+    material.needsUpdate = true;
+  }
 
   /**
    * Hide any tree that would stand between the camera and the player, or crowd the camera
@@ -130,6 +185,7 @@ export class Props {
         const up = new THREE.Vector3(0, 1, 0);
         for (const mesh of meshes) {
           const geo = toFloat(mesh.geometry.clone()).applyMatrix4(mesh.matrixWorld);
+          if (SWAY[id]) this.sway(mesh.material as THREE.Material, SWAY[id]);
           const inst = new THREE.InstancedMesh(geo, mesh.material, list.length);
           inst.castShadow = !NO_SHADOW.has(id);
           inst.receiveShadow = true;
