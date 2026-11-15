@@ -248,6 +248,11 @@ export class Hud {
     this.onSecond = onTap ?? null;
   }
 
+  /** Whether the third button is taken. */
+  get hasThird(): boolean {
+    return !this.third.hidden;
+  }
+
   /** Whether the second button is taken. */
   get hasSecond(): boolean {
     return !this.second.hidden;

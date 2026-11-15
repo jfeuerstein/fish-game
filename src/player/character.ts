@@ -14,7 +14,7 @@ import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headO
 /** Draw each skull's ellipsoid (`socket=1` in the address), to tune HEADS by eye. */
 const SOCKETS = typeof location !== 'undefined' && new URLSearchParams(location.search).get('socket') === '1';
 
-export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep' | 'flop' | 'spin' | 'honk' | 'slap' | 'stretch' | 'skip' | 'warm' | 'lean';
+export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep' | 'flop' | 'spin' | 'honk' | 'slap' | 'stretch' | 'skip' | 'warm' | 'lean' | 'skate' | 'pogo' | 'float';
 
 /** Turn a long thin model (a rod) so it lies along +y with its heavier end (the reel and handle) at the origin. */
 export function alongY(root: THREE.Object3D, length: number): THREE.Object3D {
@@ -792,6 +792,12 @@ export class Character {
         return P.warm(t);
       case 'lean':
         return P.leanOn(t);
+      case 'skate':
+        return P.skate(t, this.speed, this.strain, this.power);
+      case 'pogo':
+        return P.pogo(t, this.power);
+      case 'float':
+        return P.float(t);
       default:
         return P.idle(t);
     }
@@ -873,7 +879,7 @@ export class Character {
     else this.handPos.copy(base).addScaledVector(up, h * 0.5).addScaledVector(fwd, 0.25).addScaledVector(right, 0.25);
     // The rod's angle depends on what the character is doing.
     if (this.rod) {
-      this.rod.visible = this.rodOut && this.action !== 'uke' && this.action !== 'show' && this.action !== 'row' && this.action !== 'sit' && !['wave', 'dance', 'clap', 'cheer', 'dig', 'sweep', 'flop', 'spin', 'honk', 'slap', 'stretch', 'skip', 'warm', 'lean'].includes(this.action);
+      this.rod.visible = this.rodOut && this.action !== 'uke' && this.action !== 'show' && this.action !== 'row' && this.action !== 'sit' && !['wave', 'dance', 'clap', 'cheer', 'dig', 'sweep', 'flop', 'spin', 'honk', 'slap', 'stretch', 'skip', 'warm', 'lean', 'skate', 'pogo', 'float'].includes(this.action);
       let pitch = 0.95; // up from forward
       if (this.action === 'castBack') pitch = 1.3 + this.power * 1.25;
       else if (this.action === 'castThrow') pitch = 2.55 - Math.min(1, this.power * 1.3) * 2.15;

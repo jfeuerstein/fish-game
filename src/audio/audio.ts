@@ -180,6 +180,43 @@ export class Audio {
     }
   }
 
+  /** A hand bell, rung three times: two partials each, dying away. */
+  bell(): void {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    for (const at of [0, 0.32, 0.64]) {
+      for (const [f, level] of [[1320, 0.1], [1985, 0.05], [2640, 0.03]] as const) {
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + at);
+        g.gain.exponentialRampToValueAtTime(level, t + at + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.9);
+        o.connect(g).connect(this.sfxBus);
+        o.start(t + at);
+        o.stop(t + at + 1);
+      }
+    }
+  }
+
+  /** A pogo stick's spring: a note that slides up, higher and longer for a big bounce. */
+  boing(big = false): void {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(big ? 150 : 210, t);
+    o.frequency.exponentialRampToValueAtTime(big ? 720 : 480, t + (big ? 0.28 : 0.14));
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(big ? 0.14 : 0.06, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (big ? 0.34 : 0.18));
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.4);
+  }
+
   /** The gull: a silly squawk. */
   squawk(): void {
     if (!this.ctx || this.muted) return;

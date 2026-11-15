@@ -1,5 +1,6 @@
 // Fun: emotes, the ukulele, and chalk.
 import type { Emote, Session } from '../game/session';
+import { TOYS, restLeft, sayRest } from '../game/toys';
 
 /** Line drawings for each emote, in the ink of the page. */
 const svg = (d: string): string => `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -24,6 +25,25 @@ import { Sheet } from './sheet';
 
 export function funSheet(app: HTMLElement, s: Session, chalk: () => boolean): Sheet {
   const sheet: Sheet = new Sheet(app, 'Fun', (body) => {
+    // Toys, for whoever has won one: ridden ones are got on and off, the others used when they are ready.
+    const toys = TOYS.filter((t) => s.save.toys.includes(t.id));
+    if (toys.length) {
+      body.append(el('div', 'section', 'Toys'));
+      for (const t of toys) {
+        const left = restLeft(s.save, t.id, Date.now());
+        const row = el('div', 'row');
+        row.innerHTML = `<img src="${icon(t.id)}" alt=""><div class="grow"><div class="title">${t.name}</div><div class="sub">${t.blurb}</div></div>`;
+        const on = s.riding === t.id;
+        const b = el('button', `btn ${left ? 'plain' : 'green'}`, t.gear ? (on ? 'Hop off' : 'Ride') : left ? sayRest(left) : t.id === 'toy-bell' ? 'Ring' : 'Uncork');
+        b.onclick = () => {
+          sheet.close();
+          s.useToy(t.id);
+        };
+        row.append(b);
+        body.append(row);
+      }
+      body.append(el('div', 'section', 'Things to do'));
+    }
     const grid = el('div', 'grid');
     const emotes: [Emote, string][] = [
       ['wave', 'Wave'],

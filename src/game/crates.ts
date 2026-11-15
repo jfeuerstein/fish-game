@@ -15,7 +15,7 @@ export interface Prize {
   id: string;
   name: string;
   rarity: Rarity;
-  kind: 'hat' | 'character' | 'furniture' | 'extra' | 'paint' | 'charm';
+  kind: 'hat' | 'character' | 'furniture' | 'extra' | 'paint' | 'charm' | 'toy';
   /** The one game it can be won at. Without this, any of them. */
   only?: GameId;
 }
@@ -47,6 +47,8 @@ export const PRIZES: readonly Prize[] = [
   { id: 'paint-ink', name: 'Ink Paint', rarity: 'epic', kind: 'paint' },
   { id: 'char-raccoon', name: 'Raccoon', rarity: 'epic', kind: 'character' },
   { id: 'char-frog', name: 'Frog', rarity: 'legendary', kind: 'character' },
+  // The toys (src/game/toys.ts): the rarest prizes, which change how the island is got about or fished.
+  { id: 'toy-skateboard', name: 'Skateboard', rarity: 'legendary', kind: 'toy' },
   // Only the Gull Wheel: the grand hats.
   { id: 'hat-sailor', name: 'Sailor Hat', rarity: 'common', kind: 'hat', only: 'wheel' },
   { id: 'hat-captain', name: "Captain's Hat", rarity: 'uncommon', kind: 'hat', only: 'wheel' },
@@ -54,6 +56,7 @@ export const PRIZES: readonly Prize[] = [
   { id: 'hat-top', name: 'Top Hat', rarity: 'rare', kind: 'hat', only: 'wheel' },
   { id: 'hat-pirate', name: 'Pirate Hat', rarity: 'epic', kind: 'hat', only: 'wheel' },
   { id: 'hat-crown', name: 'Little Crown', rarity: 'legendary', kind: 'hat', only: 'wheel' },
+  { id: 'toy-bottle', name: 'Storm in a Bottle', rarity: 'legendary', kind: 'toy', only: 'wheel' },
   // Only the Bait Bandit: things for the rod, and for someone who means business.
   { id: 'x-bowtie', name: 'Bow Tie', rarity: 'common', kind: 'extra', only: 'bandit' },
   { id: 'hat-cowboy', name: 'Cowboy Hat', rarity: 'uncommon', kind: 'hat', only: 'bandit' },
@@ -63,6 +66,7 @@ export const PRIZES: readonly Prize[] = [
   { id: 'hat-fish', name: 'Fish Hat', rarity: 'epic', kind: 'hat', only: 'bandit' },
   { id: 'charm-fish', name: 'Wooden Fish', rarity: 'epic', kind: 'charm', only: 'bandit' },
   { id: 'paint-brass', name: 'Gilt Paint', rarity: 'legendary', kind: 'paint', only: 'bandit' },
+  { id: 'toy-bell', name: 'Dinner Bell', rarity: 'legendary', kind: 'toy', only: 'bandit' },
   // Only Flying Fish: the sea and the sky.
   { id: 'hat-propeller', name: 'Propeller Cap', rarity: 'common', kind: 'hat', only: 'fish' },
   { id: 'hat-flowers', name: 'Flower Crown', rarity: 'uncommon', kind: 'hat', only: 'fish' },
@@ -72,6 +76,7 @@ export const PRIZES: readonly Prize[] = [
   { id: 'hat-shark', name: 'Shark Hood', rarity: 'epic', kind: 'hat', only: 'fish' },
   { id: 'charm-moon', name: 'Tin Moon', rarity: 'epic', kind: 'charm', only: 'fish' },
   { id: 'hat-wizard', name: 'Wizard Hat', rarity: 'legendary', kind: 'hat', only: 'fish' },
+  { id: 'toy-balloons', name: 'Bunch of Balloons', rarity: 'legendary', kind: 'toy', only: 'fish' },
   // Only the scratch cards: the silly things.
   { id: 'hat-cake', name: 'Birthday Cake', rarity: 'common', kind: 'hat', only: 'scratch' },
   { id: 'hat-cone', name: 'Traffic Cone', rarity: 'uncommon', kind: 'hat', only: 'scratch' },
@@ -81,6 +86,7 @@ export const PRIZES: readonly Prize[] = [
   { id: 'paint-rose', name: 'Rose Paint', rarity: 'rare', kind: 'paint', only: 'scratch' },
   { id: 'hat-bread', name: 'Loaf of Bread', rarity: 'epic', kind: 'hat', only: 'scratch' },
   { id: 'f-snowman', name: 'Snowman', rarity: 'legendary', kind: 'furniture', only: 'scratch' },
+  { id: 'toy-pogo', name: 'Pogo Stick', rarity: 'legendary', kind: 'toy', only: 'scratch' },
 ];
 
 /** What a game can give: what any game gives, and what only it does. */

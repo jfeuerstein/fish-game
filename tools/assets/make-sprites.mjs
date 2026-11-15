@@ -61,6 +61,8 @@ const ITEM_SHEETS = [
   ['charm-bell', 'charm-feather', 'charm-shell', 'charm-star', 'charm-fish', 'charm-moon', 'f-chest', 'f-chime', 'f-shipbottle'],
   // The camp's sign, the map, the trader, and paint for the rod.
   ['f-campsign', 'icon-map', 'icon-trader', 'paint-coral', 'paint-sea', 'paint-moss', 'paint-brass', 'paint-rose', 'paint-ink'],
+  // The toys.
+  ['toy-skateboard', 'toy-pogo', 'toy-balloons', 'toy-bell', 'toy-bottle'],
 ];
 /** What an item is, as its model or picture was asked for, without the words about how a model wants it posed. */
 const itemSays = (id) => {

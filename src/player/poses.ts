@@ -457,3 +457,56 @@ export function leanOn(t: number): Pose {
   p.look = Math.sin(t * 0.3) * 0.3;
   return p;
 }
+
+/**
+ * On a skateboard: side on, knees bent, arms out for balance. `speed` runs 0 to 1; `push` is how
+ * hard the back foot is kicking (0 to 1, as it gets going); `air` is 1 off the ground.
+ */
+export function skate(t: number, speed: number, push: number, air: number): Pose {
+  const p = neutral();
+  const kick = push * Math.max(0, Math.sin(t * 7));
+  p.turn = 0.75;
+  p.look = -0.6;
+  p.lean = 0.14 + speed * 0.12 + air * 0.1;
+  p.bob = -0.05 - air * 0.03;
+  p.armL = limb(0.25, 0.85 + Math.sin(t * 2.2) * 0.08 + air * 0.4);
+  p.armR = limb(-0.2, 0.8 - Math.sin(t * 2.2) * 0.08 + air * 0.4);
+  p.elbowL = 0.3;
+  p.elbowR = 0.3;
+  p.legL = 0.3 + air * 0.35;
+  p.legR = -0.15 - kick * 0.75 + air * 0.3;
+  p.kneeL = 0.55 + air * 0.6;
+  p.kneeR = 0.5 + kick * 0.3 + air * 0.6;
+  return p;
+}
+
+/** On a pogo stick: both hands on the handle, knees together, folding as the spring is squeezed (`squeeze`, 0 to 1). */
+export function pogo(t: number, squeeze: number): Pose {
+  const p = neutral();
+  p.armL = limb(1.0, 0.15);
+  p.armR = limb(1.0, 0.15);
+  p.elbowL = 1.0 + squeeze * 0.3;
+  p.elbowR = 1.0 + squeeze * 0.3;
+  p.legL = 0.35 + squeeze * 0.35;
+  p.legR = 0.35 + squeeze * 0.35;
+  p.kneeL = 0.5 + squeeze * 0.8;
+  p.kneeR = 0.5 + squeeze * 0.8;
+  p.lean = 0.1 + squeeze * 0.12;
+  p.nod = -0.1 + Math.sin(t * 2) * 0.03;
+  return p;
+}
+
+/** Hanging from a bunch of balloons: one arm straight up, the legs dangling and paddling a little. */
+export function float(t: number): Pose {
+  const p = neutral();
+  p.armR = limb(3.0, 0.1);
+  p.elbowR = 0.05;
+  p.armL = limb(0.2, 0.5 + Math.sin(t * 1.6) * 0.15);
+  p.legL = Math.sin(t * 2.4) * 0.3;
+  p.legR = -Math.sin(t * 2.4) * 0.3;
+  p.kneeL = 0.35;
+  p.kneeR = 0.35;
+  p.side = Math.sin(t * 1.1) * 0.08;
+  p.nod = -0.2;
+  return p;
+}

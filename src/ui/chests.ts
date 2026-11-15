@@ -10,7 +10,7 @@ import { GRAND } from '../game/arcade';
 /** The list in the save a prize of each kind is kept in (furniture is counted, not listed). */
 const kept = (s: Session, p: Prize): string[] => {
   const save = s.save;
-  return p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : p.kind === 'paint' ? save.rodPaints : p.kind === 'charm' ? save.charms : save.characters;
+  return p.kind === 'hat' ? save.hats : p.kind === 'extra' ? save.extras : p.kind === 'paint' ? save.rodPaints : p.kind === 'charm' ? save.charms : p.kind === 'toy' ? save.toys : save.characters;
 };
 
 /** Whether the player already has a prize (furniture is never 'had': another is always welcome). */
@@ -48,6 +48,7 @@ function said(prize: Prize, owned: boolean, refund: number): string {
   if (prize.kind === 'extra') return 'Something new to wear!';
   if (prize.kind === 'paint') return 'Paint for your rod!';
   if (prize.kind === 'charm') return 'A charm to hang from your rod!';
+  if (prize.kind === 'toy') return 'A toy! It lives under Fun.';
   return 'In your bag, ready to set down.';
 }
 
@@ -57,12 +58,13 @@ export function prizeCard(card: HTMLElement, s: Session, prize: Prize, owned: bo
   card.innerHTML = `<div class="rr-glow"></div><img src="${icon(prize.id)}" alt=""><div class="rr-rar">${RARITY_LABEL[prize.rarity]}</div><div class="rr-name">${prize.name}</div><div class="rr-sub">${said(prize, owned, refund)}</div>`;
   const actions = el('div', 'rr-actions');
   if (!owned && prize.kind !== 'furniture') {
-    const use = el('button', 'btn green', prize.kind === 'character' ? 'Play as' : prize.kind === 'paint' || prize.kind === 'charm' ? 'Use it' : 'Wear it');
+    const use = el('button', 'btn green', prize.kind === 'character' ? 'Play as' : prize.kind === 'paint' || prize.kind === 'charm' ? 'Use it' : prize.kind === 'toy' ? 'Try it' : 'Wear it');
     use.onclick = () => {
       if (prize.kind === 'hat') s.wear(prize.id);
       else if (prize.kind === 'extra') s.wearExtra(prize.id);
       else if (prize.kind === 'paint') s.dressRod(prize.id, s.save.charm);
       else if (prize.kind === 'charm') s.dressRod(s.save.rodPaint, prize.id);
+      else if (prize.kind === 'toy') s.useToy(prize.id);
       else s.become(prize.id);
       close();
     };

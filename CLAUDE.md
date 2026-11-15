@@ -290,6 +290,23 @@ the owner's: do not route a deploy round it.
   character the player is not, in a straw hat and pack). She sells what Gus does not, each once
   a visit: two things to set down, bait by the bundle, and one pearl for coins.
 
+- **Toys** (`src/game/toys.ts`, pure, tested): the rarest prizes (all legendary), and the only
+  ones that change how the island is got about or fished; the owner asked for them. Three are
+  ridden. The **skateboard** (any game) is faster than feet, rolls on when the stick is let
+  go, is pulled by slopes and carves; Jump is an ollie, and in the air the two buttons are
+  Kickflip and 360: each takes `TRICK_SECS`, what is finished before landing is shouted as a
+  combo and counted (`tricks` in the save), and landing mid-trick is a bail (a stop and a
+  wince, nothing lost). The **pogo stick** (scratch cards) never stops bouncing and Jump makes
+  the next bounce a great one; in the air the player may cross whatever is lower than they
+  are, so it gets up ledges. The **balloons** (Flying Fish) make a jump a slow float, with two
+  more puffs of lift in the air. Two are used and then rest: the **dinner bell** (Bait Bandit)
+  makes bites come in a third of the time for a minute and a half, and the **storm in a
+  bottle** (Gull Wheel) brings the player's own rain cloud for four minutes. How a ridden toy
+  moves is `gear` on the `Player` (`SKATE`, `POGO`, `BALLOONS` hold the numbers); what is seen
+  of it is `src/world/ride.ts`; they are got on and used from the Fun sheet, and anything
+  else the player does (casting, sitting, going indoors) gets them off. Landing in deep water
+  puts the player back where they last stood, as a jump always has.
+
 ## What the game leans into
 
 `docs/what-players-love.md` is research into what players of social fishing games love besides

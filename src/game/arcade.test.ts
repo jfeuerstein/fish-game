@@ -3,6 +3,7 @@ import { rng } from '../core/rng';
 import { FLIGHT_BANDS, RARITIES, bandAt, peakFor, reelStrips, scratchCard } from './arcade';
 import { GAMES, ODDS, PRIZES, PULL_COST, STRIP_LENGTH, WIN_AT, makeStrip, pickPrize, prizesOf, rollPrize } from './crates';
 import { CHARACTERS, CHARMS, EXTRAS, FURNITURE, HATS, PAINTS } from './economy';
+import { TOYS } from './toys';
 
 describe('the one roll', () => {
   it('costs a pearl and draws rarities at the stated odds', () => {
@@ -26,7 +27,7 @@ describe('the one roll', () => {
     expect(fresh / 3000).toBeCloseTo(3 / (3 + commons.length - 1), 1);
   });
   it('offers only real things that cannot be bought for coins, of every rarity', () => {
-    const ids = new Set([...HATS, ...FURNITURE, ...CHARACTERS, ...EXTRAS, ...PAINTS, ...CHARMS].map((x) => x.id));
+    const ids = new Set([...HATS, ...FURNITURE, ...CHARACTERS, ...EXTRAS, ...PAINTS, ...CHARMS, ...TOYS].map((x) => x.id));
     const sold = new Set([...HATS, ...FURNITURE, ...EXTRAS].filter((x) => x.price > 0).map((x) => x.id));
     for (const p of PRIZES) {
       expect(ids.has(p.id), p.id).toBe(true);

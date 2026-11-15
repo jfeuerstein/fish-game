@@ -34,6 +34,8 @@ export const TITLES: readonly Title[] = [
   { name: 'Tank Keeper', how: 'Give the aquarium ten kinds of fish.', earned: (s) => s.aquarium.length >= 10 },
   { name: 'Curator', how: 'Give the aquarium thirty kinds of fish.', earned: (s) => s.aquarium.length >= 30 },
   { name: 'Lookout', how: 'Pick out four things through the lighthouse telescope.', earned: (s) => s.spotted.length >= 4 },
+  { name: 'Skater', how: 'Land 25 tricks on a skateboard.', earned: (s) => s.tricks >= 25 },
+  { name: 'Toy Box', how: 'Win three toys at the Lucky Gull.', earned: (s) => s.toys.length >= 3 },
   { name: 'Sky Watcher', how: 'See the northern lights, a blood moon and a great sunrise.', earned: (s) => ['aurora', 'bloodmoon', 'sunrise'].every((k) => s.skies.includes(k)) },
   { name: 'Happy Camper', how: 'Make camp: set down a tent with a fire and somewhere to sit beside it.', earned: (s) => campMade(s.placed) },
   { name: 'Camp Warden', how: 'Have eight different camp things round one tent.', earned: (s) => campKinds(s.placed) >= 8 },

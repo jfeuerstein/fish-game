@@ -15,6 +15,10 @@ export interface Session {
   /** Put on a hat (or take it off), become another character. */
   wear(hat: string | null): void;
   wearExtra(id: string | null): void;
+  /** Get on a toy that is ridden (or off it), or use one that is used. */
+  useToy(id: string): void;
+  /** The toy being ridden, if any. */
+  riding: string | null;
   /** Paint the rod and hang a charm from it (null for neither). */
   dressRod(paint: string | null, charm: string | null): void;
   showTitle(title: string | null): void;

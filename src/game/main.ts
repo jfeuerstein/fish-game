@@ -39,6 +39,8 @@ import { chestSheet, signSheet } from '../ui/chest';
 import { traderSheet } from '../ui/trader';
 import { Trader } from '../npc/trader';
 import { TRADER_NAME, traderHere } from './trader';
+import { BELL, BOTTLE_SECS, TRICK_SECS, comboSays, restLeft, sayRest, toyById, useToy, type Trick } from './toys';
+import { Ride } from '../world/ride';
 import { SIGHTS, sighted, type Sight } from './lookout';
 import { feedGull, gullBrings, gullFish, gullGave, gullGift, gullHungry, gullSays } from './gull';
 import { floorAt } from '../world/layout';
@@ -257,6 +259,11 @@ export class Game implements Session {
     const at = PLACES[this.cfg.at ?? 'plaza'] ?? PLACES.plaza;
     this.player.place(at.x, at.z, at.yaw);
     this.player.onStep = (surface) => {
+      // On wheels there are no footsteps: a clack of the board over whatever is under it.
+      if (this.riding === 'toy-skateboard') {
+        if (!this.player.airborne) this.audio.play('tick', { volume: surface === 'wood' ? 0.16 : 0.07, rate: 0.55 + Math.random() * 0.1 });
+        return;
+      }
       this.audio.play(surface === 'wood' ? 'stepwood' : surface === 'water' ? 'splashstep' : 'step', { volume: 0.18, rate: 0.9 + Math.random() * 0.2 });
       this.footfall(surface);
     };
@@ -305,6 +312,8 @@ export class Game implements Session {
       await this.body.setExtra(this.save.extra);
     }
     this.player.onLand = (v) => {
+      if (this.riding === 'toy-skateboard') this.landTricks();
+      if (this.riding === 'toy-pogo') this.audio.boing(v > 8);
       if (v > 6) {
         this.audio.play('stepwood', { volume: 0.5, rate: 0.7 });
         this.rig.bump(Math.min(0.15, v * 0.01));
@@ -518,6 +527,7 @@ export class Game implements Session {
       room: () => true,
       exclaim: () => undefined,
       byRise: (x, z) => this.wild.byRise(x, z),
+      hurry: () => (performance.now() < this.bellUntil ? BELL.hurry : 1),
     };
   }
 
@@ -624,6 +634,13 @@ export class Game implements Session {
   // ---------- Bait to be found ----------
 
   private forage!: Foraging;
+  /** The toy being ridden (src/game/toys.ts), as it is seen, and the tricks of this jump: the one being done and those done. */
+  riding: string | null = null;
+  private ride = new Ride();
+  private trick: { kind: Trick; t: number } | null = null;
+  private combo: Trick[] = [];
+  /** Until when the dinner bell hurries the fish. */
+  private bellUntil = 0;
   /** The trader who comes by boat some days, and whether they are here and have been spoken of today. */
   private trader!: Trader;
   private traderIn = false;
@@ -739,6 +756,102 @@ export class Game implements Session {
   wearExtra(id: string | null): void {
     this.save.extra = id;
     void this.body.setExtra(id);
+    this.changed();
+  }
+
+  // ---------- Toys ----------
+
+  /** Get on a toy that is ridden (or off it), or use one that is used. */
+  useToy(id: string): void {
+    const toy = toyById(id);
+    if (!toy || !this.save.toys.includes(id)) return;
+    if (toy.gear) {
+      if (this.riding === id) this.hopOff();
+      else this.hopOn(id);
+      return;
+    }
+    const left = restLeft(this.save, id, Date.now());
+    if (left || !useToy(this.save, id, Date.now())) {
+      this.hud.toast(`The ${toy.name.toLowerCase()} is not ready: ${sayRest(left)}.`);
+      return;
+    }
+    if (id === 'toy-bell') {
+      this.bellUntil = performance.now() + (BELL.secs * 1000) / this.cfg.warp;
+      this.audio.bell();
+      if (this.mode === 'walk' && !this.fishing.busy) {
+        // Rung over the head, where the wave is.
+        this.emote('wave');
+        void this.body.hold('toy-bell', 0.32);
+        setTimeout(() => this.body.action !== 'uke' && void this.body.hold(null), 2800);
+      }
+      this.hud.toast('The bell carries out over the water. For a minute and a half, the fish come quick.', 'gold');
+    } else {
+      this.cloudUntil = performance.now() + (BOTTLE_SECS * 1000) / this.cfg.warp;
+      this.audio.thunder(0.8);
+      this.hud.toast('The cork comes out with a rumble. A rain cloud of your own, for four minutes.', 'gold');
+    }
+    this.changed();
+  }
+
+  private hopOn(id: string): void {
+    const toy = toyById(id);
+    this.stopActivity();
+    this.putAway();
+    if (!toy?.gear || this.mode !== 'walk') {
+      this.hud.toast('Not in here.');
+      return;
+    }
+    this.riding = id;
+    this.player.gear = toy.gear;
+    this.trick = null;
+    this.combo = [];
+    void this.ride.set(id, this.scene);
+    this.audio.play('click');
+    const hint = `ride-${toy.gear}`;
+    if (!this.save.hints.includes(hint)) {
+      this.save.hints.push(hint);
+      this.hud.toast(toy.gear === 'skate' ? 'Push the stick to get rolling: it keeps going. Jump to ollie, then Kickflip or 360 before you land.' : toy.gear === 'pogo' ? 'It never stops. Jump makes the next bounce a big one.' : 'Jump, and float. Jump again in the air for a little more lift, twice.');
+      this.changed();
+    }
+  }
+
+  private hopOff(): void {
+    if (!this.riding) return;
+    this.riding = null;
+    this.player.gear = null;
+    this.trick = null;
+    this.combo = [];
+    this.body.strain = 0;
+    this.body.power = 0;
+    if (this.body.action === 'skate' || this.body.action === 'pogo' || this.body.action === 'float') this.body.action = 'idle';
+    void this.ride.set(null, this.scene);
+  }
+
+  /** Begin a trick, in the air on the skateboard, if none is under way. */
+  private doTrick(kind: Trick): void {
+    if (this.trick || !this.player.airborne || this.riding !== 'toy-skateboard') return;
+    this.trick = { kind, t: 0 };
+    this.audio.play('cast', { volume: 0.3, rate: kind === 'spin' ? 1.2 : 1.6 });
+  }
+
+  /** The board has come down: what was done in the air is landed, or, with a trick half done, it is a bail. */
+  private landTricks(): void {
+    const now = performance.now();
+    if (this.trick) {
+      this.trick = null;
+      this.combo = [];
+      this.player.stop();
+      this.rig.bump(0.12);
+      this.body.express('squint', 0.8);
+      this.audio.play('stepwood', { volume: 0.5, rate: 0.6 });
+      this.shouting = { text: 'Bail!', until: now + 1300 };
+      return;
+    }
+    if (!this.combo.length) return;
+    this.save.tricks += this.combo.length;
+    this.shouting = { text: `${comboSays(this.combo)}!`, until: now + 1700 };
+    this.audio.play(this.combo.length > 1 ? 'catch' : 'coin', { volume: 0.4 });
+    this.combo = [];
     this.changed();
   }
 
@@ -1086,6 +1199,12 @@ export class Game implements Session {
       hud.setThird('Put away', () => this.putAway());
       return;
     }
+    if (this.riding === 'toy-skateboard' && this.player.airborne && this.mode === 'walk' && !f.busy) {
+      hud.setAction('Kickflip', () => this.doTrick('kickflip'), undefined, 'blue');
+      hud.setSecond('360', () => this.doTrick('spin'));
+      hud.setThird('Hop off', () => this.hopOff());
+      return;
+    }
     // Fishing comes first once a line is out.
     if (f.busy) {
       hud.setSecond(null);
@@ -1109,6 +1228,7 @@ export class Game implements Session {
     }
     const aim = this.rig.yaw + Math.PI;
     const cast = (): void => {
+      if (this.riding) this.hopOff();
       if (this.mode === 'emote') this.stopActivity();
       f.press(aim, rod);
     };
@@ -1153,6 +1273,7 @@ export class Game implements Session {
         hud.setThird('Move', () => this.move(thing));
       } else offer('Move', () => this.move(thing));
     }
+    if (this.riding && !hud.hasThird) hud.setThird('Hop off', () => this.hopOff());
     // The main button.
     const flat = new THREE.Vector3(p.x, 0, p.z);
     if (this.mode === 'walk' && this.traderIn && this.trader.pos.distanceTo(p) < 3.2) hud.setAction('Trade', () => this.openSheet('trader'), undefined, 'green');
@@ -1536,6 +1657,17 @@ export class Game implements Session {
       if (this.mode === 'walk') this.player.update(dt, stick, this.rig.yaw);
       else this.player.update(dt, { x: 0, y: 0 }, this.rig.yaw);
       this.tread();
+    }
+    if (this.riding) {
+      if (this.mode !== 'walk' || this.fishing.busy) this.hopOff();
+      else {
+        if (this.trick && (this.trick.t += dt) >= TRICK_SECS) {
+          this.combo.push(this.trick.kind);
+          this.trick = null;
+          this.audio.play('tick', { volume: 0.3, rate: 1.4 });
+        }
+        this.ride.place(dt, this.body.group, this.player.yaw, standHeight(this.world.field, this.player.pos.x, this.player.pos.z), this.trick);
+      }
     }
     if (this.mode === 'inside') {
       // The body is in the room, not where the player's place on the island says.

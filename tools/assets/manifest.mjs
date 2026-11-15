@@ -123,6 +123,12 @@ export const MODELS = {
   'f-chime': { kind: 'prop', what: 'a wind chime of sea shells and bits of driftwood hanging from the arm of a short wooden post', h: 1.6, faces: 3000, item: true },
   'f-shipbottle': { kind: 'prop', what: 'a model sailing ship inside a big glass bottle lying on a little wooden stand', h: 0.5, faces: 3000, item: true },
   'stall': { kind: 'prop', what: "a travelling trader's stall: a striped blanket spread on the ground with a few crates, jars and baskets on it, and a lantern hanging from a crooked pole at one corner", h: 1.9, faces: 5000 },
+  // Toys: the rarest prizes, which change how the island is got about or fished.
+  'toy-skateboard': { kind: 'prop', what: 'a chunky wooden skateboard, a sea-blue deck with one red stripe down it and four fat yellow wheels', h: 0.2, faces: 2500, item: true },
+  'toy-pogo': { kind: 'prop', what: 'a red pogo stick standing upright: a big coiled steel spring, two foot pegs, a T handle with black rubber grips and a rubber foot', h: 1.25, faces: 2500, item: true },
+  'toy-balloons': { kind: 'prop', what: 'a bunch of five round balloons, red, yellow, blue, pink and green, their strings gathered into one knot at the bottom', h: 1.5, faces: 2500, item: true },
+  'toy-bell': { kind: 'prop', what: 'a brass hand bell with a turned wooden handle, the kind rung for dinner', h: 0.32, faces: 2000, item: true },
+  'toy-bottle': { kind: 'prop', what: 'a round corked glass bottle with a small dark storm cloud and a little yellow lightning bolt inside it', h: 0.34, faces: 2000, item: true },
 
   // --- Places to go into: each a room like a dolls' house, open at the front and the top, that the player walks about in ---
   'room-shop': { kind: 'prop', what: 'a dolls house room with no front wall and no ceiling, seen from its open front: the inside of a small bait and tackle shop, a plank floor and three plank walls, shelves of jars and tackle boxes along the back wall, a wooden counter with a brass till against the left wall, fishing rods in a rack against the right wall, a round rug in the middle of the bare floor', h: 3.4, faces: 9000 },

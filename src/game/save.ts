@@ -71,6 +71,10 @@ export interface Save {
   rodPaints: string[];
   charm: string | null;
   charms: string[];
+  /** Toys won (src/game/toys.ts), when each that rests was last used (ms), and tricks landed on the skateboard. */
+  toys: string[];
+  toyAt: Record<string, number>;
+  tricks: number;
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -161,6 +165,9 @@ export function newSave(): Save {
     rodPaints: [],
     charm: null,
     charms: [],
+    toys: [],
+    toyAt: {},
+    tricks: 0,
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -317,6 +324,9 @@ export function parseSave(text: string | null): Save {
     rodPaints: strs(o.rodPaints),
     charm: typeof o.charm === 'string' ? o.charm : null,
     charms: strs(o.charms),
+    toys: strs(o.toys).filter((id) => id.startsWith('toy-')),
+    toyAt: Object.fromEntries(Object.entries(rec(o.toyAt)).filter((e): e is [string, number] => typeof e[1] === 'number' && e[0].startsWith('toy-'))),
+    tricks: Math.floor(num(o.tricks, 0, 0)),
     gull: { fed: Math.floor(num(rec(o.gull).fed, -1, -1)), streak: Math.floor(num(rec(o.gull).streak, 0, 0)), tame: rec(o.gull).tame === true, giftDay: Math.floor(num(rec(o.gull).giftDay, -1, -1)), gifts: Math.floor(num(rec(o.gull).gifts, 0, 0)) },
     bait: str(o.bait, 'bait-worm'),
     baits,

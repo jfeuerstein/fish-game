@@ -32,6 +32,8 @@ export interface FishingHooks {
   room(): boolean;
   /** Show or hide the "!" over the player's head. */
   exclaim?(on: boolean): void;
+  /** What a bite's wait is multiplied by just now (a dinner bell rung: src/game/toys.ts). */
+  hurry?(): number;
   /** Whether a place on the water is by fish that are rising (src/game/rises.ts). */
   byRise?(x: number, z: number): boolean;
   /** Something happened for the first time that is worth a word of help. */
@@ -375,7 +377,7 @@ export class Fishing {
     this.conditionsNow = this.hooks.conditions(this.zone);
     this.state = 'waiting';
     // By a place where fish are rising, the bite comes sooner.
-    this.timer = biteDelay(this.conditionsNow, this.rand) * (this.hooks.byRise?.(this.bobber.position.x, this.bobber.position.z) ? RISE_SOONER : 1);
+    this.timer = biteDelay(this.conditionsNow, this.rand) * (this.hooks.byRise?.(this.bobber.position.x, this.bobber.position.z) ? RISE_SOONER : 1) * (this.hooks.hurry?.() ?? 1);
     this.nibblesLeft = nibbles(this.rand);
     this.nextNibble = 0.6 + this.rand() * Math.max(0.5, this.timer * 0.4);
     this.body.action = 'hold';
