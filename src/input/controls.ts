@@ -44,13 +44,23 @@ export class Controls {
     window.addEventListener('blur', () => this.keys.clear());
   }
 
+  /**
+   * Whether a touch landed on the game itself and not on a button or a sheet over it: on the
+   * surface, or on the picture of the world, which fills the surface and is what a thumb
+   * actually touches.
+   */
+  private onGame(e: PointerEvent): boolean {
+    const t = e.target;
+    return t === this.surface || (t instanceof HTMLCanvasElement && t.parentElement === this.surface);
+  }
+
   private inStickZone(y: number): boolean {
     const r = this.surface.getBoundingClientRect();
     return y > r.top + r.height * 0.64;
   }
 
   private down(e: PointerEvent): void {
-    if (!this.enabled || e.target !== this.surface) return;
+    if (!this.enabled || !this.onGame(e)) return;
     if (this.stickId === null && this.inStickZone(e.clientY) && e.pointerType !== 'mouse') {
       this.stickId = e.pointerId;
       this.stickOrigin = { x: e.clientX, y: e.clientY };
@@ -98,7 +108,7 @@ export class Controls {
       this.look.x += e.clientX - last.x;
       this.look.y += e.clientY - last.y;
       this.lookIds.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    } else if (e.pointerType === 'mouse' && e.buttons === 1 && e.target === this.surface) {
+    } else if (e.pointerType === 'mouse' && e.buttons === 1 && this.onGame(e)) {
       this.look.x += e.movementX;
       this.look.y += e.movementY;
     }
