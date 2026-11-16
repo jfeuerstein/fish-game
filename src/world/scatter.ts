@@ -2,11 +2,13 @@
 // water, buildings and anywhere people gather. Pure.
 import { fbm, rng } from '../core/rng';
 import { Heightfield, pathDistance, waterAt } from './island';
+import { DUNE, duneGreen } from './dune';
 import { ISLE, pick } from './isle';
 import { KETTLE } from './kettle';
 import { toStillWater } from './mire';
 import { RIME } from './rime';
-import { BRIDGE, CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, WALKS, type Placed, bridgeLocal, nearestOnLine } from './layout';
+import { SKY } from './thistle';
+import { BRIDGE, CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, VENTS, WALKS, type Placed, bridgeLocal, nearestOnLine } from './layout';
 
 /** Places kept clear of anything growing, as circles. */
 function clearings(): { x: number; z: number; r: number }[] {
@@ -15,9 +17,11 @@ function clearings(): { x: number; z: number; r: number }[] {
     { x: CAMP.x, z: CAMP.z, r: 10 },
     { x: CHALK.x, z: CHALK.z, r: CHALK.size },
     { x: 0, z: 0, r: 9 },
+    // Nothing grows where the wind comes up.
+    ...VENTS.map((v) => ({ x: v.x, z: v.z, r: 4.5 })),
   ];
   for (const p of PLACED) {
-    const big = p.id === 'shop' || p.id === 'lighthouse' || p.id === 'fishing-hut' || p.id === 'arcade' || p.id === 'cannery' || p.id === 'stilt-shack' ? 9 : p.id === 'cliff' || p.id === 'ice-hut' ? 6 : p.id === 'beacon' ? 5 : 3;
+    const big = p.id === 'shop' || p.id === 'lighthouse' || p.id === 'fishing-hut' || p.id === 'arcade' || p.id === 'cannery' || p.id === 'stilt-shack' || p.id === 'windmill' ? 9 : p.id === 'cliff' || p.id === 'ice-hut' ? 6 : p.id === 'beacon' || p.id === 'sundial' ? 5 : 3;
     if (!p.id.startsWith('tree')) out.push({ x: p.x, z: p.z, r: big });
   }
   return out;
@@ -114,7 +118,25 @@ const GLOW_RULES: GrowRule[] = [
   { id: 'rock-a', count: 45, scale: [0.6, 1.5], space: 3, fits: (s) => s.h > 0.6 && s.path > 2.5 && (s.slope > 0.3 || s.h < 1.6) },
   { id: 'rock-b', count: 55, scale: [0.6, 1.3], space: 2, fits: (s) => s.h > -0.4 && s.path > 2 && (s.slope > 0.3 || s.h < 1.4) },
 ];
-export const RULES: GrowRule[] = pick({ cove: COVE_RULES, kettle: KETTLE_RULES, rime: RIME_RULES, mire: MIRE_RULES, glow: GLOW_RULES });
+/** Thistledown grows dandelion clocks the size of trees, on a meadow; the spire is bare rock. */
+const offSpire = (s: Spot): boolean => Math.hypot(s.x - SKY.spire.x, s.z - SKY.spire.z) > SKY.spire.r + 1.5;
+const SKY_RULES: GrowRule[] = [
+  { id: 'tree-dandelion', count: 70, scale: [0.6, 1.3], space: 5, fits: (s) => dry(s) && offSpire(s) && s.slope < 0.6 && s.path > 3.5 && s.h < 6 },
+  { id: 'bush', count: 60, scale: [0.7, 1.2], space: 1.6, fits: (s) => dry(s) && offSpire(s) && s.path > 2 && s.slope < 0.7 },
+  { id: 'rock-a', count: 26, scale: [0.6, 1.4], space: 3, fits: (s) => s.h > 1.2 && s.path > 2.5 && (s.slope > 0.5 || !offSpire(s)) && Math.hypot(s.x - SKY.spire.x, s.z - SKY.spire.z) > SKY.spire.flat - 1.2 },
+  { id: 'rock-b', count: 34, scale: [0.6, 1.2], space: 2, fits: (s) => s.h > 1.5 && offSpire(s) && s.path > 2 && s.wood > 0.1 },
+];
+/** Sandglass Key is sand: cactus on the dunes, palms and green only round the oasis. */
+const offPan = (s: Spot): boolean => Math.hypot(s.x - DUNE.pan.x, s.z - DUNE.pan.z) > DUNE.pan.r + 1;
+const DUNE_RULES: GrowRule[] = [
+  { id: 'tree-palm', count: 26, scale: [0.8, 1.3], space: 3.4, tries: 600, fits: (s) => s.h > 1.2 && duneGreen(s.x, s.z) > 0.25 && s.path > 2.5 && s.shore > 1.2 },
+  { id: 'cactus', count: 64, scale: [0.6, 1.5], space: 5, fits: (s) => dry(s) && offPan(s) && duneGreen(s.x, s.z) < 0.1 && s.slope < 0.5 && s.path > 3 },
+  { id: 'bush', count: 24, scale: [0.7, 1.2], space: 1.6, tries: 400, fits: (s) => s.h > 1.2 && duneGreen(s.x, s.z) > 0.3 && s.path > 2 },
+  { id: 'rock-a', count: 22, scale: [0.6, 1.3], space: 3, fits: (s) => s.h > 0.6 && offPan(s) && s.path > 2.5 && s.wood > 0.15 },
+  { id: 'rock-b', count: 40, scale: [0.5, 1.2], space: 2, fits: (s) => s.h > -0.3 && offPan(s) && s.path > 2 && (s.h < 1.2 || s.wood > 0.2) },
+  { id: 'driftwood', count: 10, scale: [0.9, 1.3], space: 3, fits: (s) => s.h > 0.5 && s.h < 1.4 && s.path > 2 },
+];
+export const RULES: GrowRule[] = pick({ cove: COVE_RULES, kettle: KETTLE_RULES, rime: RIME_RULES, mire: MIRE_RULES, glow: GLOW_RULES, sky: SKY_RULES, dune: DUNE_RULES });
 
 /** Little things that do not get in anyone's way. */
 const COVE_FLOWERS: GrowRule[] = [
@@ -136,6 +158,17 @@ export const FLOWER_RULES: GrowRule[] = pick({
   glow: [
     { id: 'grass-tuft', count: 260, scale: [0.8, 1.5], space: 0.6, fits: (s: Spot) => s.h > 0.9 && s.path > 1.5 && s.slope < 0.7 },
     { id: 'flowers', count: 140, scale: [0.8, 1.4], space: 0.8, fits: (s: Spot) => dry(s) && s.path > 1.6 && s.slope < 0.5 },
+  ],
+  // A meadow, thick with flowers; and almost nothing on the sand, but for the oasis.
+  sky: [
+    { id: 'flowers', count: 420, scale: [0.8, 1.5], space: 0.7, fits: (s: Spot) => dry(s) && offSpire(s) && s.path > 1.6 && s.slope < 0.6 },
+    { id: 'grass-tuft', count: 300, scale: [0.8, 1.6], space: 0.6, fits: (s: Spot) => s.h > 1.5 && offSpire(s) && s.path > 1.5 && s.slope < 0.7 },
+  ],
+  dune: [
+    { id: 'grass-tuft', count: 110, scale: [0.8, 1.5], space: 0.6, tries: 300, fits: (s: Spot) => s.h > 1.0 && duneGreen(s.x, s.z) > 0.2 && s.path > 1.5 },
+    { id: 'flowers', count: 40, scale: [0.8, 1.3], space: 0.8, tries: 400, fits: (s: Spot) => s.h > 1.2 && duneGreen(s.x, s.z) > 0.4 && s.path > 1.6 },
+    { id: 'cattails', count: 18, scale: [0.8, 1.3], space: 1, tries: 900, fits: (s: Spot) => s.shore < 2 && duneGreen(s.x, s.z) > 0.5 && s.h > 0.5 },
+    { id: 'shell', count: 30, scale: [0.8, 1.4], space: 1, fits: (s: Spot) => s.h > 0.4 && s.h < 1.1 },
   ],
 });
 
@@ -170,8 +203,8 @@ export function scatter(field: Heightfield, rules: GrowRule[] = RULES, seed = 1)
 export function lilypads(seed = 3): Placed[] {
   const r = rng(seed);
   const out: Placed[] = [];
-  // (Rimefall has no pond: its lake is ice.)
-  if (ISLE === 'rime') return out;
+  // (Rimefall has no pond: its lake is ice. And nothing floats on a pool at the top of a rock in the wind.)
+  if (ISLE === 'rime' || ISLE === 'sky') return out;
   for (let i = 0; i < 16; i++) {
     const a = r() * Math.PI * 2;
     const d = POND.r * (0.45 + r() * 0.45);

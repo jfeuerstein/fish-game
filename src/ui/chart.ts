@@ -13,12 +13,12 @@ import { splatAt } from '../world/terrain';
 import { el, icon } from './hud';
 
 /** What open ground is drawn in: snow on Rimefall, a bluer green where it is always night. */
-const LAND = pick({ cove: { grass: '#5c8f44', high: '#93b85a' }, kettle: { grass: '#5c8f44', high: '#93b85a' }, rime: { grass: '#f4eee3', high: '#d2d6d2' }, mire: { grass: '#5c8f44', high: '#7d8438' }, glow: { grass: '#35633a', high: '#5c8f44' } });
+const LAND = pick({ cove: { grass: '#5c8f44', high: '#93b85a' }, kettle: { grass: '#5c8f44', high: '#93b85a' }, rime: { grass: '#f4eee3', high: '#d2d6d2' }, mire: { grass: '#5c8f44', high: '#7d8438' }, glow: { grass: '#35633a', high: '#5c8f44' }, sky: { grass: '#93b85a', high: '#737b80' }, dune: { grass: '#ecc77d', high: '#c8963e' } });
 
 const SIZE = 168;
 /** The part of the world the chart shows: the island and its pier, not the empty sea beyond. */
 const VIEW = CHART_VIEW;
-const INK: Record<string, string> = { deep: '#1f4f86', ocean: '#3f86c8', shoal: '#7fbbe6', pond: '#2c8a8a', creek: '#62c0b0', cave: '#33264c', lake: '#2c8a8a', reef: '#62c0b0', pools: '#7fbbe6', spring: '#b4e4d4', ice: '#1f4f86', floe: '#3f86c8', swamp: '#35633a', glow: '#2c8a8a', mere: '#62c0b0', sand: '#ecc77d', earth: '#a97c52', rock: '#737b80', cobble: '#d6cbb2', grass: '#5c8f44', high: '#93b85a', wood: '#7d5436', line: '#10181f' };
+const INK: Record<string, string> = { deep: '#1f4f86', ocean: '#3f86c8', shoal: '#7fbbe6', pond: '#2c8a8a', creek: '#62c0b0', cave: '#33264c', lake: '#2c8a8a', reef: '#62c0b0', pools: '#7fbbe6', spring: '#b4e4d4', ice: '#1f4f86', floe: '#3f86c8', swamp: '#35633a', glow: '#2c8a8a', mere: '#62c0b0', cloud: '#f4eee3', aerie: '#62c0b0', oasis: '#2c8a8a', sand: '#ecc77d', earth: '#a97c52', rock: '#737b80', cobble: '#d6cbb2', grass: '#5c8f44', high: '#93b85a', wood: '#7d5436', line: '#10181f' };
 
 let drawn: HTMLCanvasElement | null = null;
 
@@ -36,7 +36,7 @@ function island(field: Heightfield): HTMLCanvasElement {
       const w = waterAt(field, x, z);
       let ink: string;
       if (floorAt(x, z) !== null) ink = INK.wood;
-      else if (w) ink = w.zone === 'ocean' && w.depth < 1.4 ? INK.shoal : INK[w.zone];
+      else if (w) ink = w.zone === 'sand' ? '#c8963e' : w.zone === 'ocean' && w.depth < 1.4 ? INK.shoal : INK[w.zone];
       else {
         land[j * SIZE + i] = 1;
         const [sand, earth, rock, cobble] = splatAt(field, x, z);

@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { Look } from '../look/look';
 import { Heightfield } from './island';
+import { ISLE } from './isle';
 import { CREEK, CREEK_WIDTH, PIER, POND, creekLevel, POOLS } from './layout';
 
 export interface WaterLook {
@@ -207,6 +208,8 @@ export class Water {
 
     // Kettle Isle's tide pools and its hot spring: a disc of water each, at its own level.
     for (const p of POOLS) {
+      // (Sandglass Key's pools are sand, not water: src/world/dressing.ts draws them.)
+      if (ISLE === 'dune') break;
       const disc = new THREE.Mesh(new THREE.CircleGeometry(p.r + 0.9, 24).rotateX(-Math.PI / 2), this.material);
       disc.position.set(p.x, p.level, p.z);
       disc.renderOrder = 1;

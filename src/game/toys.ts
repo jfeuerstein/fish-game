@@ -1,12 +1,13 @@
 // Toys: the rarest prizes at the Lucky Gull, and the only ones that change how the island is
 // got about or fished. Three are ridden (a skateboard, a pogo stick, a bunch of balloons) and
-// two are used now and then (a dinner bell for fish, a storm kept in a bottle). Pure: what
+// two are used now and then (a dinner bell for fish, a storm kept in a bottle). The far islands
+// give four more, earned not won: a sled, stilts, a cloud to ride and a pocket watch. Pure: what
 // they are, their numbers, and what a run of tricks is called.
 import type { Save } from './save';
 
-export type ToyId = 'toy-skateboard' | 'toy-pogo' | 'toy-balloons' | 'toy-bell' | 'toy-bottle' | 'toy-sled' | 'toy-stilts';
+export type ToyId = 'toy-skateboard' | 'toy-pogo' | 'toy-balloons' | 'toy-bell' | 'toy-bottle' | 'toy-sled' | 'toy-stilts' | 'toy-cloud' | 'toy-watch';
 /** How a ridden toy changes the way the player moves (src/player/player.ts). */
-export type Gear = 'skate' | 'pogo' | 'balloons' | 'sled' | 'stilts';
+export type Gear = 'skate' | 'pogo' | 'balloons' | 'sled' | 'stilts' | 'cloud';
 
 export interface Toy {
   id: ToyId;
@@ -28,6 +29,8 @@ export const TOYS: readonly Toy[] = [
   { id: 'toy-bell', name: 'Dinner Bell', blurb: 'Ring it and the fish come to see: bites come much sooner for a minute and a half.', rest: 15 * 60 },
   { id: 'toy-sled', name: 'Sled', blurb: 'Sit on it at the top of a slope and let go. It does not much care for the flat.', gear: 'sled', earned: true },
   { id: 'toy-stilts', name: 'Stilts', blurb: 'Slow, tall and dry: walk through water that would be over your head. Mirewood\'s channels are just shallow enough.', gear: 'stilts', earned: true },
+  { id: 'toy-cloud', name: 'Small Cloud', blurb: 'Sit on it and it goes where you point, in no hurry, over land or water alike. You can fish off it. Get off over water and you are back where you last stood.', gear: 'cloud', earned: true },
+  { id: 'toy-watch', name: 'Pocket Watch', blurb: 'Wind it, and the island\'s day jumps on six hours: noon to dusk, dusk to the small hours. For the fish that keep hours you do not.', rest: 6 * 60, earned: true },
   { id: 'toy-bottle', name: 'Storm in a Bottle', blurb: 'Pull the cork and a rain cloud follows you about for four minutes. Rain fish bite under it.', rest: 20 * 60 },
 ];
 
@@ -53,6 +56,8 @@ export const SKATE = {
 export const SLED = { top: 2.2, most: 16, push: 2.5, roll: 0.25, hill: 15, carve: 2.6 } as const;
 /** Stilts: how fast they go, how deep they wade, and how far up they lift whoever is on them. */
 export const STILTS = { speed: 2.4, wade: 1.65, lift: 1.5 } as const;
+/** The cloud: how fast it drifts, and how far above whatever is under it (ground or water) it rides. */
+export const CLOUD = { speed: 2.9, lift: 0.85 } as const;
 export const POGO = { bounce: 5.2, big: 10.5, speed: 3.8 } as const;
 export const BALLOONS = { lift: 5, pump: 3.6, pumps: 2, fall: 3.5, sink: 1.4, speed: 3.6 } as const;
 

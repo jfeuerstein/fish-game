@@ -5,7 +5,7 @@ import { CHART_RUMOUR, DEEDS, FAR_ISLES, fishOf, hasChart } from '../game/isles'
 import { ISLE, ISLE_NAME, type IsleId } from '../world/isle';
 
 /** The waters of the island the player is on, for what is biting now. */
-const HERE: Record<IsleId, Zone[]> = { cove: ['ocean', 'deep', 'pond', 'creek'], kettle: ['lake', 'reef', 'pools', 'ocean', 'deep'], rime: ['ice', 'floe'], mire: ['swamp', 'ocean', 'deep'], glow: ['glow', 'mere', 'deep'] };
+const HERE: Record<IsleId, Zone[]> = { cove: ['ocean', 'deep', 'pond', 'creek'], kettle: ['lake', 'reef', 'pools', 'ocean', 'deep'], rime: ['ice', 'floe'], mire: ['swamp', 'ocean', 'deep'], glow: ['glow', 'mere', 'deep'], sky: ['cloud', 'aerie'], dune: ['sand', 'oasis', 'ocean', 'deep'] };
 import { farAway, BY_ID, JOURNAL_SPECIES as SPECIES, TIER_COLOR, TIER_LABEL, VARIANTS, VARIANT_LABEL, ZONE_LABEL, sayLength, sayWhen, stars } from '../fishing/fish';
 import { candidates } from '../fishing/roll';
 import { baitById, lureById, rodById } from '../game/economy';

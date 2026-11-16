@@ -135,6 +135,12 @@ export const MODELS = {
   'tree-shroom': { kind: 'prop', what: 'a giant mushroom as tall as a tree: a thick pale stalk and a wide domed cap, teal blue with pale round spots', h: 8, faces: 3000 },
   'beacon': { kind: 'prop', what: 'a waist-high pillar of stacked grey stones holding an iron fire basket full of dry logs, not lit', h: 1.9, faces: 2500 },
   'f-glowshroom': { kind: 'prop', what: 'three small mushrooms growing in a clay pot, teal caps with pale spots', h: 0.6, faces: 2000, item: true },
+  // Thistledown
+  'windmill': { kind: 'prop', what: 'a little old stone windmill: a round whitewashed tower with a red conical cap, a small wooden door, one round window and four big cloth sails on a wooden cross', h: 9, faces: 8000 },
+  'tree-dandelion': { kind: 'prop', what: 'a giant dandelion seed head as tall as a tree: a thick pale green stalk with one jagged leaf at its foot and on top a big round white fluffy ball of seeds', h: 8, faces: 3000 },
+  // Sandglass Key
+  'cactus': { kind: 'prop', what: 'a tall green saguaro cactus with two upturned arms and one small pink flower on top', h: 2.8, faces: 2000 },
+  'sundial': { kind: 'prop', what: 'a big old stone sundial: a round sandstone table on a short thick pillar, with a triangular bronze pointer standing on it and hours carved round its rim', h: 1.7, faces: 3000 },
   // Kettle Isle
   'cannery': { kind: 'prop', what: 'a ruined old fish cannery: a long weathered grey timber shed on stone footings, its rusty corrugated iron roof half fallen in, one tall brick chimney at one end, a wide dark open doorway in the middle of its long front wall, and a faded painted fish on the boards beside the door', h: 6.5, faces: 9000 },
   'room-cannery': { kind: 'prop', what: 'a dolls house room with no front wall and no ceiling, seen from its open front: the inside of an abandoned fish cannery, a floor of worn grey planks and three walls of grey boards with broken windows, a long workbench with rusty tins along the back wall, a big rusty iron boiler in the back right corner, an old wooden desk with an open ledger on it against the left wall, a stack of wooden crates against the right wall, the middle of the floor bare', h: 3.6, faces: 9000 },
@@ -312,6 +318,28 @@ export const FISH_ART = {
   'lamp-newt': 'a pale newt with glowing yellow spots, seen from above',
   'ghost-koi': 'a koi, white with glowing pale green patches',
   'spore-puffer': 'a round pufferfish that looks like a puffball mushroom, cream with brown warts',
+  // Thistledown: the sea of cloud
+  'puff-minnow': 'a tiny round white fish like a puff of cloud, with one blue eye',
+  'kite-ray': 'a diamond-shaped ray, red and yellow like a kite, with a long ribbon tail tied with bows, seen from above',
+  'drizzle-eel': 'a long thin grey-blue eel with rows of pale raindrop spots',
+  'sun-dab': 'a round flat golden fish like a little sun, with short pointed rays for fins',
+  'thunderhead': 'a grumpy dark grey puffer fish shaped like a storm cloud, with a small yellow lightning bolt on its side',
+  'weathercock': 'a fish with a red rooster comb and long curled tail feathers, coppery green like an old weathervane',
+  'silver-lining': 'a big cloud-white fish with a bright shining silver edge all the way round it',
+  // Thistledown: the Aerie
+  'dew-darter': 'a tiny clear round fish like a drop of dew, with a green leaf-shaped tail',
+  'halo-carp': 'a white carp with a thin gold ring floating over its head',
+  // Sandglass Key: the Sinks
+  'dune-dart': 'a small slim sand-coloured fish with darker ripple stripes',
+  'scarab-crab': 'a round crab, shiny blue-green like a scarab beetle, seen from above',
+  'sidewinder': 'a tan eel with a brown diamond pattern like a snake, curled in an S shape',
+  'hourglass-fish': 'a see-through glass fish shaped like an hourglass, with yellow sand inside it',
+  'mirage-koi': 'a shimmering pale blue and pink koi, its edges wavy like a heat haze',
+  'dust-devil': 'a big fish like a whirling brown tornado of sand, with two bright yellow eyes',
+  // Sandglass Key: the oasis
+  'date-perch': 'a plump dark brown perch the colour of a date, with a green tail',
+  'palm-terrapin': 'a small green terrapin with a palm tree pattern on its shell, seen from above',
+  'lotus-carp': 'a pink and white carp with fins like lotus petals',
 };
 
 /** Pictures only (no model): icons for things in the shop and the game's own art. */
@@ -369,6 +397,13 @@ export const ICONS = {
   'charm-claw': 'a red crab claw on a loop of string',
   'charm-ember': 'a small glowing orange ember in a tiny iron cage on a loop of string',
   'toy-stilts': 'a pair of tall wooden stilts with foot blocks, leaning together',
+  // Won on Thistledown and Sandglass Key
+  'paint-sky': 'a small open tin of pale sky blue paint with a little brush resting across it, a small white cloud painted on the tin',
+  'paint-sand': 'a small open tin of warm sandy yellow paint with a little brush resting across it',
+  'charm-seed': 'a single white fluffy dandelion seed on a loop of string',
+  'charm-hourglass': 'a tiny brass hourglass with yellow sand in it on a loop of string',
+  'toy-cloud': 'a small fat white cloud with a flat bottom, like a cushion, with a tiny blue rope handle',
+  'toy-watch': 'a round brass pocket watch on a chain, its lid open, with a sun and a moon on its face',
   // Charms for the rod
   'charm-bell': 'a tiny brass bell on a loop of red string',
   'charm-feather': 'a blue and white feather tied to a loop of string',

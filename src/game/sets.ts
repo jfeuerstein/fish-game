@@ -25,6 +25,8 @@ export const SETS: readonly FishSet[] = [
   { id: 'kettle', name: 'The Whole Kettle', what: 'Everything from Kettle Isle: the lake, the reef and the tide pools.', has: (s) => real(s) && isleOf(s) === 'kettle', coins: 1200, pearl: true },
   { id: 'rime', name: 'Cold Storage', what: 'Everything from Rimefall: through the ice, and out of the cold sea.', has: (s) => real(s) && isleOf(s) === 'rime', coins: 1200, pearl: true },
   { id: 'mire', name: 'Bog Standard', what: 'Everything from Mirewood: the channels and the crab pots.', has: (s) => real(s) && isleOf(s) === 'mire', coins: 1200, pearl: true },
+  { id: 'sky', name: 'Cloud Nine', what: 'Everything from Thistledown: the sea of cloud and the Aerie.', has: (s) => real(s) && isleOf(s) === 'sky', coins: 1200, pearl: true },
+  { id: 'dune', name: 'Sands of Time', what: 'Everything from Sandglass Key: the Sinks and the oasis.', has: (s) => real(s) && isleOf(s) === 'dune', coins: 1200, pearl: true },
   { id: 'glow', name: 'Lights Out', what: 'Everything from Glowmere: the glowing shallows and the Mere.', has: (s) => real(s) && isleOf(s) === 'glow', coins: 1200, pearl: true },
   { id: 'night', name: 'Night Shift', what: 'Every fish that bites only after dark.', has: (s) => real(s) && s.watch === 'night', coins: 500 },
   { id: 'twilight', name: 'Golden Hours', what: 'Every fish of dawn and dusk.', has: (s) => real(s) && s.watch === 'twilight', coins: 400 },

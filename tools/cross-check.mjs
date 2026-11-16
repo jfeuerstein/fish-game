@@ -80,6 +80,8 @@ const FLEET = [
   { id: 'rime', name: 'Rimefall', at: 'hole', zone: 'ice', fish: 'ice-smelt' },
   { id: 'mire', name: 'Mirewood', at: 'bayou', zone: 'swamp', fish: 'mudskipper' },
   { id: 'glow', name: 'Glowmere', at: 'mere', zone: 'mere', fish: 'lamp-newt' },
+  { id: 'sky', name: 'Thistledown', at: 'aerie', zone: 'aerie', fish: 'dew-darter' },
+  { id: 'dune', name: 'Sandglass Key', at: 'sinks', zone: 'sand', fish: 'dune-dart' },
 ];
 for (const [n, isle] of FLEET.entries()) {
   await charts(FLEET.map((f) => f.id));

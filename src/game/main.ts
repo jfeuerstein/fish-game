@@ -40,7 +40,7 @@ import { traderSheet } from '../ui/trader';
 import { Trader } from '../npc/trader';
 import { TRADER_NAME, traderHere } from './trader';
 import { BELL, BOTTLE_SECS, TRICK_SECS, comboSays, restLeft, sayRest, toyById, useToy, type Trick } from './toys';
-import { Ride } from '../world/ride';
+import { Ride, dandelionSeed } from '../world/ride';
 import { SIGHTS, sighted, type Sight } from './lookout';
 import { feedGull, gullBrings, gullFish, gullGave, gullGift, gullHungry, gullSays } from './gull';
 import { floorAt } from '../world/layout';
@@ -55,11 +55,11 @@ import { Uke } from '../ui/uke';
 import { Boat } from '../world/boat';
 import { fishingZone, shoreRadius, standHeight, waterAt } from '../world/island';
 import { splatAt } from '../world/terrain';
-import { BEACONS, CAMP, CANNERY, CAVE, CROSSING, ICE_HUT, PIER, PLACES, PLACED, POND, POOLS, POTS, START } from '../world/layout';
+import { BEACONS, CAMP, CANNERY, CAVE, CROSSING, ICE_HUT, PIER, PLACES, PLACED, POND, POOLS, POTS, START, SUNDIAL, VENTS, VENT_REACH } from '../world/layout';
 import { CROSSING_KEY, HOME, ISLE, ISLE_KEY, ISLE_NAME, type IsleId } from '../world/isle';
 import { CANNERY_PAGES, rummage } from './kettle';
 import { BIOMES } from '../look/biome';
-import { CHART_FOUND, type FarIsle, awake, bottleHolds, burning, giveChart, haulPot, hasChart, lightBeacon, newDeeds, potLeft, potState, setPot } from './isles';
+import { CHART_FOUND, DIAL_HOURS, DIAL_NAMES, type FarIsle, awake, bottleHolds, burning, dialAt, digHolds, gullHolds, markHour, turnDial, windWatch, WATCH_JUMP, giveChart, haulPot, hasChart, lightBeacon, newDeeds, potLeft, potState, setPot } from './isles';
 import { voyageSheet } from '../ui/voyage';
 import { World } from '../world/world';
 import { PlacedThings, ghostOf } from '../world/placed';
@@ -81,6 +81,8 @@ type Mode = 'walk' | 'sit' | 'boat' | 'emote' | 'uke' | 'chalk' | 'dig' | 'insid
 
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)];
 /** What islanders say when the player honks nearby, or slaps them with a fish. */
+/** How fast the sun goes round when the sundial is turned or the pocket watch wound, hours a second. */
+const SPIN_RATE = 2.6;
 const HONKED = ['Was that you?', 'HONK to you too.', 'Bless you?', 'Who let the goose in?', 'I felt that in my fins.', 'Please never do that again.', 'Beautiful. Truly.'];
 const SLAPPED = ['Ow! Rude.', 'Was that a FISH?', 'I did not deserve that.', 'Smells like mackerel now. Thanks.', 'Fair. I had it coming.', 'Slap me again and I tell Gus.', 'My dignity!'];
 const MISSED = ['You slap the air with a fish. It feels good.', 'Nobody to slap. The fish is relieved.', 'A mighty swing, at nothing.'];
@@ -300,7 +302,7 @@ export class Game implements Session {
       this.footfall(surface);
     };
     this.rig = new CameraRig(this.camera, this.world.field);
-    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well|cannery|ice-hut|stilt-shack)/.test(c.name));
+    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well|cannery|ice-hut|stilt-shack|windmill)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
     if (this.cfg.zoom) this.rig.zoom = this.cfg.zoom;
     this.controls = new Controls(this.app);
@@ -584,6 +586,8 @@ export class Game implements Session {
     // Now and then a bottle has more in it than a note.
     if (c.species === 'bottle' && bottleHolds(this.save, Math.random()) && giveChart(this.save, 'glow')) setTimeout(() => this.hud.toast(CHART_FOUND.glow, 'gold'), 2600);
     const night = !bitesAt('day', this.hour);
+    // On Sandglass Key a catch is marked against the hour the sundial stands at.
+    if (ISLE === 'dune') markHour(this.save);
     const r = applyCatch(this.save, c, zone, night, this.raining);
     noteCatch(this.save, zone, c.species);
     this.lastCatch = { ...c, at: Date.now() };
@@ -698,6 +702,8 @@ export class Game implements Session {
   /** The toy being ridden (src/game/toys.ts), as it is seen, and the tricks of this jump: the one being done and those done. */
   riding: string | null = null;
   private ride = new Ride();
+  /** The dandelion seed held overhead on the way down from an updraft. */
+  private seed = dandelionSeed();
   private trick: { kind: Trick; t: number } | null = null;
   private combo: Trick[] = [];
   /** Until when the dinner bell hurries the fish. */
@@ -890,6 +896,55 @@ export class Game implements Session {
     this.changed();
   }
 
+  // ---------- Sandglass Key's sundial, and Thistledown's updrafts ----------
+
+  /** The hours the sun still has to go round, after the dial is turned or the watch wound. */
+  private spin = 0;
+
+  private turnTheDial(): void {
+    if (this.spin > 0) return;
+    const { at, round } = turnDial(this.save);
+    this.spin = round;
+    this.audio.play('stepwood', { volume: 0.5, rate: 0.5 });
+    this.hud.toast(`The dial grinds round, and the shadow goes with it. It is ${DIAL_NAMES[at]}.`, at === 3 ? '' : 'gold');
+    this.changed();
+  }
+
+  /** Whether the last updraft has been left: one does not take the same person up twice without their stepping out of it. */
+  private ventArmed = true;
+
+  /** Stepping into an updraft, on foot: up, and gently down. */
+  private updrafts(): void {
+    if (!VENTS.length || !this.started) return;
+    const p = this.player.pos;
+    const near = VENTS.find((v) => Math.hypot(v.x - p.x, v.z - p.z) < VENT_REACH);
+    if (!this.seed.parent) this.scene.add(this.seed);
+    this.seed.visible = this.player.lofted;
+    if (this.player.lofted) {
+      // The seed is held overhead, and leans the way it is going.
+      this.seed.position.set(p.x, this.body.group.position.y + 1.25, p.z);
+      this.seed.rotation.y = Math.floor(performance.now() / 160) * 0.5;
+    }
+    if (!near) {
+      if (!this.player.airborne && !VENTS.some((v) => Math.hypot(v.x - p.x, v.z - p.z) < VENT_REACH + 1.2)) this.ventArmed = true;
+      return;
+    }
+    if (!this.ventArmed || this.player.airborne || this.mode !== 'walk' || this.carrying || this.detecting) return;
+    this.ventArmed = false;
+    if (this.fishing.busy) this.fishing.cancel();
+    this.hopOff();
+    this.player.loft();
+    this.save.lofts++;
+    this.audio.play('cast', { volume: 0.7, rate: 0.45 });
+    this.body.express('wide', 1.4);
+    if (!this.save.hints.includes('loft')) {
+      this.save.hints.push('loft');
+      this.hud.toast('Up! Steer with the stick on the way down. The top of the rock is that way.');
+    }
+    this.checkTitles();
+    this.changed();
+  }
+
   // ---------- Glowmere's beacons ----------
 
   private beaconFires: ({ flame: THREE.Object3D; lamp: THREE.PointLight | null } | null)[] = [null, null, null];
@@ -988,6 +1043,11 @@ export class Game implements Session {
       else this.hopOn(id);
       return;
     }
+    if (id === 'toy-watch' && !restLeft(this.save, id, Date.now())) {
+      // Where the hour is not the clock's, or the clock is the real one, there is nothing for it to wind.
+      if (ISLE === 'dune' || BIOMES[ISLE].hour !== undefined) return this.hud.toast('It ticks, and the hands do not move. The hour here is not the watch\'s to change.');
+      if (this.save.settings.clock === 'real') return this.hud.toast('It ticks, and nothing happens: you asked the island to keep real time. (More > Settings.)');
+    }
     const left = restLeft(this.save, id, Date.now());
     if (left || !useToy(this.save, id, Date.now())) {
       this.hud.toast(`The ${toy.name.toLowerCase()} is not ready: ${sayRest(left)}.`);
@@ -1003,6 +1063,11 @@ export class Game implements Session {
         setTimeout(() => this.body.action !== 'uke' && void this.body.hold(null), 2800);
       }
       this.hud.toast('The bell carries out over the water. For a minute and a half, the fish come quick.', 'gold');
+    } else if (id === 'toy-watch') {
+      windWatch(this.save);
+      this.spin = WATCH_JUMP;
+      this.audio.play('tick', { volume: 0.6, rate: 0.7 });
+      setTimeout(() => this.hud.toast(`The hands go round, and the sun goes with them. It is ${sayHour(this.hour)}.`, 'gold'), 2600);
     } else {
       this.cloudUntil = performance.now() + (BOTTLE_SECS * 1000) / this.cfg.warp;
       this.audio.thunder(0.8);
@@ -1034,6 +1099,7 @@ export class Game implements Session {
         balloons: 'Jump, and float. Jump again in the air for a little more lift, twice.',
         sled: 'Point it downhill and let go. On the flat it hardly moves at all.',
         stilts: 'Slow and tall. Water that would stop you on foot will not stop you now.',
+        cloud: 'It goes where you point, over water too, and you can cast from it. Hop off over water and you are back where you last stood.',
       };
       this.hud.toast(says[toy.gear]);
       this.changed();
@@ -1042,13 +1108,15 @@ export class Game implements Session {
 
   private hopOff(): void {
     if (!this.riding) return;
+    // Off a cloud over the water: back to dry land.
+    if (this.riding === 'toy-cloud') this.player.ashore();
     this.riding = null;
     this.player.gear = null;
     this.trick = null;
     this.combo = [];
     this.body.strain = 0;
     this.body.power = 0;
-    if (this.body.action === 'skate' || this.body.action === 'pogo' || this.body.action === 'float') this.body.action = 'idle';
+    if (this.body.action === 'skate' || this.body.action === 'pogo' || this.body.action === 'float' || this.body.action === 'sit') this.body.action = 'idle';
     void this.ride.set(null, this.scene);
   }
 
@@ -1468,7 +1536,8 @@ export class Game implements Session {
     }
     const aim = this.rig.yaw + Math.PI;
     const cast = (): void => {
-      if (this.riding) this.hopOff();
+      // (A cloud can be fished from.)
+      if (this.riding && this.riding !== 'toy-cloud') this.hopOff();
       if (this.mode === 'emote') this.stopActivity();
       f.press(aim, rod);
     };
@@ -1498,6 +1567,8 @@ export class Game implements Session {
       const pot = this.potNear()!;
       const state = potState(this.save, pot.id, Date.now());
       hud.setSecond(state === 'empty' ? 'Set pot' : state === 'ready' ? 'Haul pot' : 'Pot soaking', () => this.usePot(pot));
+    } else if (this.mode === 'walk' && Math.hypot(p.x - SUNDIAL.x, p.z - SUNDIAL.z) < 3.6) {
+      hud.setSecond(this.spin > 0 ? 'Turning…' : 'Turn dial', () => this.turnTheDial());
     } else if (this.mode === 'walk' && this.beaconNear() >= 0 && !burning(this.save, this.beaconNear(), Date.now())) {
       const i = this.beaconNear();
       hud.setSecond('Light', () => this.lightTheBeacon(i));
@@ -1691,6 +1762,12 @@ export class Game implements Session {
     this.gullDue -= dt;
     if (this.gullDue > 0) return;
     this.gullDue = 150 + Math.random() * 200;
+    // The first thing a tame gull brings is not coins.
+    if (gullHolds(this.save)) {
+      this.save.gull = gullGave(this.save.gull, this.today);
+      this.foundChart('sky');
+      return;
+    }
     const gift = gullGift(Math.random());
     this.save.coins += gift.coins;
     if (gift.bait) this.save.baits[gift.bait.id] = (this.save.baits[gift.bait.id] ?? 0) + gift.bait.count;
@@ -1851,8 +1928,14 @@ export class Game implements Session {
     const mode = this.save.settings.clock;
     const tz = new Date().getTimezoneOffset();
     // (Where it is always one hour, or one season, it is.)
-    this.hour = pinnedHour(this.pin.time) ?? BIOMES[ISLE].hour ?? hourAt(now, mode, tz);
-    this.weather = this.pin.weather ?? weatherAt(now, mode, tz);
+    // On Sandglass Key it is whatever hour the sundial says; and the pocket watch puts the island's own clock on.
+    // Either way the sun is seen going round to get there (`spin`: the hours it still has to go).
+    this.spin = Math.max(0, this.spin - dt * SPIN_RATE);
+    const ahead = mode === 'island' ? this.save.clockAhead : 0;
+    const told = ISLE === 'dune' ? DIAL_HOURS[dialAt(this.save)] : (BIOMES[ISLE].hour ?? (hourAt(now, mode, tz) + ahead) % 24);
+    this.hour = pinnedHour(this.pin.time) ?? (told - this.spin + 48) % 24;
+    // (Thistledown is above the weather.)
+    this.weather = this.pin.weather ?? (BIOMES[ISLE].cloud ? 'clear' : weatherAt(now, mode, tz));
     const skyRain = this.weather === 'rain' || this.weather === 'storm';
     // The season, by the calendar (or pinned): the island is dressed for it when it changes.
     const season = pinnedSeason(this.pin.season) ?? BIOMES[ISLE].season ?? seasonAt(now, tz);
@@ -1918,12 +2001,13 @@ export class Game implements Session {
       if (this.boat.effort > 0.3 && Math.floor(performance.now() / 950) !== Math.floor((performance.now() - dt * 1000) / 950)) this.audio.play('row', { volume: 0.35 });
     } else {
       this.boat.update(dt, { x: 0, y: 0 }, 0);
-      if (this.mode === 'walk') this.player.update(dt, stick, this.rig.yaw);
+      // (On a cloud with a line out, the cloud stays where it is.)
+      if (this.mode === 'walk' && !(this.riding === 'toy-cloud' && this.fishing.busy)) this.player.update(dt, stick, this.rig.yaw);
       else this.player.update(dt, { x: 0, y: 0 }, this.rig.yaw);
       this.tread();
     }
     if (this.riding) {
-      if (this.mode !== 'walk' || this.fishing.busy) this.hopOff();
+      if (this.mode !== 'walk' || (this.fishing.busy && this.riding !== 'toy-cloud')) this.hopOff();
       else {
         if (this.trick && (this.trick.t += dt) >= TRICK_SECS) {
           this.combo.push(this.trick.kind);
@@ -2001,6 +2085,7 @@ export class Game implements Session {
     if (this.started) this.secrets(dt, now);
     if (!HOME) this.steam(dt);
     if (BEACONS.length) this.tendBeacons();
+    this.updrafts();
     this.fx.update(dt, this.camera, this.player.pos);
 
     if (this.started) {
@@ -2139,6 +2224,7 @@ export class Game implements Session {
       this.hud.toast(`You dug up a ${find.name}! It's a little muddy.`, 'gold');
       this.audio.play('rare');
     }
+    if (digHolds(this.save, Math.random())) setTimeout(() => this.foundChart('dune'), 2400);
     this.finds.showMound(null);
     this.fx.splash(new THREE.Vector3(spot.x, this.world.field.heightAt(spot.x, spot.z), spot.z), 0.5, 0x8a6440);
     this.checkTitles();

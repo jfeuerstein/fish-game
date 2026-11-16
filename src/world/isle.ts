@@ -1,14 +1,15 @@
-// Which island this is. There are five: Driftwood Cove, where the game begins, and four more a
+// Which island this is. There are seven: Driftwood Cove, where the game begins, and six more a
 // boat's row away, each its own kind of place: Kettle Isle (an old crater), Rimefall (ice and
-// snow), Mirewood (a swamp) and Glowmere (where it is always night). Only one is ever loaded: the crossing puts the game away and
+// snow), Mirewood (a swamp), Glowmere (where it is always night), Thistledown (above the
+// clouds) and Sandglass Key (a desert where time stands still). Only one is ever loaded: the crossing puts the game away and
 // begins it again on the other (behind a card that says so), so everything that says where
 // things are (layout.ts, island.ts) is chosen once, here, as the page loads. Under the tests
 // there is no page, and it is the cove unless a test says otherwise.
 
-export type IsleId = 'cove' | 'kettle' | 'rime' | 'mire' | 'glow';
-export const ISLES: readonly IsleId[] = ['cove', 'kettle', 'rime', 'mire', 'glow'];
+export type IsleId = 'cove' | 'kettle' | 'rime' | 'mire' | 'glow' | 'sky' | 'dune';
+export const ISLES: readonly IsleId[] = ['cove', 'kettle', 'rime', 'mire', 'glow', 'sky', 'dune'];
 
-export const ISLE_NAME: Record<IsleId, string> = { cove: 'Driftwood Cove', kettle: 'Kettle Isle', rime: 'Rimefall', mire: 'Mirewood', glow: 'Glowmere' };
+export const ISLE_NAME: Record<IsleId, string> = { cove: 'Driftwood Cove', kettle: 'Kettle Isle', rime: 'Rimefall', mire: 'Mirewood', glow: 'Glowmere', sky: 'Thistledown', dune: 'Sandglass Key' };
 const isIsle = (v: string | null): v is IsleId => !!v && (ISLES as readonly string[]).includes(v);
 
 /** Where the choice is kept between visits, so the game opens on the island it was put away on. */

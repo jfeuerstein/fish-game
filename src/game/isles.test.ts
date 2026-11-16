@@ -4,6 +4,8 @@ import { rollCatch } from '../fishing/roll';
 import { rng } from '../core/rng';
 import { ISLES } from '../world/isle';
 import { BAITS, CHARMS, FURNITURE, PAINTS, RODS } from './economy';
+import { DIAL_HOURS, DIAL_NAMES, DIG_SURE, UPDRAFT, WATCH_JUMP, dialAt, digHolds, gullHolds, markHour, turnDial, updraftRise, windWatch } from './isles';
+import { bitesAt, watchOf } from './clock';
 import { BEACON_COUNT, BURN_SECS, CHART_FOUND, CHART_RUMOUR, DEEDS, FAR_ISLES, ISLE_SAYS, POT_SECS, WAKE_SECS, awake, bottleHolds, burning, fishOf, giveChart, hasChart, haulPot, lightBeacon, newDeeds, potLeft, potState, setPot } from './isles';
 import { newSave, parseSave } from './save';
 import { TOYS } from './toys';
@@ -171,7 +173,7 @@ describe('beacons', () => {
 
 describe('deeds', () => {
   it('each island has three, and each gives something that exists and cannot be bought or won', () => {
-    for (const isle of ['rime', 'mire', 'glow'] as const) expect(DEEDS.filter((d) => d.isle === isle)).toHaveLength(3);
+    for (const isle of ['rime', 'mire', 'glow', 'sky', 'dune'] as const) expect(DEEDS.filter((d) => d.isle === isle)).toHaveLength(3);
     expect(new Set(DEEDS.map((d) => d.id)).size).toBe(DEEDS.length);
     for (const d of DEEDS) {
       const g = d.gives;
@@ -197,10 +199,12 @@ describe('deeds', () => {
 
   it('the fish deeds can be done, and never wait on a legend', () => {
     const s = newSave();
-    for (const isle of ['rime', 'mire', 'glow'] as const)
+    for (const isle of ['rime', 'mire', 'glow', 'sky', 'dune'] as const)
       for (const f of fishOf(isle)) if (f.tier !== 'legendary' && !f.woken) s.journal[f.id] = { count: 1, best: 10, first: T0 } as never;
     const done = newDeeds(s).map((d) => d.id);
-    for (const id of ['rime-all', 'mire-all', 'glow-all']) expect(done).toContain(id);
+    for (const id of ['rime-all', 'mire-all', 'glow-all', 'sky-all', 'dune-all']) expect(done).toContain(id);
+    expect(s.toys).toContain('toy-cloud');
+    expect(s.rodPaints).toContain('paint-sand');
     expect(s.toys).toContain('toy-sled');
     expect(s.rodPaints).toContain('paint-glow');
   });
@@ -222,10 +226,118 @@ describe('the far waters', () => {
       expect(fish.length, isle).toBeGreaterThanOrEqual(8);
       for (const f of fish) expect(farAway(f), f.id).toBe(true);
     }
-    for (const isle of ['rime', 'mire', 'glow'] as const) expect(fishOf(isle).some((f) => f.tier === 'legendary'), isle).toBe(true);
+    for (const isle of ['rime', 'mire', 'glow', 'sky', 'dune'] as const) expect(fishOf(isle).some((f) => f.tier === 'legendary'), isle).toBe(true);
   });
 
   it('every water belongs to one island', () => {
     for (const [zone, isle] of Object.entries(ZONE_ISLE)) expect(ISLES, zone).toContain(isle);
+  });
+});
+
+describe('the two charts that are brought and dug up', () => {
+  it('a tame gull brings Thistledown\'s, once', () => {
+    const s = newSave();
+    expect(gullHolds(s)).toBe(false);
+    s.gull = { ...s.gull, tame: true };
+    expect(gullHolds(s)).toBe(true);
+    giveChart(s, 'sky');
+    expect(gullHolds(s)).toBe(false);
+  });
+
+  it('the detector turns up Sandglass Key\'s about one dig in four, the sixth for certain, and never twice', () => {
+    const s = newSave();
+    s.dug = ['a'];
+    expect(digHolds(s, 0.9)).toBe(false);
+    expect(digHolds(s, 0.1)).toBe(true);
+    s.dug = Array.from({ length: DIG_SURE }, (_, i) => `d${i}`);
+    expect(digHolds(s, 0.99)).toBe(true);
+    giveChart(s, 'dune');
+    expect(digHolds(s, 0)).toBe(false);
+  });
+});
+
+describe('updrafts', () => {
+  it('throw high enough to clear the spire, and let down more gently than a fall', () => {
+    // The spire's top is 13 above its foot.
+    expect(updraftRise()).toBeGreaterThan(14.5);
+    expect(updraftRise()).toBeLessThan(24);
+    expect(UPDRAFT.fall).toBeLessThan(15);
+    expect(UPDRAFT.sink).toBeLessThan(3);
+  });
+
+  it('pay a deed the first time', () => {
+    const s = newSave();
+    s.lofts = 1;
+    expect(newDeeds(s).map((d) => d.id)).toEqual(['sky-up']);
+    expect(s.charms).toContain('charm-seed');
+  });
+});
+
+describe('the sundial', () => {
+  it('stands at noon to begin with, and goes round the four hours and back', () => {
+    const s = newSave();
+    expect(DIAL_NAMES[dialAt(s)]).toBe('noon');
+    const seen = [dialAt(s)];
+    let round = 0;
+    for (let i = 0; i < 4; i++) {
+      const t = turnDial(s);
+      expect(t.round).toBeGreaterThan(3);
+      expect(t.round).toBeLessThan(8);
+      round += t.round;
+      seen.push(t.at);
+    }
+    expect(seen).toEqual([1, 2, 3, 0, 1]);
+    // Four turns are a whole day.
+    expect(round).toBeCloseTo(24, 5);
+  });
+
+  it('turns to a dawn, a day, a dusk and a night, so every fish that keeps hours can be had', () => {
+    expect(DIAL_HOURS.map((h) => watchOf(h))).toEqual(['dawn', 'day', 'dusk', 'night']);
+    for (const f of fishOf('dune')) expect(DIAL_HOURS.some((h) => bitesAt(f.watch, h)), f.id).toBe(true);
+    // And there is something for every hour.
+    for (const h of DIAL_HOURS) expect(fishOf('dune').filter((f) => f.watch !== 'any' && bitesAt(f.watch, h)).length, String(h)).toBeGreaterThan(0);
+  });
+
+  it('a fish at each hour is a deed', () => {
+    const s = newSave();
+    for (let i = 0; i < 3; i++) {
+      markHour(s);
+      markHour(s);
+      turnDial(s);
+    }
+    expect(s.dialCaught.sort()).toEqual([1, 2, 3]);
+    expect(newDeeds(s).map((d) => d.id)).not.toContain('dune-hours');
+    markHour(s);
+    expect(newDeeds(s).map((d) => d.id)).toContain('dune-hours');
+    expect(s.toys).toContain('toy-watch');
+  });
+
+  it('is kept by the save, and a broken one reads as noon', () => {
+    const s = newSave();
+    turnDial(s);
+    markHour(s);
+    const back = parseSave(JSON.stringify(s));
+    expect(back.dial).toBe(2);
+    expect(back.dialCaught).toEqual([2]);
+    const odd = JSON.parse(JSON.stringify(s));
+    odd.dial = 'x';
+    odd.dialCaught = [9, -1, 'a', 2, 2];
+    const mended = parseSave(JSON.stringify(odd));
+    expect(mended.dial).toBe(1);
+    expect(mended.dialCaught).toEqual([2]);
+  });
+});
+
+describe('the pocket watch', () => {
+  it('puts the day on a quarter at a time, and four winds are a whole day', () => {
+    const s = newSave();
+    expect(s.clockAhead).toBe(0);
+    windWatch(s);
+    expect(s.clockAhead).toBe(WATCH_JUMP);
+    windWatch(s);
+    windWatch(s);
+    windWatch(s);
+    expect(s.clockAhead).toBe(0);
+    expect(parseSave(JSON.stringify({ ...s, clockAhead: 18 })).clockAhead).toBe(18);
   });
 });

@@ -11,6 +11,7 @@ import { BIOMES } from '../look/biome';
 import { lit } from '../look/material';
 import { ISLE } from './isle';
 import { HOLES, RIME } from './rime';
+import { dressDune, dressSky } from './dressing';
 
 const BIOME = BIOMES[ISLE];
 import type { Weather } from '../game/clock';
@@ -31,6 +32,8 @@ export class World {
   /** Glowing lamps after dark: one sprite each. */
   private glows: THREE.Sprite[] = [];
   private glowMat: THREE.SpriteMaterial;
+  /** What an island has that moves by the clock alone (Thistledown's cloud, wind and kites; Sandglass Key's sand). */
+  private moving: ((clock: number) => void)[] = [];
   /** Glowmere's mushrooms' own light. */
   private extraGlow: THREE.SpriteMaterial | null = null;
   /** What is lit after dark: lamps, the fire, the shop's counter, the lighthouse. */
@@ -248,6 +251,15 @@ export class World {
 
   /** What an island has that is made here, not from a model: Rimefall's ice, Glowmere's light, and the iceberg off the cove. */
   private dress(things: readonly Placed[]): void {
+    if (ISLE === 'sky') {
+      this.moving = dressSky(this.group, this.field);
+      // The dandelion clocks keep some light of their own: in a low sun the shaded side of a white ball was nearly black.
+      for (const o of this.props.group.children) {
+        const m = (o as THREE.Mesh).material as THREE.MeshToonMaterial | undefined;
+        if (o.name === 'tree-dandelion' && m?.emissive) m.emissive.set(0x57524a);
+      }
+    }
+    if (ISLE === 'dune') this.moving = dressDune(this.group);
     if (ISLE === 'cove') {
       // A long way north, white on the horizon on a clear day.
       const berg = new THREE.Mesh(new THREE.ConeGeometry(26, 34, 5, 1), new THREE.MeshBasicMaterial({ color: 0xf4eee3, fog: true }));
@@ -387,6 +399,7 @@ export class World {
     for (const g of this.glows) g.visible = on > 0.02;
     // A fire's light jumps about, a few times a second.
     this.clock += dt;
+    for (const move of this.moving) move(this.clock);
     const jump = 0.8 + 0.2 * Math.abs(Math.sin(Math.floor(this.clock * 7) * 12.9898) * 43758.5453 % 1);
     for (const l of this.lamps) l.light.intensity = l.strength * on * (l.flickers ? jump : 1);
     // Flames lean and stretch on the same beat, each a little differently.

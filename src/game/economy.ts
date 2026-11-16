@@ -293,6 +293,8 @@ export const PAINTS: readonly { id: string; name: string; colour: number; earned
   { id: 'paint-frost', name: 'Frost Paint', colour: 0xc6e4f4, earned: true },
   { id: 'paint-mire', name: 'Mire Paint', colour: 0x5c8f44, earned: true },
   { id: 'paint-glow', name: 'Glow Paint', colour: 0x62c0b0, earned: true, glows: true },
+  { id: 'paint-sky', name: 'Sky Paint', colour: 0x7fbbe6, earned: true },
+  { id: 'paint-sand', name: 'Sand Paint', colour: 0xecc77d, earned: true },
 ];
 
 /** Charms to hang from the rod: won at the Lucky Gull, never sold. */
@@ -306,4 +308,6 @@ export const CHARMS: readonly { id: string; name: string; earned?: boolean }[] =
   { id: 'charm-icicle', name: 'Icicle', earned: true },
   { id: 'charm-claw', name: 'Crab Claw', earned: true },
   { id: 'charm-ember', name: 'Ember', earned: true },
+  { id: 'charm-seed', name: 'Dandelion Seed', earned: true },
+  { id: 'charm-hourglass', name: 'Hourglass', earned: true },
 ];

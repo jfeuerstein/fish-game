@@ -138,8 +138,30 @@ export const SPECIES: readonly Species[] = [
   { id: 'lamp-newt', name: 'Lamp Newt', zones: ['mere'], tier: 'common', size: [6, 14], value: 15, watch: 'any', fight: 0.1, note: 'Its spots go out one by one as it falls asleep.' },
   { id: 'ghost-koi', name: 'Ghost Koi', zones: ['mere'], tier: 'uncommon', size: [30, 70], value: 50, watch: 'any', fight: 0.4, note: 'Seen from the bank it is only the moon in the water, moving.' },
   { id: 'spore-puffer', name: 'Spore Puffer', zones: ['mere'], tier: 'rare', size: [10, 25], value: 115, watch: 'night', fight: 0.3, note: 'Puffs when startled. Do not breathe in.' },
-  { id: 'boot', name: 'Old Boot', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'glow', 'mere'], tier: 'junk', size: [25, 32], value: 1, watch: 'any', fight: 0.05, note: 'One day you will find the other one.' },
-  { id: 'can', name: 'Tin Can', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'pots', 'glow', 'mere'], tier: 'junk', size: [10, 14], value: 1, watch: 'any', fight: 0.05, note: 'Recycling it anyway.' },
+  // Thistledown: the sea of cloud. (It is always the golden hour there, so none of them keeps hours.)
+  { id: 'puff-minnow', name: 'Puff Minnow', zones: ['cloud'], tier: 'common', size: [4, 10], value: 15, watch: 'any', fight: 0.05, note: 'Mostly air. Weighs less on the line than the line does.' },
+  { id: 'kite-ray', name: 'Kite Ray', zones: ['cloud'], tier: 'uncommon', size: [30, 70], value: 46, watch: 'any', fight: 0.45, note: 'Pulls up, not down. Hold on to your hat.' },
+  { id: 'drizzle-eel', name: 'Drizzle Eel', zones: ['cloud'], tier: 'uncommon', size: [40, 90], value: 44, watch: 'any', fight: 0.4, note: 'Drips. Nobody has found out where it keeps it all.' },
+  { id: 'sun-dab', name: 'Sun Dab', zones: ['cloud'], tier: 'rare', size: [15, 35], value: 125, watch: 'any', fight: 0.35, note: 'Warm to hold. Lies on top of the cloud to catch the last of the light.' },
+  { id: 'thunderhead', name: 'Thunderhead', zones: ['cloud'], tier: 'rare', size: [25, 60], value: 135, watch: 'any', fight: 0.6, note: 'In a mood. Grumbles when handled, and you feel it in your teeth.' },
+  { id: 'weathercock', name: 'Weathercock', zones: ['cloud'], tier: 'epic', size: [40, 85], value: 290, watch: 'any', fight: 0.75, note: 'Always faces into the wind, which makes it easy to creep up on from behind.' },
+  { id: 'silver-lining', name: 'Silver Lining', zones: ['cloud'], tier: 'legendary', size: [140, 260], value: 1000, watch: 'any', fight: 1.05, note: 'Every cloud has one. This is the one this cloud has.' },
+  // Thistledown: the Aerie, on top of the spire.
+  { id: 'dew-darter', name: 'Dew Darter', zones: ['aerie'], tier: 'common', size: [3, 8], value: 16, watch: 'any', fight: 0.1, note: 'Anywhere else it would be gone by mid-morning. Up here it is never mid-morning.' },
+  { id: 'halo-carp', name: 'Halo Carp', zones: ['aerie'], tier: 'rare', size: [30, 65], value: 140, watch: 'any', fight: 0.45, note: 'Very well behaved. The ring does not come off; people have tried.' },
+  // Sandglass Key: the Sinks. They keep hours, and the hour is whatever the sundial says.
+  { id: 'dune-dart', name: 'Dune Dart', zones: ['sand'], tier: 'common', size: [8, 18], value: 15, watch: 'day', fight: 0.2, note: 'Swims through sand as if nobody had told it.' },
+  { id: 'scarab-crab', name: 'Scarab Crab', zones: ['sand'], tier: 'uncommon', size: [8, 16], value: 45, watch: 'twilight', fight: 0.2, note: 'Rolls a little ball of sand about, and will not say what it is for.' },
+  { id: 'sidewinder', name: 'Sidewinder Eel', zones: ['sand'], tier: 'uncommon', size: [40, 90], value: 48, watch: 'night', fight: 0.5, note: 'Goes sideways, at speed. The line goes with it.' },
+  { id: 'hourglass-fish', name: 'Hourglass Fish', zones: ['sand'], tier: 'rare', size: [12, 28], value: 130, watch: 'twilight', fight: 0.3, note: 'Turn it over and it starts again. Please do not turn it over.' },
+  { id: 'mirage-koi', name: 'Mirage Koi', zones: ['sand'], tier: 'epic', size: [35, 75], value: 300, watch: 'day', fight: 0.7, note: 'There at noon, and not quite there even then.' },
+  { id: 'dust-devil', name: 'Dust Devil', zones: ['sand'], tier: 'legendary', size: [120, 220], value: 1050, watch: 'night', fight: 1.05, note: 'A wind with a fish in the middle of it. It comes up only in the dark.' },
+  // Sandglass Key: the oasis.
+  { id: 'date-perch', name: 'Date Perch', zones: ['oasis'], tier: 'common', size: [12, 28], value: 16, watch: 'any', fight: 0.2, note: 'Sweet-natured, and a little sticky.' },
+  { id: 'palm-terrapin', name: 'Palm Terrapin', zones: ['oasis'], tier: 'uncommon', size: [12, 26], value: 46, watch: 'night', fight: 0.25, note: 'Carries its own shade about with it.' },
+  { id: 'lotus-carp', name: 'Lotus Carp', zones: ['oasis'], tier: 'rare', size: [30, 70], value: 135, watch: 'twilight', fight: 0.5, note: 'Opens its fins at first light and shuts them at last.' },
+  { id: 'boot', name: 'Old Boot', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'glow', 'mere', 'cloud', 'sand', 'oasis'], tier: 'junk', size: [25, 32], value: 1, watch: 'any', fight: 0.05, note: 'One day you will find the other one.' },
+  { id: 'can', name: 'Tin Can', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'pots', 'glow', 'mere', 'cloud', 'aerie', 'sand', 'oasis'], tier: 'junk', size: [10, 14], value: 1, watch: 'any', fight: 0.05, note: 'Recycling it anyway.' },
   { id: 'seaweed', name: 'Seaweed', zones: ['ocean', 'deep', 'reef', 'pools', 'floe', 'swamp', 'pots', 'glow'], tier: 'junk', size: [20, 60], value: 2, watch: 'any', fight: 0.05, note: 'Smells like the seaside.' },
   { id: 'bottle', name: 'Message in a Bottle', zones: ['ocean', 'deep', 'floe', 'glow'], tier: 'junk', size: [25, 30], value: 25, watch: 'any', fight: 0.05, note: '"Hope you are having a nice day." Signed, a stranger.' },
   { id: 'treasure', name: 'Treasure Chest', zones: [], tier: 'junk', size: [40, 60], value: 0, watch: 'any', fight: 0.2, note: 'Something heavy on the line, and it rattles. Opened on the spot.' },
@@ -168,7 +190,7 @@ export const TIER_LABEL: Record<Tier, string> = {
   junk: 'Junk',
 };
 
-export const ZONE_LABEL: Record<Zone, string> = { ocean: 'Ocean', deep: 'Deep water', pond: 'Pond', creek: 'Creek', cave: 'Sea cave', lake: 'The Kettle', reef: 'Reef flat', pools: 'Tide pools', spring: 'Hot spring', ice: 'Through the ice', floe: 'The cold sea', swamp: 'The channels', pots: 'Crab pots', glow: 'Glowing shallows', mere: 'The Mere' };
+export const ZONE_LABEL: Record<Zone, string> = { ocean: 'Ocean', deep: 'Deep water', pond: 'Pond', creek: 'Creek', cave: 'Sea cave', lake: 'The Kettle', reef: 'Reef flat', pools: 'Tide pools', spring: 'Hot spring', ice: 'Through the ice', floe: 'The cold sea', swamp: 'The channels', pots: 'Crab pots', glow: 'Glowing shallows', mere: 'The Mere', cloud: 'The sea of cloud', aerie: 'The Aerie', sand: 'The Sinks', oasis: 'The oasis' };
 /** When a fish is about, said in a few words: its hours, and its weather or seasons if it keeps to any. */
 export function sayWhen(s: Species): string {
   const parts = [WATCH_LABEL[s.watch]];
@@ -180,7 +202,7 @@ export function sayWhen(s: Species): string {
 }
 
 /** Which island each of the far islands' waters is on. The cove's own are not here. */
-export const ZONE_ISLE: Partial<Record<Zone, IsleId>> = { lake: 'kettle', reef: 'kettle', pools: 'kettle', ice: 'rime', floe: 'rime', swamp: 'mire', pots: 'mire', glow: 'glow', mere: 'glow' };
+export const ZONE_ISLE: Partial<Record<Zone, IsleId>> = { lake: 'kettle', reef: 'kettle', pools: 'kettle', ice: 'rime', floe: 'rime', swamp: 'mire', pots: 'mire', glow: 'glow', mere: 'glow', cloud: 'sky', aerie: 'sky', sand: 'dune', oasis: 'dune' };
 export const FAR_ZONES: readonly Zone[] = Object.keys(ZONE_ISLE) as Zone[];
 /** A fish that lives only in a far island's waters is not at the cove at all. */
 export const farAway = (s: Species): boolean => s.zones.length > 0 && s.zones.every((z) => FAR_ZONES.includes(z));

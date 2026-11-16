@@ -4,11 +4,11 @@
 // belongs each frame.
 import * as THREE from 'three';
 import { model } from '../assets/models';
-import { STILTS, TRICK_SECS, type Trick } from '../game/toys';
+import { CLOUD, STILTS, TRICK_SECS, type Trick } from '../game/toys';
 import { lit } from '../look/material';
 
 /** How far a toy lifts whoever is on it, metres. */
-const LIFT: Record<string, number> = { 'toy-skateboard': 0.2, 'toy-pogo': 0.22, 'toy-balloons': 0, 'toy-sled': 0.02, 'toy-stilts': STILTS.lift };
+const LIFT: Record<string, number> = { 'toy-skateboard': 0.2, 'toy-pogo': 0.22, 'toy-balloons': 0, 'toy-sled': 0.02, 'toy-stilts': STILTS.lift, 'toy-cloud': CLOUD.lift };
 /** How tall each is made (the skateboard is made bigger than its file says: a metre long, for big feet). */
 const TALL: Record<string, number> = { 'toy-skateboard': 0.3, 'toy-sled': 0.42 };
 /** Which way each model's length lies from the way the player faces, as it comes from being made. */
@@ -33,6 +33,67 @@ function stilts(): THREE.Object3D {
   return pair;
 }
 
+/** A small cloud to sit on: a few flat-bottomed lumps, pale, with nothing under it. */
+function cloud(): THREE.Object3D {
+  const puff = new THREE.Group();
+  const white = lit({ color: 0xfffdf6 });
+  const shade = lit({ color: 0xc6e4f4 });
+  const lumps: [number, number, number, number][] = [
+    [0, 0.02, 0, 0.5],
+    [0.42, -0.02, 0.1, 0.36],
+    [-0.4, -0.02, -0.06, 0.38],
+    [0.08, -0.04, 0.4, 0.33],
+    [-0.1, -0.04, -0.42, 0.34],
+    [0.3, 0.0, -0.3, 0.28],
+    [-0.3, 0.0, 0.32, 0.27],
+  ];
+  for (const [x, y, z, r] of lumps) {
+    const lump = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), white);
+    lump.position.set(x, y, z);
+    lump.scale.y = 0.62;
+    lump.rotation.y = x * 7 + z * 3;
+    lump.castShadow = true;
+    puff.add(lump);
+  }
+  // Two eyes on the front of it, as its picture in the menu has: it is that kind of cloud.
+  const ink = new THREE.MeshBasicMaterial({ color: 0x10181f });
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.09, 0.04), ink);
+    eye.position.set(side * 0.16, 0.0, 0.7);
+    puff.add(eye);
+  }
+  // Its flat underside, in shadow.
+  const under = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.5, 0.12, 7), shade);
+  under.position.y = -0.2;
+  puff.add(under);
+  return puff;
+}
+
+/** A dandelion seed big enough to hang from: a stalk, and a crown of spokes with a tuft on the end of each. */
+export function dandelionSeed(): THREE.Object3D {
+  const seed = new THREE.Group();
+  const stalk = lit({ color: 0xd6cbb2 });
+  const fluff = lit({ color: 0xfffdf6, emissive: 0x6a6a6a });
+  const stem = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.9, 0.04), stalk);
+  stem.position.y = 0.45;
+  seed.add(stem);
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2;
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.62, 0.025), stalk);
+    // Each leans out from the top of the stalk.
+    spoke.position.set(Math.cos(a) * 0.24, 1.14, Math.sin(a) * 0.24);
+    spoke.rotation.set(Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8);
+    const tuft = new THREE.Mesh(new THREE.IcosahedronGeometry(0.15, 0), fluff);
+    tuft.position.set(Math.cos(a) * 0.5, 1.42, Math.sin(a) * 0.5);
+    seed.add(spoke, tuft);
+  }
+  const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 0), fluff);
+  crown.position.y = 1.5;
+  seed.add(crown);
+  seed.visible = false;
+  return seed;
+}
+
 export class Ride {
   private obj: THREE.Object3D | null = null;
   private id: string | null = null;
@@ -47,7 +108,7 @@ export class Ride {
     }
     if (!id) return;
     // Stilts are two poles, made here: there is no model of them.
-    const m = id === 'toy-stilts' ? stilts() : await model(id, TALL[id]);
+    const m = id === 'toy-stilts' ? stilts() : id === 'toy-cloud' ? cloud() : await model(id, TALL[id]);
     if (!m || this.id !== id) return;
     this.obj = m;
     scene.add(m);
@@ -85,6 +146,12 @@ export class Ride {
       const step = Math.round(Math.sin(this.clock * 5) * 2) * 0.07 * Math.min(1, moving);
       o.children[0].position.z = step;
       o.children[1].position.z = -step;
+    } else if (id === 'toy-cloud') {
+      // Under whoever sits on it, bobbing a little, in steps.
+      const bob = Math.round(Math.sin(this.clock * 1.7) * 2) * 0.02;
+      body.position.y += bob;
+      o.position.set(body.position.x, body.position.y + 0.12, body.position.z);
+      o.rotation.set(0, yaw, 0);
     } else if (id === 'toy-pogo') {
       // The stick's foot is on the ground as it lands and leaves; its spring gives as it does.
       const off = Math.max(0, body.position.y - (LIFT[id] ?? 0) - ground);

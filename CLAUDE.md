@@ -18,7 +18,7 @@ node tools/shot.mjs out.png "at=shop" 402 874 1 "window.__cove.open('shop')"   #
 node tools/play-check.mjs outdir                             # three scripted casts from the pier, with pictures
 node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons, a dragged thumb walks and turns, and a whole cast by thumb
 node tools/bench-check.mjs                                   # runs the game's own benchmark end to end (its numbers mean nothing off the phone)
-node tools/cross-check.mjs outdir                            # rows round all four far islands and home by the buttons, with pictures; and that a kept save opens on the island it was put away on
+node tools/cross-check.mjs outdir                            # rows round all six far islands and home by the buttons, with pictures; and that a kept save opens on the island it was put away on
 node tools/icons.mjs [prefix]                                # render menu icons from the models (into art/icons)
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
@@ -46,7 +46,7 @@ the owner's: do not route a deploy round it.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `isle=kettle|rime|mire|glow` loads a far island (`at` then takes its places: Kettle's `jetty`, `cannery`, `notch`, `lake`, `spring`, `pools`, `reef`; Rimefall's `jetty`, `hut`, `lake`, `hole`, `hill`, `seals`; Mirewood's `jetty`, `bayou`, `shack`, `walk`, `north`, `west`; Glowmere's `jetty`, `mere`, `beacon`, `west`, `south`; each has `boat`). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `isle=kettle|rime|mire|glow|sky|dune` loads a far island (`at` then takes its places: Kettle's `jetty`, `cannery`, `notch`, `lake`, `spring`, `pools`, `reef`; Rimefall's `jetty`, `hut`, `lake`, `hole`, `hill`, `seals`; Mirewood's `jetty`, `bayou`, `shack`, `walk`, `north`, `west`; Glowmere's `jetty`, `mere`, `beacon`, `west`, `south`; Thistledown's (`sky`) `jetty`, `mill`, `vent`, `aerie`, `south`; Sandglass Key's (`dune`) `jetty`, `sinks`, `dial`, `oasis`, `dune`; each has `boat`). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
   the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
@@ -100,7 +100,7 @@ the owner's: do not route a deploy round it.
   reel, sit, wave, dance, cheer, clap, uke, row) and `rig.ts` (turns them into bone rotations about
   the character's own axes, worked out from the skeleton). Hats sit on the head bone; the rod is
   placed from the hand each frame.
-- **Fishing** (`src/fishing/`): `fish.ts` (some ninety kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
+- **Fishing** (`src/fishing/`): `fish.ts` (some hundred and ten kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
   size, shiny/golden), `reel.ts` (the reeling minigame, fixed-step), `fishing.ts` (cast, bobber,
   line, bite, hook, reel, land). Tune feel with `REEL` and the tests in `fishing.test.ts`.
 - **Pearls and the Lucky Gull.** Pearls (the save's `tokens`) are the premium currency: only the
@@ -308,18 +308,19 @@ the owner's: do not route a deploy round it.
   else the player does (casting, sitting, going indoors) gets them off. Landing in deep water
   puts the player back where they last stood, as a jump always has.
 
-- **Five islands** (`src/world/isle.ts`). Driftwood Cove, and four far ones a boat's row away:
-  Kettle Isle, Rimefall, Mirewood and Glowmere. The owner asked for a second island, then for
-  a fleet of them, each with its own design, rewards, biome and fish, and for the crossing to
+- **Seven islands** (`src/world/isle.ts`). Driftwood Cove, and six far ones a boat's row away:
+  Kettle Isle, Rimefall, Mirewood, Glowmere, Thistledown (`sky`) and Sandglass Key (`dune`).
+  The owner asked for a second island, then for a fleet of them, then for two more "in this
+  way", each with its own design, rewards, biome and fish, and for the crossing to
   be a loading card rather than a seamless sea. **Only one island is ever loaded.** Which one
   is chosen once, as the page loads (`ISLE`, `HOME`: from `isle=` in the address, else from
   `cove.isle` in storage, and always the cove under the tests and for an unkept save), and
   everything that says where things are picks its island's version there and then with
-  `pick({ cove, kettle, rime, mire, glow })`: `layout.ts` (`POND`, `PIER`, `PATHS`, `PLACED`,
+  `pick({ cove, kettle, rime, mire, glow, sky, dune })`: `layout.ts` (`POND`, `PIER`, `PATHS`, `PLACED`,
   `PLACES`, `START`, `CROSSING`, `PINS`, `CHART_VIEW` and the rest; what an island lacks is
   put at `NOWHERE`, off the map, so nothing is ever near it), `island.ts` (`HEIGHT`, `SHORE`,
   and `WATERS`: what each island calls its pond, its pools and its sea), the scatter's rules,
-  the chart. `pick` takes a full record, so a sixth island will not compile until every one
+  the chart. `pick` takes a full record, so another island will not compile until every one
   of them has been given its value. A test of an island's ground mocks `./isle` with
   `mockIsle('rime')` from `isleMock.ts`, which must import nothing (a mock that imports what
   imports `isle` hangs), and runs the shared `checkIsle` (`isleChecks.ts`): paths dry, the
@@ -342,17 +343,23 @@ the owner's: do not route a deploy round it.
   Kettle Isle (its last page); Rimefall's is drawn by picking out the ice on the northern
   horizon through the lighthouse's telescope on a clear day (the sight `ice`, an iceberg
   drawn far out at `World.ICEBERG`); Glowmere's is in a bottle (the odd `bottle` on the end
-  of a line: about one in three holds it, and the fifth for certain; `bottleHolds`). `CHART_RUMOUR` and `CHART_FOUND` are the words.
+  of a line: about one in three holds it, and the fifth for certain; `bottleHolds`);
+  Thistledown's is the first thing a tame gull brings (`gullHolds`); Sandglass Key's is dug
+  up with the metal detector (about one dig in four, the sixth for certain; `digHolds`).
+  `CHART_RUMOUR` and `CHART_FOUND` are the words.
 - **A biome is a look laid over the island** (`src/look/biome.ts`, `BIOMES`; `World.dress`):
   a season or an hour that never changes there, mist, the water's own colour, the grass's
   tint, and what is said on arriving. Rimefall is always winter, with the northern lights on
   every clear night; Mirewood has mist lying on it and green water; on Glowmere it is always
-  a little after eleven at night.
+  a little after eleven at night; on Thistledown always the golden hour, over a sea that is
+  cloud; Sandglass Key is sand, at whatever hour its sundial says.
 - **Deeds** (`DEEDS`, `newDeeds` in `isles.ts`): three to an island, each paid once with
   something that cannot be bought or won (`earned` on a paint, a charm, a toy or a piece of
   furniture, which keeps it out of the shop and the Lucky Gull's prizes): the Icicle, Crab
   Claw and Ember charms, Frost, Mire and Glow paint (which gives off light), the sled, the
-  stilts, and pots of glowshrooms to set down. No deed waits on a legend. The journal's Far
+  stilts, pots of glowshrooms to set down, and from the last two islands the Dandelion Seed
+  and Hourglass charms, Sky and Sand paint, a cloud to ride and a pocket watch. No deed waits
+  on a legend. The journal's Far
   isles tab lists each island's deeds over its fish; an island with no chart is `???` there.
 - **Rimefall** (`src/world/rime.ts`): snow, a few pines, seals on the shore, floes on a cold
   sea (zone `floe`), and in the middle a lake frozen flat. The ice is ground: it is walked
@@ -375,6 +382,31 @@ the owner's: do not route a deploy round it.
   twelve minutes (`BURN_SECS`); with all three alight at once the water wakes for ten
   (`WAKE_SECS`, `awake`): the shallows go brighter (`World.woken`), and the two fish marked
   `woken` in `fish.ts` bite only then (`Conditions.woken` in `roll.ts`).
+- **Thistledown** (`src/world/thistle.ts`; not `sky.ts`, which is the sky itself): a small
+  island standing on cliffs above a sea of cloud (zone `cloud`: the whole sea; the water's
+  colours are drawn almost all the way to white, and `src/world/dressing.ts` stands lumps of
+  cloud in it out to the horizon). Dandelion clocks the size of trees, a windmill, three
+  kites on lines. **Updrafts** (`VENTS`, `UPDRAFT` in `isles.ts`; `Player.loft`): stepping
+  into one on foot throws the player some seventeen metres up and lets them down like a seed
+  (one is drawn over their head), steered with the stick. The first is at the foot of the
+  **spire**, a rock that feet may leave but not enter (`WALLS`, `walled` in `layout.ts`: a
+  slope steep enough to stop a walker at one frame rate lets them up at another, so it is a
+  rule, not a slope), and is the only way to the **Aerie**, the pool on top (`POND` there,
+  zone `aerie`, drawn by `dressing.ts` in its own colours since the island's water is cloud).
+  The **cloud** (a ridden toy, `CLOUD`) goes over water as over land, slowly, and can be
+  fished from; off it over water the player is back where they last stood (`Player.ashore`;
+  the pier's boards count as firm).
+- **Sandglass Key** (`src/world/dune.ts`): an hourglass: two lobes joined by a waist. Sand
+  everywhere but round the oasis (`duneGreen`; `splatAt`), cactus, a great dune for the sled.
+  **Time stands still**: the hour is whichever of four the **sundial** at the waist is turned
+  to (`DIAL_HOURS`: dawn, noon, dusk, night; `dial` in the save; Turn dial), and the sun is
+  seen going round to get there (`spin` in `main.ts`). Its fish keep hours, so the dial is
+  how they are all had; a catch is marked against the hour it was made at (`markHour`), and
+  one at each of the four is a deed. They are fished out of the **Sinks**, pools of soft sand
+  (`SINKS`, which are `POOLS`; zone `sand`; `dressing.ts` draws them as rings of sand going
+  slowly round, and the water's own discs are not made there), and out of the oasis (`POND`,
+  zone `oasis`). The **pocket watch** (a used toy) puts the island's own clock on six hours
+  (`clockAhead` in the save): no use where the hour is fixed, or to someone keeping real time.
 - **Kettle Isle** (`src/world/kettle.ts`, pure, tested): an old crater with a lake in it (the
   Kettle: `POND` there, zone `lake`, held in by a rim with a notch to walk in by), a reef flat
   off the south-west shore where the sea stays wadeable for thirty metres (zone `reef`, with
@@ -386,11 +418,11 @@ the owner's: do not route a deploy round it.
   cannery to go into (`room-cannery`: a ledger read a page at a time, and a crate with
   something in it once a day; `src/game/kettle.ts`), an old fire ring. Eleven fish in the
   three waters.
-- **The far islands' fish** (`ZONE_ISLE`, `farAway`, `isleOf` in `fish.ts`): 37 kinds, each
+- **The far islands' fish** (`ZONE_ISLE`, `farAway`, `isleOf` in `fish.ts`): 55 kinds, each
   island with a legend of its own, a set, and its part of the journal's Far isles tab; an
   errand, a bounty or a favour never asks for one (`everyDay`). Things set down are kept by
   island (`isle` on a `PlacedThing`). A new fish needs a sprite: a new sheet in
-  `make-sprites.mjs` (sheets 6 to 8 are the fleet's).
+  `make-sprites.mjs` (sheets 6 to 10 are the far islands').
 
 ## What the game leans into
 

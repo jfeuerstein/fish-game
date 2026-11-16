@@ -45,6 +45,15 @@ const SOLID: Record<string, { circle?: number; box?: number }> = {
   signpost: { circle: 0.15 },
   mailbox: { circle: 0.25 },
   fence: { box: 0.9 },
+  // The far islands' own.
+  'tree-mangrove': { circle: 0.1 },
+  'tree-shroom': { circle: 0.08 },
+  'tree-dandelion': { circle: 0.05 },
+  cactus: { circle: 0.22 },
+  beacon: { circle: 0.42 },
+  sundial: { circle: 0.42 },
+  windmill: { circle: 0.24 },
+  'ice-hut': { box: 0.8 },
 };
 
 /**
@@ -56,6 +65,7 @@ const SWAY: Record<string, { bend: number; power: number }> = {
   'tree-round': { bend: 0.003, power: 2 },
   'tree-birch': { bend: 0.0036, power: 2 },
   'tree-palm': { bend: 0.0045, power: 2 },
+  'tree-dandelion': { bend: 0.006, power: 2 },
   bush: { bend: 0.035, power: 1 },
   'grass-tuft': { bend: 0.13, power: 1 },
   flowers: { bend: 0.11, power: 1 },
@@ -71,7 +81,7 @@ const REACH: Record<string, number> = { flowers: 40, 'grass-tuft': 40, mushrooms
 
 /** Things too small to bother casting shadows. */
 /** What else is big enough to hide the player and so is opened over them like a tree (see src/look/spotlight.ts). */
-const WINDOWED = new Set(['cliff', 'shop', 'arcade', 'lighthouse', 'fishing-hut', 'tent', 'well', 'notice-board', 'rock-a', 'cave-mouth', 'cannery', 'wreck']);
+const WINDOWED = new Set(['cliff', 'shop', 'arcade', 'lighthouse', 'fishing-hut', 'tent', 'well', 'notice-board', 'rock-a', 'cave-mouth', 'cannery', 'wreck', 'windmill', 'ice-hut', 'stilt-shack']);
 
 const NO_SHADOW = new Set(['flowers', 'grass-tuft', 'mushrooms', 'lilypad', 'cattails', 'shell']);
 

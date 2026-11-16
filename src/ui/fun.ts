@@ -34,7 +34,7 @@ export function funSheet(app: HTMLElement, s: Session, chalk: () => boolean): Sh
         const row = el('div', 'row');
         row.innerHTML = `<img src="${icon(t.id)}" alt=""><div class="grow"><div class="title">${t.name}</div><div class="sub">${t.blurb}</div></div>`;
         const on = s.riding === t.id;
-        const b = el('button', `btn ${left ? 'plain' : 'green'}`, t.gear ? (on ? 'Hop off' : 'Ride') : left ? sayRest(left) : t.id === 'toy-bell' ? 'Ring' : 'Uncork');
+        const b = el('button', `btn ${left ? 'plain' : 'green'}`, t.gear ? (on ? 'Hop off' : 'Ride') : left ? sayRest(left) : t.id === 'toy-bell' ? 'Ring' : t.id === 'toy-watch' ? 'Wind' : 'Uncork');
         b.onclick = () => {
           sheet.close();
           s.useToy(t.id);

@@ -64,6 +64,8 @@ const FIGHTS: Record<string, FightStyle> = {
   'old-frostbite': 'sulker', halibut: 'diver', wolffish: 'diver', 'pocket-narwhal': 'runner', 'glass-cod': 'steady',
   'bog-gar': 'runner', 'snapper-turtle': 'sulker', 'the-log': 'sulker', 'bog-lantern': 'jumper',
   'moon-wrasse': 'runner', 'star-ray': 'diver', 'the-comet': 'runner', 'ghost-koi': 'jumper',
+  'kite-ray': 'jumper', 'drizzle-eel': 'runner', 'thunderhead': 'sulker', 'weathercock': 'jumper', 'silver-lining': 'runner', 'halo-carp': 'steady',
+  'sidewinder': 'runner', 'mirage-koi': 'jumper', 'dust-devil': 'diver', 'lotus-carp': 'sulker', 'scarab-crab': 'sulker',
 };
 export const styleOf = (species: string): FightStyle => FIGHTS[species] ?? 'steady';
 

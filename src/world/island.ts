@@ -1,11 +1,13 @@
 // The island's ground: a height for every point, the water over it, and what kind of water a
 // bobber lands in. Pure, no three.js, so it runs under Vitest.
 import { clamp, fbm, smoothstep } from '../core/rng';
+import { duneHeight, duneShore } from './dune';
 import { glowHeight, glowShore } from './glow';
 import { ISLE, pick } from './isle';
 import { REEF, kettleHeight, kettleShore, reefiness } from './kettle';
 import { mireHeight, mireInland, mireShore } from './mire';
 import { rimeHeight, rimeShore } from './rime';
+import { skyHeight, skyShore } from './thistle';
 import { CAVE, BEACH_ANGLE, CREEK, CREEK_WIDTH, HILL, PATHS, PATH_WIDTH, PLAZA, POND, POOLS, STEP, WORLD_SIZE, bridgeBank, creekLevel, floorAt, nearestOnLine } from './layout';
 
 /** Distance from the centre to the shore at an angle (radians, atan2(z, x)). */
@@ -138,9 +140,10 @@ export class Heightfield {
  * After the cove's five: Kettle Isle's crater lake, reef flat, tide pools and hot spring (which
  * is not fished); Rimefall's holes in the ice and its cold sea; Mirewood's still channels, and
  * what its crab pots bring up (not a water at all: nothing is ever cast into it); Glowmere's
- * glowing shallows and its Mere.
+ * glowing shallows and its Mere; Thistledown's sea of cloud and the pool on its spire;
+ * Sandglass Key's pools of soft sand and its oasis.
  */
-export type Zone = 'ocean' | 'deep' | 'pond' | 'creek' | 'cave' | 'lake' | 'reef' | 'pools' | 'spring' | 'ice' | 'floe' | 'swamp' | 'pots' | 'glow' | 'mere';
+export type Zone = 'ocean' | 'deep' | 'pond' | 'creek' | 'cave' | 'lake' | 'reef' | 'pools' | 'spring' | 'ice' | 'floe' | 'swamp' | 'pots' | 'glow' | 'mere' | 'cloud' | 'aerie' | 'sand' | 'oasis';
 
 const open = (ground: number): Zone => (ground < -5.5 ? 'deep' : 'ocean');
 /** What each island calls its pond, its pools, and its sea at a place. */
@@ -152,9 +155,13 @@ const WATERS = pick<{ pond: Zone; pool: Zone; sea: (x: number, z: number, ground
   // Inside the island's shore the water is the swamp's; outside, the sea.
   mire: { pond: 'swamp', pool: 'swamp', sea: (x, z, ground) => (mireInland(x, z) > -1 ? 'swamp' : open(ground)) },
   glow: { pond: 'mere', pool: 'mere', sea: (_x, _z, ground) => (ground < -5.5 ? 'deep' : 'glow') },
+  // There is no sea under Thistledown: it is cloud all the way out.
+  sky: { pond: 'aerie', pool: 'aerie', sea: () => 'cloud' },
+  // Sandglass Key's pools are sand; its sea is the sea.
+  dune: { pond: 'oasis', pool: 'sand', sea: (_x, _z, ground) => open(ground) },
 });
-const SHORE = pick({ cove: coveShore, kettle: kettleShore, rime: rimeShore, mire: mireShore, glow: glowShore });
-const HEIGHT = pick({ cove: coveHeight, kettle: kettleHeight, rime: rimeHeight, mire: mireHeight, glow: glowHeight });
+const SHORE = pick({ cove: coveShore, kettle: kettleShore, rime: rimeShore, mire: mireShore, glow: glowShore, sky: skyShore, dune: duneShore });
+const HEIGHT = pick({ cove: coveHeight, kettle: kettleHeight, rime: rimeHeight, mire: mireHeight, glow: glowHeight, sky: skyHeight, dune: duneHeight });
 void ISLE;
 
 /** The surface of whatever water is at a point, or null where it is dry. */

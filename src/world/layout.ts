@@ -3,11 +3,13 @@
 // Coordinates: +x east, +z south, +y up, metres. The island is centred on the origin; the sea
 // surface is y = 0.
 
+import { DUNE, SINKS } from './dune';
 import { GLOW } from './glow';
 import { ISLE, pick } from './isle';
 import { KETTLE, POOLS as KETTLE_POOLS, SPRING_AT, type Pool } from './kettle';
 import { BAYOU } from './mire';
 import { HOLES, RIME, rimeShore } from './rime';
+import { SKY } from './thistle';
 
 const HOME = ISLE === 'cove';
 
@@ -34,10 +36,13 @@ export const POND: { readonly x: number; readonly z: number; readonly r: number;
   mire: { x: BAYOU.x, z: BAYOU.z, r: BAYOU.r, level: 0 },
   // Glowmere's is the Mere.
   glow: GLOW.mere,
+  // Thistledown's is the Aerie, on top of the spire; Sandglass Key's is the oasis.
+  sky: SKY.aerie,
+  dune: DUNE.oasis,
 });
 
 /** Small waters cut into the ground: Kettle Isle's tide pools and its hot spring, and the holes in Rimefall's ice. */
-export const POOLS: readonly Pool[] = pick({ cove: [], kettle: KETTLE_POOLS, rime: HOLES, mire: [], glow: [] });
+export const POOLS: readonly Pool[] = pick({ cove: [], kettle: KETTLE_POOLS, rime: HOLES, mire: [], glow: [], sky: [], dune: SINKS });
 
 /** The creek: out of the pond's west side, down to the sea. Water level falls along it. */
 export const CREEK: readonly V2[] = HOME
@@ -65,7 +70,7 @@ export const HILL = { x: 30, z: -36, r: 20, h: 8.5 } as const;
 
 /** The camp in the western meadow. */
 /** (On Kettle Isle: an old fire ring by the cannery. On Rimefall: the fire by the ice hut.) */
-export const CAMP: { readonly x: number; readonly z: number } = pick({ cove: { x: -38, z: 18 }, kettle: { x: 63, z: 30 }, rime: { x: 47, z: 22 }, mire: NO_PLACE, glow: NO_PLACE });
+export const CAMP: { readonly x: number; readonly z: number } = pick({ cove: { x: -38, z: 18 }, kettle: { x: 63, z: 30 }, rime: { x: 47, z: 22 }, mire: NO_PLACE, glow: NO_PLACE, sky: NO_PLACE, dune: NO_PLACE });
 
 /** The pier: east from the shore along z, with a wider head at the end. */
 /** The pier: whole 3 m sections of deck, so the boards cover every metre that can be walked on. */
@@ -84,6 +89,9 @@ export const PIER: Pier = pick({
   rime: { x0: 63, x1: 87, z: 8, width: 3, deck: 2.0, head: { x0: 81, x1: 87, z0: 3.5, z1: 12.5 } },
   mire: { x0: 81, x1: 105, z: 24, width: 3, deck: 2.0, head: { x0: 99, x1: 105, z0: 19.5, z1: 28.5 } },
   glow: { x0: 58, x1: 82, z: 10, width: 3, deck: 2.0, head: { x0: 76, x1: 82, z0: 5.5, z1: 14.5 } },
+  // (Thistledown's stands out from the cliff over the cloud, so it is as high as the cove's.)
+  sky: { x0: 57, x1: 81, z: 8, width: 3, deck: 2.4, head: { x0: 75, x1: 81, z0: 3.5, z1: 12.5 } },
+  dune: { x0: 57, x1: 81, z: 6, width: 3, deck: 2.0, head: { x0: 75, x1: 81, z0: 1.5, z1: 10.5 } },
 });
 
 /** Where the rowboat ties up, beside the pier. */
@@ -97,6 +105,8 @@ export const CROSSING: { readonly x: number; readonly z: number; readonly reach:
   rime: { x: 99, z: 22, reach: 9 },
   mire: { x: 111, z: 38, reach: 9 },
   glow: { x: 96, z: 24, reach: 9 },
+  sky: { x: 94, z: 22, reach: 9 },
+  dune: { x: 95, z: 21, reach: 9 },
 });
 
 /** The patch of the square that takes chalk. */
@@ -153,7 +163,22 @@ const GLOW_PATHS: readonly (readonly V2[])[] = [
   [[14, -4], [8, 9], [-10, 11], [-24, 10], [-35, 10]],
   [[8, 9], [6, 24], [6, 43]],
 ];
-export const PATHS: readonly (readonly V2[])[] = pick({ cove: COVE_PATHS, kettle: KETTLE_PATHS, rime: RIME_PATHS, mire: MIRE_PATHS, glow: GLOW_PATHS });
+/** Thistledown's: from the jetty across the top to the windmill, to the foot of the spire, and to the other two updrafts. */
+const SKY_PATHS: readonly (readonly V2[])[] = [
+  [[58, 8], [48, 6], [36, 2], [22, 0], [8, -4]],
+  [[36, 2], [33, -9], [30, -17]],
+  [[8, -4], [1, -9], [-3.5, -12]],
+  [[22, 0], [23, 12], [22.5, 23]],
+  [[8, -4], [-5, 6], [-17, 16], [-23.5, 21.5]],
+];
+/** Sandglass Key's: from the jetty to the Sinks, through the waist past the sundial to the oasis, and up the great dune. */
+const DUNE_PATHS: readonly (readonly V2[])[] = [
+  [[58, 6], [52, 9], [47, 12]],
+  [[47, 12], [41, 7], [30, 4], [17, 2], [7, 1]],
+  [[-7, 0], [-18, 1], [-29, 2]],
+  [[41, 7], [38, -4], [35, -12]],
+];
+export const PATHS: readonly (readonly V2[])[] = pick({ cove: COVE_PATHS, kettle: KETTLE_PATHS, rime: RIME_PATHS, mire: MIRE_PATHS, glow: GLOW_PATHS, sky: SKY_PATHS, dune: DUNE_PATHS });
 export const PATH_WIDTH = 1.7;
 
 /** Where the beach is widest: the south shore. */
@@ -317,6 +342,8 @@ export const WALKS: readonly Floor[] = pick<readonly Floor[]>({
     { x0: 18, x1: 27, z0: 17.5, z1: 26.5, y: WALK_DECK },
   ],
   glow: [],
+  sky: [],
+  dune: [],
 });
 
 /** Where crab pots may be set on Mirewood: in the still water beside a boardwalk, each with a name for the save. */
@@ -331,10 +358,34 @@ export const POTS: readonly { id: string; x: number; z: number }[] = pick<readon
     { id: 'shack', x: 22.5, z: 28.6 },
   ],
   glow: [],
+  sky: [],
+  dune: [],
 });
 
 /** Glowmere's beacons. */
-export const BEACONS: readonly { x: number; z: number }[] = pick<readonly { x: number; z: number }[]>({ cove: [], kettle: [], rime: [], mire: [], glow: GLOW.beacons });
+export const BEACONS: readonly { x: number; z: number }[] = pick<readonly { x: number; z: number }[]>({ cove: [], kettle: [], rime: [], mire: [], glow: GLOW.beacons, sky: [], dune: [] });
+
+/** Thistledown's updrafts: where the wind comes up out of the ground and takes whoever steps into it. The first is the way up the spire. */
+export const VENTS: readonly { x: number; z: number }[] = pick<readonly { x: number; z: number }[]>({ cove: [], kettle: [], rime: [], mire: [], glow: [], sky: SKY.vents, dune: [] });
+/** How near a vent's middle takes someone up. */
+export const VENT_REACH = 1.5;
+
+/** Rock that cannot be walked up: a circle that feet may leave but not enter (Thistledown's spire, which is got up by the wind). */
+export const WALLS: readonly { x: number; z: number; r: number }[] = pick<readonly { x: number; z: number; r: number }[]>({
+  cove: [],
+  kettle: [],
+  rime: [],
+  mire: [],
+  glow: [],
+  sky: [{ x: SKY.spire.x, z: SKY.spire.z, r: (SKY.spire.r + SKY.spire.flat) / 2 }],
+  dune: [],
+});
+/** Whether a step on foot from one place to another would go up a wall. */
+export const walled = (x0: number, z0: number, x1: number, z1: number): boolean => WALLS.some((w) => Math.hypot(x0 - w.x, z0 - w.z) >= w.r && Math.hypot(x1 - w.x, z1 - w.z) < w.r);
+
+/** Sandglass Key's sundial, at the island's waist; and Thistledown's windmill. */
+export const SUNDIAL: { readonly x: number; readonly z: number } = pick<{ readonly x: number; readonly z: number }>({ cove: NO_PLACE, kettle: NO_PLACE, rime: NO_PLACE, mire: NO_PLACE, glow: NO_PLACE, sky: NO_PLACE, dune: DUNE.dial });
+export const MILL = { x: SKY.mill.x, z: SKY.mill.z, yaw: 2.2 } as const;
 
 /** Rimefall's ice hut, and Mirewood's shack on stilts. */
 export const ICE_HUT = { x: 46, z: 28, yaw: Math.PI + 0.5 } as const;
@@ -381,7 +432,29 @@ const GLOW_PLACED: readonly Placed[] = [
   { id: 'signpost', x: 52, z: 10.5, yaw: 1.2 },
   { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
 ];
-export const PLACED: readonly Placed[] = pick({ cove: COVE_PLACED, kettle: KETTLE_PLACED, rime: RIME_PLACED, mire: MIRE_PLACED, glow: GLOW_PLACED });
+/** Thistledown's: a jetty out over the cloud, a windmill on its knoll, and somewhere to sit and look at it all. */
+const SKY_PLACED: readonly Placed[] = [
+  { id: 'windmill', x: MILL.x, z: MILL.z, yaw: MILL.yaw },
+  { id: 'lamp-post', x: 59, z: 6.8, y: PIER.deck },
+  { id: 'lamp-post', x: 78, z: 4.1, y: PIER.deck },
+  { id: 'crates', x: 64, z: 7.2, y: PIER.deck, yaw: 0.4 },
+  { id: 'signpost', x: 51, z: 9.5, yaw: 1.2 },
+  { id: 'bench', x: 9, z: -8.5, yaw: 0.5 },
+  { id: 'bench', x: SKY.spire.x + 7.6, z: SKY.spire.z + 2.6, yaw: -1.9 },
+  { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
+];
+/** Sandglass Key's: a jetty, the sundial, and a well by the oasis. */
+const DUNE_PLACED: readonly Placed[] = [
+  { id: 'sundial', x: DUNE.dial.x, z: DUNE.dial.z, yaw: 0, scale: 1.5 },
+  { id: 'lamp-post', x: 59, z: 4.8, y: PIER.deck },
+  { id: 'lamp-post', x: 78, z: 2.1, y: PIER.deck },
+  { id: 'barrel', x: 64, z: 5.1, y: PIER.deck },
+  { id: 'signpost', x: 51, z: 8, yaw: 1.2 },
+  { id: 'well', x: DUNE.oasis.x + 11.5, z: DUNE.oasis.z - 6, yaw: 0.6 },
+  { id: 'bench', x: DUNE.oasis.x + 11, z: DUNE.oasis.z + 5.5, yaw: -1.2 },
+  { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
+];
+export const PLACED: readonly Placed[] = pick({ cove: COVE_PLACED, kettle: KETTLE_PLACED, rime: RIME_PLACED, mire: MIRE_PLACED, glow: GLOW_PLACED, sky: SKY_PLACED, dune: DUNE_PLACED });
 
 /** Where the pier's deck sections go (each model is a square section about three metres across). */
 export function pierSections(): Placed[] {
@@ -547,7 +620,23 @@ const GLOW_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
   south: { x: GLOW.beacons[2].x, z: GLOW.beacons[2].z - 3, yaw: 0 },
   boat,
 };
-export const PLACES: Record<string, { x: number; z: number; yaw: number }> = pick({ cove: COVE_PLACES, kettle: KETTLE_PLACES, rime: RIME_PLACES, mire: MIRE_PLACES, glow: GLOW_PLACES });
+const SKY_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+  jetty: { x: 66, z: 8, yaw: -Math.PI / 2 },
+  mill: { x: 31, z: -16, yaw: 3.7 },
+  vent: { x: SKY.vents[0].x + 3.2, z: SKY.vents[0].z + 1.6, yaw: -2.0 },
+  aerie: { x: SKY.spire.x + 7.2, z: SKY.spire.z, yaw: -Math.PI / 2 },
+  south: { x: 22, z: 22, yaw: 0 },
+  boat,
+};
+const DUNE_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+  jetty: { x: 66, z: 6, yaw: -Math.PI / 2 },
+  sinks: { x: SINKS[1].x + 4.6, z: SINKS[1].z, yaw: -Math.PI / 2 },
+  dial: { x: DUNE.dial.x + 3.6, z: DUNE.dial.z + 0.4, yaw: -Math.PI / 2 },
+  oasis: { x: DUNE.oasis.x + 11.2, z: DUNE.oasis.z, yaw: -Math.PI / 2 },
+  dune: { x: DUNE.big.x, z: DUNE.big.z, yaw: 0.6 },
+  boat,
+};
+export const PLACES: Record<string, { x: number; z: number; yaw: number }> = pick({ cove: COVE_PLACES, kettle: KETTLE_PLACES, rime: RIME_PLACES, mire: MIRE_PLACES, glow: GLOW_PLACES, sky: SKY_PLACES, dune: DUNE_PLACES });
 /** Where a visit begins, when the address does not say. */
 export const START = HOME ? 'plaza' : 'jetty';
 
@@ -572,5 +661,17 @@ export const PINS: readonly { x: number; z: number; label: string }[] = pick<rea
     { x: GLOW.mere.x, z: GLOW.mere.z, label: 'The Mere' },
     ...GLOW.beacons.map((b) => ({ x: b.x, z: b.z, label: 'Beacon' })),
   ],
+  sky: [
+    { x: PIER.x0 + 6, z: PIER.z, label: 'Jetty' },
+    { x: MILL.x, z: MILL.z, label: 'Windmill' },
+    { x: SKY.aerie.x, z: SKY.aerie.z, label: 'The Aerie' },
+    ...SKY.vents.map((v) => ({ x: v.x, z: v.z, label: 'Updraft' })),
+  ],
+  dune: [
+    { x: PIER.x0 + 6, z: PIER.z, label: 'Jetty' },
+    { x: DUNE.pan.x, z: DUNE.pan.z, label: 'The Sinks' },
+    { x: DUNE.dial.x, z: DUNE.dial.z, label: 'Sundial' },
+    { x: DUNE.oasis.x, z: DUNE.oasis.z, label: 'Oasis' },
+  ],
 });
-export const CHART_VIEW: { readonly x: number; readonly z: number; readonly half: number } = pick({ cove: { x: 14, z: -4, half: 98 }, kettle: { x: 0, z: 0, half: 116 }, rime: { x: 8, z: 4, half: 104 }, mire: { x: 4, z: 4, half: 116 }, glow: { x: 6, z: 4, half: 100 } });
+export const CHART_VIEW: { readonly x: number; readonly z: number; readonly half: number } = pick({ cove: { x: 14, z: -4, half: 98 }, kettle: { x: 0, z: 0, half: 116 }, rime: { x: 8, z: 4, half: 104 }, mire: { x: 4, z: 4, half: 116 }, glow: { x: 6, z: 4, half: 100 }, sky: { x: 6, z: 2, half: 96 }, dune: { x: 4, z: 0, half: 100 } });

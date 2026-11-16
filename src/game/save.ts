@@ -18,7 +18,7 @@ export interface PlacedThing {
   z: number;
   yaw: number;
   /** The far island it was set down on. Without this, on the cove. */
-  isle?: 'kettle' | 'rime' | 'mire' | 'glow';
+  isle?: 'kettle' | 'rime' | 'mire' | 'glow' | 'sky' | 'dune';
 }
 
 export interface Settings {
@@ -92,6 +92,13 @@ export interface Save {
   wakings: number;
   /** The far islands' deeds done. */
   deeds: string[];
+  /** Times taken up by one of Thistledown's updrafts. */
+  lofts: number;
+  /** Which hour Sandglass Key's sundial stands at (0 to 3), and the hours a fish has been landed at there. */
+  dial: number;
+  dialCaught: number[];
+  /** How many hours the pocket watch has put the island's own clock on by. */
+  clockAhead: number;
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -194,6 +201,10 @@ export function newSave(): Save {
     wokenAt: 0,
     wakings: 0,
     deeds: [],
+    lofts: 0,
+    dial: 1,
+    dialCaught: [],
+    clockAhead: 0,
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -321,7 +332,7 @@ export function parseSave(text: string | null): Save {
   const placed = (Array.isArray(o.placed) ? o.placed : [])
     .map((p) => rec(p))
     .filter((p) => typeof p.id === 'string')
-    .map((p): PlacedThing => (p.isle === 'kettle' || p.isle === 'rime' || p.isle === 'mire' || p.isle === 'glow' ? { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0), isle: p.isle } : { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
+    .map((p): PlacedThing => (p.isle === 'kettle' || p.isle === 'rime' || p.isle === 'mire' || p.isle === 'glow' || p.isle === 'sky' || p.isle === 'dune' ? { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0), isle: p.isle } : { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
   const quests = (Array.isArray(o.quests) ? o.quests : []).map(readQuest).filter((q): q is Quest => q !== null);
   const s = rec(o.settings);
   const st = rec(o.stats);
@@ -362,6 +373,10 @@ export function parseSave(text: string | null): Save {
     wokenAt: num(o.wokenAt, 0, 0),
     wakings: Math.floor(num(o.wakings, 0, 0)),
     deeds: strs(o.deeds),
+    lofts: Math.floor(num(o.lofts, 0, 0)),
+    dial: Math.floor(num(o.dial, 1, 0)) % 4,
+    dialCaught: Array.isArray(o.dialCaught) ? [...new Set(o.dialCaught.filter((x): x is number => typeof x === 'number' && x >= 0 && x < 4).map(Math.floor))] : [],
+    clockAhead: num(o.clockAhead, 0, 0) % 24,
     gull: { fed: Math.floor(num(rec(o.gull).fed, -1, -1)), streak: Math.floor(num(rec(o.gull).streak, 0, 0)), tame: rec(o.gull).tame === true, giftDay: Math.floor(num(rec(o.gull).giftDay, -1, -1)), gifts: Math.floor(num(rec(o.gull).gifts, 0, 0)) },
     bait: str(o.bait, 'bait-worm'),
     baits,

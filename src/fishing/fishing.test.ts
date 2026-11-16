@@ -7,7 +7,7 @@ import { BY_ID, JOURNAL_SPECIES as SPECIES, valueOf } from './fish';
 import { type Conditions, candidates, rollCatch } from './roll';
 import { type Fighter, startReel, stepReel } from './reel';
 
-const zones: Zone[] = ['ocean', 'deep', 'pond', 'creek', 'cave', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'pots', 'glow', 'mere'];
+const zones: Zone[] = ['ocean', 'deep', 'pond', 'creek', 'cave', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'pots', 'glow', 'mere', 'cloud', 'aerie', 'sand', 'oasis'];
 
 describe('fish', () => {
   it('has unique ids and sensible numbers', () => {
