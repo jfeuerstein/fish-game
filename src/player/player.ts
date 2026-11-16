@@ -6,7 +6,7 @@ import { Heightfield, standHeight, walkable, waterAt } from '../world/island';
 import { floorAt } from '../world/layout';
 import type { Character } from './character';
 import { heading } from './steer';
-import { BALLOONS, POGO, SKATE, type Gear } from '../game/toys';
+import { BALLOONS, POGO, SKATE, SLED, STILTS, type Gear } from '../game/toys';
 
 export const WALK_SPEED = 3.0;
 export const RUN_SPEED = 5.4;
@@ -53,7 +53,9 @@ export class Player {
       }
       return;
     }
-    this.vy = this.gear === 'skate' ? SKATE.ollie : this.gear === 'balloons' ? BALLOONS.lift : 5.6;
+    // (Nobody jumps on stilts.)
+    if (this.gear === 'stilts') return;
+    this.vy = this.gear === 'skate' ? SKATE.ollie : this.gear === 'balloons' ? BALLOONS.lift : this.gear === 'sled' ? 3.2 : 5.6;
     this.pumps = 0;
     this.airborne = true;
   }
@@ -95,22 +97,25 @@ export class Player {
     const wading = waterAt(this.field, this.pos.x, this.pos.z) !== null && floorAt(this.pos.x, this.pos.z) === null;
     const gear = this.gear;
     let turning = 12;
-    if (gear === 'skate') {
-      // A board gets up to speed slowly and keeps it: left alone it rolls on. A slope pulls it.
-      const want = push < 0.08 ? 0 : SKATE.top * Math.max(0.5, push) * (wading ? 0.3 : 1);
+    // On stilts the water is only water when it is over them.
+    const wade = gear === 'stilts' ? STILTS.wade : 0.45;
+    const board = gear === 'skate' ? SKATE : gear === 'sled' ? SLED : null;
+    if (board) {
+      // A board gets up to speed slowly and keeps it: left alone it rolls on. A slope pulls it. (A sled is all slope.)
+      const want = push < 0.08 ? 0 : board.top * Math.max(0.5, push) * (wading ? 0.3 : 1);
       this.pushing = !this.airborne && want > this.speed + 0.5 ? 1 : 0;
       if (!this.airborne) {
-        this.speed += (want - this.speed) * (1 - Math.exp(-dt * (want > this.speed ? SKATE.push : push < 0.08 ? (wading ? 3 : SKATE.roll) : 1.1)));
+        this.speed += (want - this.speed) * (1 - Math.exp(-dt * (want > this.speed ? board.push : push < 0.08 ? (wading ? 3 : board.roll) : want < this.speed ? board.roll : 1.1)));
         // (Only ground that can be rolled onto: the drop off the pier's edge is not a hill.)
         const ax = this.pos.x + Math.sin(this.yaw) * 1.2;
         const az = this.pos.z + Math.cos(this.yaw) * 1.2;
         const slope = walkable(this.field, ax, az) && !waterAt(this.field, ax, az) ? (standHeight(this.field, this.pos.x, this.pos.z) - standHeight(this.field, ax, az)) / 1.2 : 0;
-        this.speed = Math.min(SKATE.most, Math.max(0, this.speed + Math.max(-0.6, Math.min(0.6, slope)) * SKATE.hill * dt));
+        this.speed = Math.min(board.most, Math.max(0, this.speed + Math.max(-0.6, Math.min(0.6, slope)) * board.hill * dt));
       }
-      turning = SKATE.carve;
+      turning = board.carve;
     } else {
-      const top = gear === 'pogo' ? POGO.speed : gear === 'balloons' && this.airborne ? BALLOONS.speed : RUN_SPEED;
-      const want = push < 0.08 ? 0 : (push > 0.82 ? top : Math.min(top, WALK_SPEED) * Math.max(0.45, push / 0.82)) * (wading ? 0.6 : 1);
+      const top = gear === 'pogo' ? POGO.speed : gear === 'balloons' && this.airborne ? BALLOONS.speed : gear === 'stilts' ? STILTS.speed : RUN_SPEED;
+      const want = push < 0.08 ? 0 : (push > 0.82 ? top : Math.min(top, WALK_SPEED) * Math.max(0.45, push / 0.82)) * (wading && gear !== 'stilts' ? 0.6 : 1);
       this.speed += (want - this.speed) * (1 - Math.exp(-dt * (want > this.speed ? 7 : 10)));
     }
     if (push >= 0.08) {
@@ -132,7 +137,7 @@ export class Player {
       let nz = this.pos.z + Math.cos(this.yaw) * step + this.fling.y * dt;
       [nx, nz] = this.solid.resolve(nx, nz, 0.32);
       // In the air anything goes, short of the edge of the world; on foot, only where it may be walked.
-      const ok = (x: number, z: number): boolean => (this.airborne ? Math.abs(x) < this.field.half - 3 && Math.abs(z) < this.field.half - 3 && standHeight(this.field, x, z) < this.pos.y + 0.5 : walkable(this.field, x, z) && this.climbable(x, z));
+      const ok = (x: number, z: number): boolean => (this.airborne ? Math.abs(x) < this.field.half - 3 && Math.abs(z) < this.field.half - 3 && standHeight(this.field, x, z) < this.pos.y + 0.5 : walkable(this.field, x, z, wade) && this.climbable(x, z));
       if (ok(nx, nz)) {
         this.pos.x = nx;
         this.pos.z = nz;
@@ -165,7 +170,7 @@ export class Player {
         this.fling.set(0, 0);
         this.pos.y = ground;
         // Landed in water too deep to stand in: back to where the jump began.
-        if (!walkable(this.field, this.pos.x, this.pos.z)) {
+        if (!walkable(this.field, this.pos.x, this.pos.z, wade)) {
           this.pos.copy(this.lastFirm);
           this.speed = 0;
         } else if (!waterAt(this.field, this.pos.x, this.pos.z)) this.lastFirm.copy(this.pos);
@@ -173,13 +178,13 @@ export class Player {
       }
     } else {
       this.pos.y += (ground - this.pos.y) * (1 - Math.exp(-dt * 20));
-      if (walkable(this.field, this.pos.x, this.pos.z) && !waterAt(this.field, this.pos.x, this.pos.z)) this.lastFirm.copy(this.pos);
+      if (walkable(this.field, this.pos.x, this.pos.z, wade) && !waterAt(this.field, this.pos.x, this.pos.z)) this.lastFirm.copy(this.pos);
     }
     this.sync();
-    const riding = gear === 'skate' ? 'skate' : gear === 'pogo' ? 'pogo' : gear === 'balloons' && this.airborne ? 'float' : null;
+    const riding = gear === 'skate' ? 'skate' : gear === 'pogo' ? 'pogo' : gear === 'balloons' && this.airborne ? 'float' : gear === 'sled' ? 'sit' : null;
     const was = this.body.action;
-    this.body.action = riding ?? (this.airborne ? 'jump' : this.speed > 0.25 ? 'walk' : was === 'walk' || was === 'jump' || was === 'skate' || was === 'pogo' || was === 'float' ? 'idle' : was);
-    this.body.speed = gear === 'skate' ? Math.min(1, this.speed / SKATE.top) : Math.min(1, Math.max(0, (this.speed - WALK_SPEED * 0.6) / (RUN_SPEED - WALK_SPEED * 0.6)));
+    this.body.action = riding ?? (this.airborne ? 'jump' : this.speed > 0.25 ? 'walk' : was === 'walk' || was === 'jump' || was === 'skate' || was === 'pogo' || was === 'float' || (was === 'sit' && gear !== 'sled' && this.free && this.speed > 0.25) ? 'idle' : was);
+    this.body.speed = gear === 'skate' ? Math.min(1, this.speed / SKATE.top) : gear === 'stilts' ? 0 : Math.min(1, Math.max(0, (this.speed - WALK_SPEED * 0.6) / (RUN_SPEED - WALK_SPEED * 0.6)));
     if (gear === 'skate') {
       this.body.strain = this.pushing;
       this.body.power = this.airborne ? 1 : 0;

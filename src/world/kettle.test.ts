@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Everything that says where things are is chosen as it is loaded: this file is Kettle Isle's.
-vi.mock('./isle', () => ({ ISLE: 'kettle', HOME: false, ISLE_NAME: { cove: 'Driftwood Cove', kettle: 'Kettle Isle' }, ISLE_KEY: 'cove.isle', CROSSING_KEY: 'cove.crossing' }));
+vi.mock('./isle', async () => (await import('./isleMock')).mockIsle('kettle'));
 
 import { Heightfield, fishingZone, floatable, walkable, waterAt, type Zone } from './island';
 import { KETTLE, POOLS, REEF, kettleShore } from './kettle';

@@ -17,8 +17,8 @@ export interface PlacedThing {
   x: number;
   z: number;
   yaw: number;
-  /** Set down on Kettle Isle. Without this, on the cove. */
-  isle?: 'kettle';
+  /** The far island it was set down on. Without this, on the cove. */
+  isle?: 'kettle' | 'rime' | 'mire' | 'glow';
 }
 
 export interface Settings {
@@ -81,6 +81,17 @@ export interface Save {
   seaChart: boolean;
   /** Kettle Isle's cannery: the day its crate was last gone through (-1 never), and pages of its ledger read. */
   cannery: { day: number; pages: number };
+  /** The far islands charted (src/game/isles.ts). */
+  charts: string[];
+  /** Mirewood's crab pots: when each was set (ms), by name; and how many have been pulled up. */
+  pots: Record<string, number>;
+  potHauls: number;
+  /** Glowmere's beacons: when each was last lit (ms); when the water last woke; and how many times it has. */
+  beacons: number[];
+  wokenAt: number;
+  wakings: number;
+  /** The far islands' deeds done. */
+  deeds: string[];
   bait: string;
   baits: Record<string, number>;
   bag: Catch[];
@@ -176,6 +187,13 @@ export function newSave(): Save {
     tricks: 0,
     seaChart: false,
     cannery: { day: -1, pages: 0 },
+    charts: [],
+    pots: {},
+    potHauls: 0,
+    beacons: [0, 0, 0],
+    wokenAt: 0,
+    wakings: 0,
+    deeds: [],
     bait: 'bait-worm',
     baits: {},
     bag: [],
@@ -303,7 +321,7 @@ export function parseSave(text: string | null): Save {
   const placed = (Array.isArray(o.placed) ? o.placed : [])
     .map((p) => rec(p))
     .filter((p) => typeof p.id === 'string')
-    .map((p): PlacedThing => (p.isle === 'kettle' ? { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0), isle: 'kettle' } : { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
+    .map((p): PlacedThing => (p.isle === 'kettle' || p.isle === 'rime' || p.isle === 'mire' || p.isle === 'glow' ? { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0), isle: p.isle } : { id: p.id as string, x: num(p.x, 0), z: num(p.z, 0), yaw: num(p.yaw, 0) }));
   const quests = (Array.isArray(o.quests) ? o.quests : []).map(readQuest).filter((q): q is Quest => q !== null);
   const s = rec(o.settings);
   const st = rec(o.stats);
@@ -337,6 +355,13 @@ export function parseSave(text: string | null): Save {
     tricks: Math.floor(num(o.tricks, 0, 0)),
     seaChart: o.seaChart === true,
     cannery: { day: Math.floor(num(rec(o.cannery).day, -1, -1)), pages: Math.floor(num(rec(o.cannery).pages, 0, 0)) },
+    charts: [...new Set(strs(o.charts))],
+    pots: Object.fromEntries(Object.entries(rec(o.pots)).filter((e): e is [string, number] => typeof e[1] === 'number' && e[1] > 0)),
+    potHauls: Math.floor(num(o.potHauls, 0, 0)),
+    beacons: [0, 1, 2].map((i) => num((Array.isArray(o.beacons) ? o.beacons : [])[i], 0, 0)),
+    wokenAt: num(o.wokenAt, 0, 0),
+    wakings: Math.floor(num(o.wakings, 0, 0)),
+    deeds: strs(o.deeds),
     gull: { fed: Math.floor(num(rec(o.gull).fed, -1, -1)), streak: Math.floor(num(rec(o.gull).streak, 0, 0)), tame: rec(o.gull).tame === true, giftDay: Math.floor(num(rec(o.gull).giftDay, -1, -1)), gifts: Math.floor(num(rec(o.gull).gifts, 0, 0)) },
     bait: str(o.bait, 'bait-worm'),
     baits,

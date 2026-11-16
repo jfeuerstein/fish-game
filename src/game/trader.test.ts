@@ -117,7 +117,7 @@ describe('the camp chest and sign', () => {
 describe('the telescope', () => {
   it('picks out what is in the middle of the glass and nothing off to the side', () => {
     const eye = { x: 0, y: 20, z: 0 };
-    const where = { trawler: { x: 300, y: 0, z: 0 }, pier: { x: 0, y: 0, z: 100 }, pond: null, cave: null, camp: null };
+    const where = { trawler: { x: 300, y: 0, z: 0 }, pier: { x: 0, y: 0, z: 100 }, pond: null, cave: null, camp: null, ice: null };
     const to = (p: { x: number; y: number; z: number }) => ({ x: p.x - eye.x, y: p.y - eye.y, z: p.z - eye.z });
     expect(sighted(eye, to(where.trawler), where)).toBe('trawler');
     expect(sighted(eye, to(where.pier), where)).toBe('pier');

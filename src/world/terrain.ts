@@ -6,7 +6,7 @@ import { smoothstep } from '../core/rng';
 import type { Look } from '../look/look';
 import { pixelled } from '../look/material';
 import { Heightfield, pathDistance } from './island';
-import { HOME } from './isle';
+import { ISLE } from './isle';
 import { kettleRock } from './kettle';
 import { PATH_WIDTH, PLAZA, POND, STEP, CREEK, CREEK_WIDTH, nearestOnLine } from './layout';
 
@@ -30,7 +30,7 @@ export function splatAt(field: Heightfield, x: number, z: number): [number, numb
   const c = nearestOnLine(CREEK, x, z);
   sand = Math.max(sand, smoothstep(CREEK_WIDTH * 2.2, CREEK_WIDTH * 1.1, c.d) * 0.8);
   // (Kettle Isle's shelf of tide pools is bare rock, flat as it is.)
-  const rock = Math.max(smoothstep(0.55, 0.95, slope) * (h > 0.4 ? 1 : 0.4), HOME ? 0 : kettleRock(x, z));
+  const rock = Math.max(smoothstep(0.55, 0.95, slope) * (h > 0.4 ? 1 : 0.4), ISLE === 'kettle' ? kettleRock(x, z) : 0);
   const earth = smoothstep(PATH_WIDTH + 0.6, PATH_WIDTH - 0.5, pathDistance(x, z));
   const cobble = smoothstep(PLAZA.r - 0.5, PLAZA.r - 2.2, Math.hypot(x - PLAZA.x, z - PLAZA.z));
   // Each as much as it would be on its own: the shader lays them one over another, sand, then

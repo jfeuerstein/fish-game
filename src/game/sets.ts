@@ -1,6 +1,6 @@
 // Sets: every fish of one water, or one hour, or one sky. Each is worth a small prize the day it
 // is finished and a stamp in the journal for good. Pure.
-import { JOURNAL_SPECIES, type Species, farAway } from '../fishing/fish';
+import { JOURNAL_SPECIES, type Species, isleOf } from '../fishing/fish';
 import type { Save } from './save';
 
 export interface FishSet {
@@ -22,7 +22,10 @@ export const SETS: readonly FishSet[] = [
   { id: 'shore', name: 'Beachcomber\'s Catch', what: 'Everything from the sea by the shore.', has: (s) => real(s) && s.zones.includes('ocean'), coins: 500 },
   { id: 'deep', name: 'The Deep End', what: 'Everything from the deep water off the pier.', has: (s) => real(s) && s.zones.includes('deep'), coins: 800, pearl: true },
   { id: 'cave', name: 'In the Dark', what: 'Everything from the sea cave.', has: (s) => real(s) && s.zones.includes('cave'), coins: 300 },
-  { id: 'kettle', name: 'The Whole Kettle', what: 'Everything from Kettle Isle: the lake, the reef and the tide pools.', has: (s) => real(s) && farAway(s), coins: 1200, pearl: true },
+  { id: 'kettle', name: 'The Whole Kettle', what: 'Everything from Kettle Isle: the lake, the reef and the tide pools.', has: (s) => real(s) && isleOf(s) === 'kettle', coins: 1200, pearl: true },
+  { id: 'rime', name: 'Cold Storage', what: 'Everything from Rimefall: through the ice, and out of the cold sea.', has: (s) => real(s) && isleOf(s) === 'rime', coins: 1200, pearl: true },
+  { id: 'mire', name: 'Bog Standard', what: 'Everything from Mirewood: the channels and the crab pots.', has: (s) => real(s) && isleOf(s) === 'mire', coins: 1200, pearl: true },
+  { id: 'glow', name: 'Lights Out', what: 'Everything from Glowmere: the glowing shallows and the Mere.', has: (s) => real(s) && isleOf(s) === 'glow', coins: 1200, pearl: true },
   { id: 'night', name: 'Night Shift', what: 'Every fish that bites only after dark.', has: (s) => real(s) && s.watch === 'night', coins: 500 },
   { id: 'twilight', name: 'Golden Hours', what: 'Every fish of dawn and dusk.', has: (s) => real(s) && s.watch === 'twilight', coins: 400 },
   { id: 'weather', name: 'Bad Weather Friends', what: 'Every fish that wants rain, fog or a storm.', has: (s) => real(s) && (!!s.rain || !!s.weather), coins: 900, pearl: true },

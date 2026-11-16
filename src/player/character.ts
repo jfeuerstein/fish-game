@@ -149,6 +149,7 @@ export class Character {
   private rod: THREE.Object3D | null = null;
   /** How the rod is dressed: the colour it is painted (or null), and the charm hung from it. */
   private rodPaint: number | null = null;
+  private rodGlows = false;
   private charmId: string | null = null;
   private charm: THREE.Sprite | null = null;
   private rodId = '';
@@ -404,8 +405,9 @@ export class Character {
   }
 
   /** Paint the rod a colour (null for its own) and hang a charm from it (null for none). */
-  setRodLook(paint: number | null, charm: string | null): void {
+  setRodLook(paint: number | null, charm: string | null, glows = false): void {
     this.rodPaint = paint;
+    this.rodGlows = glows;
     this.paintRod();
     if (charm === this.charmId) return;
     this.charmId = charm;
@@ -433,6 +435,8 @@ export class Character {
         mesh.userData.painted = true;
       }
       (mesh.material as THREE.MeshToonMaterial).color.set(this.rodPaint ?? 0xffffff);
+      // A paint that glows gives off its own colour, so the rod shows in the dark.
+      (mesh.material as THREE.MeshToonMaterial).emissive.set(this.rodGlows && this.rodPaint !== null ? this.rodPaint : 0x000000).multiplyScalar(0.55);
     });
   }
 

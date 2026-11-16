@@ -17,6 +17,8 @@ export interface Conditions {
   season?: Season;
   /** The weather: fog and storms have fish of their own. */
   weather?: Weather;
+  /** Whether Glowmere's water is awake (when not given, what wants it awake bites anyway: for the tests). */
+  woken?: boolean;
 }
 
 /** How often each tier bites, before bait and rod have their say. */
@@ -32,6 +34,7 @@ export function candidates(c: Conditions): { species: Species; weight: number }[
     if (s.rain && !c.raining) continue;
     if (s.weather && s.weather !== c.weather) continue;
     if (s.seasons && c.season && !s.seasons.includes(c.season)) continue;
+    if (s.woken && c.woken === false) continue;
     let w = TIER_WEIGHT[s.tier] * (c.bait.boost[s.tier] ?? 1);
     if (s.tier === 'rare' || s.tier === 'epic' || s.tier === 'legendary') w *= 1 + c.rod.luck;
     if (night && c.bait.night && s.tier !== 'junk' && s.tier !== 'common') w *= c.bait.night;

@@ -2,9 +2,11 @@
 // water, buildings and anywhere people gather. Pure.
 import { fbm, rng } from '../core/rng';
 import { Heightfield, pathDistance, waterAt } from './island';
-import { HOME } from './isle';
+import { ISLE, pick } from './isle';
 import { KETTLE } from './kettle';
-import { BRIDGE, CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, type Placed, bridgeLocal, nearestOnLine } from './layout';
+import { toStillWater } from './mire';
+import { RIME } from './rime';
+import { BRIDGE, CAMP, CHALK, CREEK, CREEK_WIDTH, PIER, PLACED, PLAZA, POND, WALKS, type Placed, bridgeLocal, nearestOnLine } from './layout';
 
 /** Places kept clear of anything growing, as circles. */
 function clearings(): { x: number; z: number; r: number }[] {
@@ -15,7 +17,7 @@ function clearings(): { x: number; z: number; r: number }[] {
     { x: 0, z: 0, r: 9 },
   ];
   for (const p of PLACED) {
-    const big = p.id === 'shop' || p.id === 'lighthouse' || p.id === 'fishing-hut' || p.id === 'arcade' ? 9 : p.id === 'cliff' ? 6 : 3;
+    const big = p.id === 'shop' || p.id === 'lighthouse' || p.id === 'fishing-hut' || p.id === 'arcade' || p.id === 'cannery' || p.id === 'stilt-shack' ? 9 : p.id === 'cliff' || p.id === 'ice-hut' ? 6 : p.id === 'beacon' ? 5 : 3;
     if (!p.id.startsWith('tree')) out.push({ x: p.x, z: p.z, r: big });
   }
   return out;
@@ -86,14 +88,56 @@ const KETTLE_RULES: GrowRule[] = [
   { id: 'log', count: 14, scale: [0.9, 1.2], space: 3, fits: (s) => dry(s) && outOfCrater(s) && s.wood > 0.1 && s.path > 2.5 && s.slope < 0.4 },
   { id: 'mushrooms', count: 30, scale: [0.8, 1.3], space: 1, fits: (s) => dry(s) && s.wood > 0.2 && s.path > 1.8 },
 ];
-export const RULES: GrowRule[] = HOME ? COVE_RULES : KETTLE_RULES;
+/** Rimefall is nearly bare: a few pines on the low ground and the hill's flanks, rocks, and nothing on the ice. */
+const offIce = (s: Spot): boolean => Math.hypot(s.x - RIME.lake.x, s.z - RIME.lake.z) > RIME.lake.r + 2;
+const RIME_RULES: GrowRule[] = [
+  { id: 'tree-pine', count: 70, scale: [0.7, 1.25], space: 4, fits: (s) => dry(s) && offIce(s) && s.wood > 0.05 && s.slope < 0.6 && s.path > 3.5 && s.shore > 3 },
+  { id: 'rock-a', count: 55, scale: [0.6, 1.5], space: 3, fits: (s) => s.h > 0.6 && offIce(s) && s.path > 2.5 },
+  { id: 'rock-b', count: 70, scale: [0.6, 1.3], space: 2, fits: (s) => s.h > -0.4 && offIce(s) && s.path > 2 },
+  { id: 'log', count: 6, scale: [0.9, 1.2], space: 3, fits: (s) => dry(s) && offIce(s) && s.wood > 0.1 && s.path > 2.5 && s.slope < 0.4 },
+];
+/** Mirewood is thick with it: mangroves standing along every bank and in the shallows' edge, round trees behind, and everything low and wet between. */
+const bank = (s: Spot): number => toStillWater(s.x, s.z);
+const MIRE_RULES: GrowRule[] = [
+  { id: 'tree-mangrove', count: 150, scale: [0.7, 1.25], space: 4.2, tries: 120, fits: (s) => s.h > 0.2 && bank(s) > 1.2 && bank(s) < 9 && s.path > 3 },
+  { id: 'tree-round', count: 90, scale: [0.75, 1.2], space: 4, fits: (s) => dry(s) && bank(s) > 7 && s.slope < 0.5 && s.path > 3.5 },
+  { id: 'bush', count: 160, scale: [0.7, 1.3], space: 1.6, fits: (s) => s.h > 0.7 && bank(s) > 1 && s.path > 2 },
+  { id: 'log', count: 22, scale: [0.9, 1.3], space: 3, fits: (s) => s.h > 0.5 && bank(s) > 1.5 && s.path > 2.5 },
+  { id: 'mushrooms', count: 50, scale: [0.8, 1.4], space: 1, fits: (s) => dry(s) && s.path > 1.8 },
+  { id: 'rock-b', count: 20, scale: [0.6, 1.2], space: 2, fits: (s) => s.h > 0.4 && s.path > 2 },
+];
+/** Glowmere grows mushrooms the size of trees, and little else. */
+const GLOW_RULES: GrowRule[] = [
+  { id: 'tree-shroom', count: 150, scale: [0.55, 1.35], space: 4.5, fits: (s) => dry(s) && s.slope < 0.7 && s.path > 3.5 && s.shore > 3 },
+  { id: 'mushrooms', count: 120, scale: [0.9, 2.2], space: 1.2, fits: (s) => dry(s) && s.path > 1.8 },
+  { id: 'bush', count: 50, scale: [0.7, 1.2], space: 1.6, fits: (s) => dry(s) && s.path > 2 && s.slope < 0.7 },
+  { id: 'rock-a', count: 45, scale: [0.6, 1.5], space: 3, fits: (s) => s.h > 0.6 && s.path > 2.5 && (s.slope > 0.3 || s.h < 1.6) },
+  { id: 'rock-b', count: 55, scale: [0.6, 1.3], space: 2, fits: (s) => s.h > -0.4 && s.path > 2 && (s.slope > 0.3 || s.h < 1.4) },
+];
+export const RULES: GrowRule[] = pick({ cove: COVE_RULES, kettle: KETTLE_RULES, rime: RIME_RULES, mire: MIRE_RULES, glow: GLOW_RULES });
 
 /** Little things that do not get in anyone's way. */
-export const FLOWER_RULES: GrowRule[] = [
+const COVE_FLOWERS: GrowRule[] = [
   { id: 'flowers', count: 220, scale: [0.8, 1.4], space: 0.8, fits: (s) => dry(s) && s.path > 1.6 && s.slope < 0.5 && s.wood < 0.3 },
   { id: 'grass-tuft', count: 380, scale: [0.8, 1.5], space: 0.6, fits: (s) => s.h > 0.9 && s.path > 1.5 && s.slope < 0.7 },
   { id: 'cattails', count: 46, scale: [0.8, 1.3], space: 1, tries: 900, fits: (s) => s.shore < 2 && s.h > 0.5 && s.path > 1.5 },
 ];
+
+/** On the snow there is only grass poking through; in the swamp, reeds along every bank; under the mushrooms, flowers that would rather it were day. */
+export const FLOWER_RULES: GrowRule[] = pick({
+  cove: COVE_FLOWERS,
+  kettle: COVE_FLOWERS,
+  rime: [{ id: 'grass-tuft', count: 120, scale: [0.7, 1.2], space: 0.8, fits: (s: Spot) => s.h > 0.9 && offIce(s) && s.path > 1.5 && s.slope < 0.5 }],
+  mire: [
+    { id: 'cattails', count: 190, scale: [0.8, 1.5], space: 1, tries: 300, fits: (s: Spot) => s.h > 0.15 && bank(s) > 0.3 && bank(s) < 3.2 && s.path > 1.5 },
+    { id: 'grass-tuft', count: 420, scale: [0.9, 1.7], space: 0.6, fits: (s: Spot) => s.h > 0.7 && s.path > 1.5 },
+    { id: 'flowers', count: 90, scale: [0.8, 1.3], space: 0.8, fits: (s: Spot) => dry(s) && s.path > 1.6 },
+  ],
+  glow: [
+    { id: 'grass-tuft', count: 260, scale: [0.8, 1.5], space: 0.6, fits: (s: Spot) => s.h > 0.9 && s.path > 1.5 && s.slope < 0.7 },
+    { id: 'flowers', count: 140, scale: [0.8, 1.4], space: 0.8, fits: (s: Spot) => dry(s) && s.path > 1.6 && s.slope < 0.5 },
+  ],
+});
 
 /** Scatter every rule over the island. The same seed always gives the same island. */
 export function scatter(field: Heightfield, rules: GrowRule[] = RULES, seed = 1): Placed[] {
@@ -101,7 +145,7 @@ export function scatter(field: Heightfield, rules: GrowRule[] = RULES, seed = 1)
   const clear = clearings();
   const out: Placed[] = [];
   const taken: { x: number; z: number; r: number }[] = [];
-  const pierClear = (x: number, z: number): boolean => !(x > PIER.x0 - 4 && x < PIER.x1 + 4 && z > PIER.head.z0 - 4 && z < PIER.head.z1 + 4);
+  const pierClear = (x: number, z: number): boolean => !(x > PIER.x0 - 4 && x < PIER.x1 + 4 && z > PIER.head.z0 - 4 && z < PIER.head.z1 + 4) && !WALKS.some((w) => x > w.x0 - 2.5 && x < w.x1 + 2.5 && z > w.z0 - 2.5 && z < w.z1 + 2.5);
   for (const rule of rules) {
     let placed = 0;
     for (let tries = 0; tries < rule.count * (rule.tries ?? 40) && placed < rule.count; tries++) {
@@ -126,6 +170,8 @@ export function scatter(field: Heightfield, rules: GrowRule[] = RULES, seed = 1)
 export function lilypads(seed = 3): Placed[] {
   const r = rng(seed);
   const out: Placed[] = [];
+  // (Rimefall has no pond: its lake is ice.)
+  if (ISLE === 'rime') return out;
   for (let i = 0; i < 16; i++) {
     const a = r() * Math.PI * 2;
     const d = POND.r * (0.45 + r() * 0.45);
@@ -136,7 +182,7 @@ export function lilypads(seed = 3): Placed[] {
 
 /** Coral on Kettle Isle's reef flat: clumps standing on the bottom where the water is shallow, some breaking the surface. */
 export function corals(field: Heightfield, seed = 5): Placed[] {
-  if (HOME) return [];
+  if (ISLE !== 'kettle') return [];
   const r = rng(seed);
   const out: Placed[] = [];
   for (let tries = 0; out.length < 46 && tries < 6000; tries++) {

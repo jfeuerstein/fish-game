@@ -123,6 +123,18 @@ export const MODELS = {
   'f-chime': { kind: 'prop', what: 'a wind chime of sea shells and bits of driftwood hanging from the arm of a short wooden post', h: 1.6, faces: 3000, item: true },
   'f-shipbottle': { kind: 'prop', what: 'a model sailing ship inside a big glass bottle lying on a little wooden stand', h: 0.5, faces: 3000, item: true },
   'stall': { kind: 'prop', what: "a travelling trader's stall: a striped blanket spread on the ground with a few crates, jars and baskets on it, and a lantern hanging from a crooked pole at one corner", h: 1.9, faces: 5000 },
+  // Rimefall
+  'ice-hut': { kind: 'prop', what: 'a small ice-fishing hut on wooden sled runners: red painted plank walls, snow piled on its roof, a black stovepipe chimney, a door with a round window', h: 3.4, faces: 6000 },
+  'seal': { kind: 'prop', what: 'a chubby grey spotted seal lying on its belly with its head up and its flippers out', h: 0.7, faces: 2000 },
+  'toy-sled': { kind: 'prop', what: 'a wooden sled with red metal runners and a loop of rope at the front', h: 0.35, faces: 2000, item: true },
+  // Mirewood
+  'stilt-shack': { kind: 'prop', what: 'a ramshackle swamp shack standing on tall wooden stilts: mossy plank walls, a crooked rusty tin roof, a small porch with a hanging lantern and a short ladder down', h: 6, faces: 8000 },
+  'tree-mangrove': { kind: 'prop', what: 'a mangrove tree: a tangle of arching stilt roots holding up a short trunk and a round canopy of dark green leaves with hanging moss', h: 7, faces: 4000 },
+  'crab-pot': { kind: 'prop', what: 'a round wicker crab pot trap with a coil of rope and a red and white cork float on top', h: 0.8, faces: 2000 },
+  // Glowmere
+  'tree-shroom': { kind: 'prop', what: 'a giant mushroom as tall as a tree: a thick pale stalk and a wide domed cap, teal blue with pale round spots', h: 8, faces: 3000 },
+  'beacon': { kind: 'prop', what: 'a waist-high pillar of stacked grey stones holding an iron fire basket full of dry logs, not lit', h: 1.9, faces: 2500 },
+  'f-glowshroom': { kind: 'prop', what: 'three small mushrooms growing in a clay pot, teal caps with pale spots', h: 0.6, faces: 2000, item: true },
   // Kettle Isle
   'cannery': { kind: 'prop', what: 'a ruined old fish cannery: a long weathered grey timber shed on stone footings, its rusty corrugated iron roof half fallen in, one tall brick chimney at one end, a wide dark open doorway in the middle of its long front wall, and a faded painted fish on the boards beside the door', h: 6.5, faces: 9000 },
   'room-cannery': { kind: 'prop', what: 'a dolls house room with no front wall and no ceiling, seen from its open front: the inside of an abandoned fish cannery, a floor of worn grey planks and three walls of grey boards with broken windows, a long workbench with rusty tins along the back wall, a big rusty iron boiler in the back right corner, an old wooden desk with an open ledger on it against the left wall, a stack of wooden crates against the right wall, the middle of the floor bare', h: 3.6, faces: 9000 },
@@ -268,6 +280,38 @@ export const FISH_ART = {
   'hermit-crab': 'a hermit crab peeping out of a spiral whelk shell, orange legs and eye stalks',
   'sea-urchin': 'a round purple sea urchin covered in spines',
   'sea-slug': 'a small sea slug, bright blue with yellow stripes and two feathery orange horns',
+  // Rimefall: through the ice
+  'ice-smelt': 'a slim silver smelt with a pale blue back',
+  'glass-cod': 'a cod so pale it is almost see-through, its bones showing faintly through its side',
+  'snow-crab': 'a long-legged white and orange snow crab, seen from above',
+  'lampfish': 'a small dark deep-water fish with big eyes and a row of glowing blue dots along its side',
+  'old-frostbite': 'a huge pike covered in frost crystals, pale blue-white, with a beard of small icicles under its jaw',
+  // Rimefall: the cold sea
+  'capelin': 'a small olive-backed silver capelin',
+  'halibut': 'a big flat halibut, mottled brown-green, both eyes on top, seen from above',
+  'wolffish': 'a grumpy blue-grey wolffish with a big head and crooked teeth showing',
+  'pocket-narwhal': 'a chubby little narwhal, grey-white with dark spots and a spiral tusk',
+  // Mirewood: the channels
+  'mudskipper': 'a mudskipper with bulging eyes on top of its head and a tall spotted fin on its back',
+  'bog-gar': 'a long olive spotted gar with a narrow toothy snout',
+  'snapper-turtle': 'a snapping turtle with a spiky mossy shell and a hooked beak, seen from above',
+  'bog-lantern': 'a round dark green swamp fish with a glowing yellow lure like a firefly dangling over its head',
+  'the-log': 'an enormous long gar that looks exactly like a mossy floating log, bark-brown with moss on its back and two small eyes',
+  // Mirewood: the crab pots
+  'mud-crab': 'a broad dark brown mud crab with big claws, seen from above',
+  'blue-crab': 'a blue crab with red-tipped claws, seen from above',
+  'whelk': 'a spiral whelk sea snail, cream and brown, with its foot out',
+  'pot-octopus': 'a small orange octopus curled up inside a clay pot, two eyes peeping over the rim',
+  // Glowmere: the glowing shallows
+  'glow-fry': 'a tiny see-through fish with a bright teal glowing belly',
+  'comb-jelly': 'a clear comb jelly with rows of rainbow lights down its sides',
+  'moon-wrasse': 'a wrasse coloured like the night sky, deep blue with one pale crescent moon shape on its side',
+  'star-ray': 'a small ray, midnight blue and dotted with glowing white stars, seen from above',
+  'the-comet': 'a long silver fish with a glowing white head and a long streaming tail of pale light, like a comet',
+  // Glowmere: the mere
+  'lamp-newt': 'a pale newt with glowing yellow spots, seen from above',
+  'ghost-koi': 'a koi, white with glowing pale green patches',
+  'spore-puffer': 'a round pufferfish that looks like a puffball mushroom, cream with brown warts',
 };
 
 /** Pictures only (no model): icons for things in the shop and the game's own art. */
@@ -317,6 +361,14 @@ export const ICONS = {
   'paint-brass': 'a small open tin of golden yellow paint with a little brush resting across it',
   'paint-rose': 'a small open tin of pink paint with a little brush resting across it',
   'paint-ink': 'a small open tin of black paint with a little brush resting across it',
+  // Won on the far islands: paints, charms and a pair of stilts
+  'paint-frost': 'a small open tin of pale icy blue paint with a little brush resting across it, frost on the tin',
+  'paint-mire': 'a small open tin of dark swamp green paint with a little brush resting across it',
+  'paint-glow': 'a small open tin of glowing teal paint with a little brush resting across it, the paint shining',
+  'charm-icicle': 'a small clear icicle on a loop of string',
+  'charm-claw': 'a red crab claw on a loop of string',
+  'charm-ember': 'a small glowing orange ember in a tiny iron cage on a loop of string',
+  'toy-stilts': 'a pair of tall wooden stilts with foot blocks, leaning together',
   // Charms for the rod
   'charm-bell': 'a tiny brass bell on a loop of red string',
   'charm-feather': 'a blue and white feather tied to a loop of string',

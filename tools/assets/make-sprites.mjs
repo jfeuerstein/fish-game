@@ -63,6 +63,8 @@ const ITEM_SHEETS = [
   ['f-campsign', 'icon-map', 'icon-trader', 'paint-coral', 'paint-sea', 'paint-moss', 'paint-brass', 'paint-rose', 'paint-ink'],
   // The toys.
   ['toy-skateboard', 'toy-pogo', 'toy-balloons', 'toy-bell', 'toy-bottle'],
+  // What the far islands give.
+  ['paint-frost', 'paint-mire', 'paint-glow', 'charm-icicle', 'charm-claw', 'charm-ember', 'toy-sled', 'toy-stilts', 'f-glowshroom'],
 ];
 /** What an item is, as its model or picture was asked for, without the words about how a model wants it posed. */
 const itemSays = (id) => {
@@ -80,8 +82,8 @@ const sixteens = (ids) => {
 
 /** The two sets of sprites: their sheets, what each thing looks like, what its file is called, and how they are seen. */
 const SETS = {
-  // (The first 57 fish fill four sheets, the last not to the end; Kettle Isle's eleven have a sheet of their own, so that none of those is painted again.)
-  fish: { sheets: [...sixteens(Object.keys(FISH_ART).slice(0, 57)), Object.keys(FISH_ART).slice(57)], says: (id) => FISH_ART[id], name: (id) => `fish-${id}`, sheet: 'sheet', view: 'Every animal has one small round black eye. Seen from the side facing left unless said.' },
+  // (The first 57 fish fill four sheets, the last not to the end; each far island's fish have a sheet of their own, so that none of those is painted again: Kettle Isle's eleven, then Rimefall's, Mirewood's and Glowmere's.)
+  fish: { sheets: [...sixteens(Object.keys(FISH_ART).slice(0, 57)), Object.keys(FISH_ART).slice(57, 68), Object.keys(FISH_ART).slice(68, 77), Object.keys(FISH_ART).slice(77, 86), Object.keys(FISH_ART).slice(86)], says: (id) => FISH_ART[id], name: (id) => `fish-${id}`, sheet: 'sheet', view: 'Every animal has one small round black eye. Seen from the side facing left unless said.' },
   items: { sheets: ITEM_SHEETS, says: itemSays, name: (id) => id, sheet: 'items', view: 'Each thing whole and on its own, with nobody wearing or holding it, seen from the front and a little above, upright; a fishing rod lies on a slant. Animals have small round black eyes.' },
 };
 const which = args.find((a) => a in SETS) ?? 'fish';

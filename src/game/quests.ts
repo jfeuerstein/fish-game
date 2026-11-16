@@ -102,7 +102,7 @@ export function advance(q: Quest, e: QuestEvent): Quest {
 
 export const done = (q: Quest): boolean => q.progress >= q.goal;
 
-const ZONE_WORDS: Record<Zone, string> = { ocean: 'in the sea', deep: 'out in deep water', pond: 'in the pond', creek: 'in the creek', cave: 'in the sea cave', lake: 'in the Kettle', reef: 'on the reef', pools: 'in the tide pools', spring: 'in the hot spring' };
+const ZONE_WORDS: Record<Zone, string> = { ocean: 'in the sea', deep: 'out in deep water', pond: 'in the pond', creek: 'in the creek', cave: 'in the sea cave', lake: 'in the Kettle', reef: 'on the reef', pools: 'in the tide pools', spring: 'in the hot spring', ice: 'through the ice', floe: 'in the cold sea', swamp: 'in the channels', pots: 'in a crab pot', glow: 'in the glowing shallows', mere: 'in the Mere' };
 
 /** What the note on the board says. */
 export function describe(q: Quest): string {

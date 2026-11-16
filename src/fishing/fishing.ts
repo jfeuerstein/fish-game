@@ -10,7 +10,7 @@ import type { Bait, Rod } from '../game/economy';
 import type { Character } from '../player/character';
 import type { Effects } from '../fx/particles';
 import { type Zone, fishingZone, waterAt } from '../world/island';
-import { floorAt } from '../world/layout';
+import { floorAt, POOLS } from '../world/layout';
 import type { Heightfield } from '../world/island';
 import { BY_ID, type Catch, VARIANT_STARS } from './fish';
 import { type Conditions, biteDelay, nibbles, rollCatch } from './roll';
@@ -172,6 +172,21 @@ export class Fishing {
     const dir = new THREE.Vector3(Math.sin(this.aimYaw), 0, Math.cos(this.aimYaw));
     const from = this.body.rodTip.clone();
     const to = this.body.group.position.clone().addScaledVector(dir, dist);
+    // A small water takes a near miss: a cast that would land on the ice past a hole, or on the rock by a pool, drops into
+    // the first one its line passes over (or lands beside).
+    if (!fishingZone(this.field, to.x, to.z)) {
+      const pools = POOLS.filter((p) => !p.hot);
+      const from0 = this.body.group.position;
+      let near: (typeof pools)[number] | undefined;
+      for (let d = 1.5; d <= dist + 0.01 && !near; d += 0.75) near = pools.find((p) => Math.hypot(p.x - (from0.x + dir.x * d), p.z - (from0.z + dir.z * d)) < p.r + 1.4);
+      near ??= pools.find((p) => Math.hypot(p.x - to.x, p.z - to.z) < p.r + 3.2);
+      if (near) {
+        // A little off the middle, toward where it was thrown from.
+        const back = Math.hypot(near.x - from0.x, near.z - from0.z) || 1;
+        to.x = near.x + ((from0.x - near.x) / back) * near.r * 0.3;
+        to.z = near.z + ((from0.z - near.z) / back) * near.r * 0.3;
+      }
+    }
     const w = waterAt(this.field, to.x, to.z);
     // Water under the pier's boards is not water to cast into.
     this.zone = fishingZone(this.field, to.x, to.z);

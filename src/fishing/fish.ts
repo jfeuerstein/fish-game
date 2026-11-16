@@ -1,6 +1,7 @@
 // Everything that can be caught, as data. Pure.
 import { SEASON_LABEL, type Season } from '../look/season';
 import type { Zone } from '../world/island';
+import type { IsleId } from '../world/isle';
 
 export type Tier = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'junk';
 export type Watch = 'any' | 'day' | 'night' | 'twilight';
@@ -22,6 +23,8 @@ export interface Species {
   weather?: 'fog' | 'storm';
   /** Only in these seasons (all year when not given). */
   seasons?: Season[];
+  /** Only while Glowmere's water is awake (its three beacons lit: src/game/isles.ts). */
+  woken?: boolean;
   /** How hard it fights, 0 to 1. */
   fight: number;
   /** A line for the journal. */
@@ -103,10 +106,42 @@ export const SPECIES: readonly Species[] = [
   { id: 'hermit-crab', name: 'Hermit Crab', zones: ['pools'], tier: 'common', size: [4, 10], value: 12, watch: 'any', fight: 0.1, note: 'Would like its shell back when you have finished looking.' },
   { id: 'sea-urchin', name: 'Sea Urchin', zones: ['pools'], tier: 'uncommon', size: [6, 12], value: 30, watch: 'any', fight: 0.1, note: 'Reeling it in is the easy part.' },
   { id: 'sea-slug', name: 'Sea Slug', zones: ['pools'], tier: 'rare', size: [3, 8], value: 110, watch: 'day', fight: 0.1, note: 'Dressed for a party nobody else was told about.' },
-  { id: 'boot', name: 'Old Boot', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools'], tier: 'junk', size: [25, 32], value: 1, watch: 'any', fight: 0.05, note: 'One day you will find the other one.' },
-  { id: 'can', name: 'Tin Can', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools'], tier: 'junk', size: [10, 14], value: 1, watch: 'any', fight: 0.05, note: 'Recycling it anyway.' },
-  { id: 'seaweed', name: 'Seaweed', zones: ['ocean', 'deep', 'reef', 'pools'], tier: 'junk', size: [20, 60], value: 2, watch: 'any', fight: 0.05, note: 'Smells like the seaside.' },
-  { id: 'bottle', name: 'Message in a Bottle', zones: ['ocean', 'deep'], tier: 'junk', size: [25, 30], value: 25, watch: 'any', fight: 0.05, note: '"Hope you are having a nice day." Signed, a stranger.' },
+  // Rimefall: through the holes in the ice.
+  { id: 'ice-smelt', name: 'Ice Smelt', zones: ['ice'], tier: 'common', size: [10, 22], value: 15, watch: 'any', fight: 0.1, note: 'Comes up stiff as a pencil and thaws out cross.' },
+  { id: 'glass-cod', name: 'Glass Cod', zones: ['ice'], tier: 'uncommon', size: [30, 70], value: 46, watch: 'day', fight: 0.4, note: 'You can read a newspaper through it. Somebody has tried.' },
+  { id: 'snow-crab', name: 'Snow Crab', zones: ['ice'], tier: 'uncommon', size: [15, 40], value: 52, watch: 'night', fight: 0.3, note: 'Comes up the hole sideways, which takes some doing.' },
+  { id: 'lampfish', name: 'Lampfish', zones: ['ice'], tier: 'rare', size: [8, 18], value: 130, watch: 'night', fight: 0.25, note: 'Lights its own way under the ice. Yours too, for a moment.' },
+  { id: 'old-frostbite', name: 'Old Frostbite', zones: ['ice'], tier: 'legendary', size: [120, 210], value: 850, watch: 'twilight', fight: 1.0, note: 'The hole had to be made bigger. Twice.' },
+  // Rimefall: the cold sea.
+  { id: 'capelin', name: 'Capelin', zones: ['floe'], tier: 'common', size: [12, 22], value: 13, watch: 'any', fight: 0.1, note: 'The seals think very highly of it.' },
+  { id: 'halibut', name: 'Halibut', zones: ['floe'], tier: 'uncommon', size: [60, 160], value: 60, watch: 'day', fight: 0.65, note: 'A flounder that kept going.' },
+  { id: 'wolffish', name: 'Wolffish', zones: ['floe'], tier: 'rare', size: [60, 130], value: 125, watch: 'night', fight: 0.7, note: 'Looks like it has heard the joke before.' },
+  { id: 'pocket-narwhal', name: 'Pocket Narwhal', zones: ['floe'], tier: 'epic', size: [60, 110], value: 260, watch: 'twilight', fight: 0.6, note: 'A whole narwhal, only smaller. Mind the pointy end.' },
+  // Mirewood: the still channels.
+  { id: 'mudskipper', name: 'Mudskipper', zones: ['swamp'], tier: 'common', size: [8, 20], value: 14, watch: 'any', fight: 0.15, note: 'Not sure it is a fish. Neither is it.' },
+  { id: 'bog-gar', name: 'Bog Gar', zones: ['swamp'], tier: 'uncommon', size: [50, 120], value: 54, watch: 'day', fight: 0.6, note: 'Mostly snout, and the snout is mostly teeth.' },
+  { id: 'snapper-turtle', name: 'Snapping Turtle', zones: ['swamp'], tier: 'rare', size: [30, 70], value: 135, watch: 'night', fight: 0.75, note: 'Let it think letting go was its own idea.' },
+  { id: 'bog-lantern', name: 'Bog Lantern', zones: ['swamp'], tier: 'epic', size: [15, 35], value: 240, watch: 'twilight', fight: 0.45, note: 'The light people follow into the swamp and are not seen again. It is quite small, really.' },
+  { id: 'the-log', name: 'The Log', zones: ['swamp'], tier: 'legendary', size: [200, 330], value: 880, watch: 'day', fight: 1.0, note: 'Everyone has stood on it at least once to cast.' },
+  // Mirewood: what the crab pots bring up.
+  { id: 'mud-crab', name: 'Mud Crab', zones: ['pots'], tier: 'common', size: [10, 22], value: 20, watch: 'any', fight: 0.1, note: 'Went in for the bait and stayed for the company.' },
+  { id: 'whelk', name: 'Whelk', zones: ['pots'], tier: 'common', size: [5, 12], value: 16, watch: 'any', fight: 0.05, note: 'In no hurry. Got into the pot anyway.' },
+  { id: 'blue-crab', name: 'Blue Crab', zones: ['pots'], tier: 'uncommon', size: [12, 25], value: 44, watch: 'any', fight: 0.1, note: 'Bluer than it has any call to be, in that water.' },
+  { id: 'pot-octopus', name: 'Pot Octopus', zones: ['pots'], tier: 'rare', size: [15, 40], value: 140, watch: 'any', fight: 0.1, note: 'Had eaten everything else in the pot and was reading the label.' },
+  // Glowmere: the glowing shallows. The last two bite only while the water is awake.
+  { id: 'glow-fry', name: 'Glow Fry', zones: ['glow'], tier: 'common', size: [3, 8], value: 14, watch: 'any', fight: 0.05, note: 'One is a spark. A shoal is a sky.' },
+  { id: 'comb-jelly', name: 'Comb Jelly', zones: ['glow'], tier: 'uncommon', size: [5, 15], value: 42, watch: 'any', fight: 0.1, note: 'Runs its lights up and down when it is thinking.' },
+  { id: 'moon-wrasse', name: 'Moon Wrasse', zones: ['glow'], tier: 'rare', size: [20, 45], value: 120, watch: 'night', fight: 0.45, note: 'The crescent on its side waxes as it grows. Nobody has landed a full one.' },
+  { id: 'star-ray', name: 'Star Ray', zones: ['glow'], tier: 'epic', size: [50, 110], value: 280, watch: 'any', woken: true, fight: 0.7, note: 'Wears the sky it was born under.' },
+  { id: 'the-comet', name: 'The Comet', zones: ['glow'], tier: 'legendary', size: [150, 260], value: 950, watch: 'any', woken: true, fight: 1.05, note: 'Comes round when the fires are lit, and not for long.' },
+  // Glowmere: the Mere.
+  { id: 'lamp-newt', name: 'Lamp Newt', zones: ['mere'], tier: 'common', size: [6, 14], value: 15, watch: 'any', fight: 0.1, note: 'Its spots go out one by one as it falls asleep.' },
+  { id: 'ghost-koi', name: 'Ghost Koi', zones: ['mere'], tier: 'uncommon', size: [30, 70], value: 50, watch: 'any', fight: 0.4, note: 'Seen from the bank it is only the moon in the water, moving.' },
+  { id: 'spore-puffer', name: 'Spore Puffer', zones: ['mere'], tier: 'rare', size: [10, 25], value: 115, watch: 'night', fight: 0.3, note: 'Puffs when startled. Do not breathe in.' },
+  { id: 'boot', name: 'Old Boot', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'glow', 'mere'], tier: 'junk', size: [25, 32], value: 1, watch: 'any', fight: 0.05, note: 'One day you will find the other one.' },
+  { id: 'can', name: 'Tin Can', zones: ['ocean', 'deep', 'pond', 'creek', 'lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'pots', 'glow', 'mere'], tier: 'junk', size: [10, 14], value: 1, watch: 'any', fight: 0.05, note: 'Recycling it anyway.' },
+  { id: 'seaweed', name: 'Seaweed', zones: ['ocean', 'deep', 'reef', 'pools', 'floe', 'swamp', 'pots', 'glow'], tier: 'junk', size: [20, 60], value: 2, watch: 'any', fight: 0.05, note: 'Smells like the seaside.' },
+  { id: 'bottle', name: 'Message in a Bottle', zones: ['ocean', 'deep', 'floe', 'glow'], tier: 'junk', size: [25, 30], value: 25, watch: 'any', fight: 0.05, note: '"Hope you are having a nice day." Signed, a stranger.' },
   { id: 'treasure', name: 'Treasure Chest', zones: [], tier: 'junk', size: [40, 60], value: 0, watch: 'any', fight: 0.2, note: 'Something heavy on the line, and it rattles. Opened on the spot.' },
 ];
 
@@ -133,7 +168,7 @@ export const TIER_LABEL: Record<Tier, string> = {
   junk: 'Junk',
 };
 
-export const ZONE_LABEL: Record<Zone, string> = { ocean: 'Ocean', deep: 'Deep water', pond: 'Pond', creek: 'Creek', cave: 'Sea cave', lake: 'The Kettle', reef: 'Reef flat', pools: 'Tide pools', spring: 'Hot spring' };
+export const ZONE_LABEL: Record<Zone, string> = { ocean: 'Ocean', deep: 'Deep water', pond: 'Pond', creek: 'Creek', cave: 'Sea cave', lake: 'The Kettle', reef: 'Reef flat', pools: 'Tide pools', spring: 'Hot spring', ice: 'Through the ice', floe: 'The cold sea', swamp: 'The channels', pots: 'Crab pots', glow: 'Glowing shallows', mere: 'The Mere' };
 /** When a fish is about, said in a few words: its hours, and its weather or seasons if it keeps to any. */
 export function sayWhen(s: Species): string {
   const parts = [WATCH_LABEL[s.watch]];
@@ -144,9 +179,13 @@ export function sayWhen(s: Species): string {
   return parts.join(' · ');
 }
 
-/** Kettle Isle's waters: a fish that lives only in them is not at the cove at all. */
-export const FAR_ZONES: readonly Zone[] = ['lake', 'reef', 'pools'];
+/** Which island each of the far islands' waters is on. The cove's own are not here. */
+export const ZONE_ISLE: Partial<Record<Zone, IsleId>> = { lake: 'kettle', reef: 'kettle', pools: 'kettle', ice: 'rime', floe: 'rime', swamp: 'mire', pots: 'mire', glow: 'glow', mere: 'glow' };
+export const FAR_ZONES: readonly Zone[] = Object.keys(ZONE_ISLE) as Zone[];
+/** A fish that lives only in a far island's waters is not at the cove at all. */
 export const farAway = (s: Species): boolean => s.zones.length > 0 && s.zones.every((z) => FAR_ZONES.includes(z));
+/** The far island a fish belongs to, if it belongs to one. */
+export const isleOf = (s: Species): IsleId | null => (farAway(s) ? (ZONE_ISLE[s.zones[0]] ?? null) : null);
 
 /** Whether a fish can be had on any day of the year, whatever the sky, without leaving the cove: what an errand or a bounty may ask for. */
 export const everyDay = (s: Species): boolean => !s.rain && !s.weather && !s.seasons && !s.zones.includes('cave') && !farAway(s);

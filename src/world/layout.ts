@@ -3,13 +3,19 @@
 // Coordinates: +x east, +z south, +y up, metres. The island is centred on the origin; the sea
 // surface is y = 0.
 
-import { HOME } from './isle';
+import { GLOW } from './glow';
+import { ISLE, pick } from './isle';
 import { KETTLE, POOLS as KETTLE_POOLS, SPRING_AT, type Pool } from './kettle';
+import { BAYOU } from './mire';
+import { HOLES, RIME, rimeShore } from './rime';
+
+const HOME = ISLE === 'cove';
 
 export type V2 = readonly [number, number];
 
 /** Somewhere off the map, for a thing an island does not have: nothing is ever near it. */
-const NOWHERE = 900;
+export const NOWHERE = 900;
+const NO_PLACE = { x: NOWHERE, z: NOWHERE } as const;
 
 export const SEA_LEVEL = 0;
 /** The square of world the ground covers, centred on the origin. */
@@ -19,10 +25,19 @@ export const STEP = 1;
 
 /** The freshwater pond, in a hollow in the north-west woods. */
 /** (On Kettle Isle the "pond" is the crater lake: the same kind of thing, much bigger and higher up.) */
-export const POND: { readonly x: number; readonly z: number; readonly r: number; readonly level: number } = HOME ? { x: -26, z: -24, r: 11, level: 2.6 } : { x: KETTLE.x, z: KETTLE.z, r: KETTLE.lake, level: KETTLE.level };
+export const POND: { readonly x: number; readonly z: number; readonly r: number; readonly level: number } = pick({
+  cove: { x: -26, z: -24, r: 11, level: 2.6 },
+  kettle: { x: KETTLE.x, z: KETTLE.z, r: KETTLE.lake, level: KETTLE.level },
+  // Rimefall's lake is frozen: it is ground, and its water is the holes in it (`POOLS`).
+  rime: { ...NO_PLACE, r: 1, level: 0 },
+  // Mirewood's is the bayou, level with the sea.
+  mire: { x: BAYOU.x, z: BAYOU.z, r: BAYOU.r, level: 0 },
+  // Glowmere's is the Mere.
+  glow: GLOW.mere,
+});
 
-/** Small waters cut into the ground: Kettle Isle's tide pools and its hot spring. The cove has none. */
-export const POOLS: readonly Pool[] = HOME ? [] : KETTLE_POOLS;
+/** Small waters cut into the ground: Kettle Isle's tide pools and its hot spring, and the holes in Rimefall's ice. */
+export const POOLS: readonly Pool[] = pick({ cove: [], kettle: KETTLE_POOLS, rime: HOLES, mire: [], glow: [] });
 
 /** The creek: out of the pond's west side, down to the sea. Water level falls along it. */
 export const CREEK: readonly V2[] = HOME
@@ -35,7 +50,7 @@ export const CREEK: readonly V2[] = HOME
       [-66, -40],
       [-80, -44],
     ]
-  : // Kettle Isle has no creek.
+  : // No other island has a creek.
     [
       [NOWHERE, NOWHERE],
       [NOWHERE + 1, NOWHERE],
@@ -43,14 +58,14 @@ export const CREEK: readonly V2[] = HOME
 export const CREEK_WIDTH = 2.6;
 
 /** The village square, in front of the shop. */
-export const PLAZA: { readonly x: number; readonly z: number; readonly r: number; readonly h: number } = HOME ? { x: 0, z: 14, r: 12, h: 2.2 } : { x: NOWHERE, z: NOWHERE, r: 12, h: 2.2 };
+export const PLAZA: { readonly x: number; readonly z: number; readonly r: number; readonly h: number } = HOME ? { x: 0, z: 14, r: 12, h: 2.2 } : { ...NO_PLACE, r: 12, h: 2.2 };
 
 /** The lighthouse hill, north-east. */
 export const HILL = { x: 30, z: -36, r: 20, h: 8.5 } as const;
 
 /** The camp in the western meadow. */
-/** (On Kettle Isle: an old fire ring by the cannery.) */
-export const CAMP: { readonly x: number; readonly z: number } = HOME ? { x: -38, z: 18 } : { x: 63, z: 30 };
+/** (On Kettle Isle: an old fire ring by the cannery. On Rimefall: the fire by the ice hut.) */
+export const CAMP: { readonly x: number; readonly z: number } = pick({ cove: { x: -38, z: 18 }, kettle: { x: 63, z: 30 }, rime: { x: 47, z: 22 }, mire: NO_PLACE, glow: NO_PLACE });
 
 /** The pier: east from the shore along z, with a wider head at the end. */
 /** The pier: whole 3 m sections of deck, so the boards cover every metre that can be walked on. */
@@ -63,16 +78,29 @@ export interface Pier {
   readonly head: { readonly x0: number; readonly x1: number; readonly z0: number; readonly z1: number };
 }
 /** (Kettle Isle's is a short jetty, where the boat lands.) */
-export const PIER: Pier = HOME ? { x0: 59, x1: 104, z: 14, width: 3, deck: 2.4, head: { x0: 98, x1: 104, z0: 7, z1: 22 } } : { x0: 76, x1: 100, z: 18, width: 3, deck: 2.0, head: { x0: 94, x1: 100, z0: 13.5, z1: 22.5 } };
+export const PIER: Pier = pick({
+  cove: { x0: 59, x1: 104, z: 14, width: 3, deck: 2.4, head: { x0: 98, x1: 104, z0: 7, z1: 22 } },
+  kettle: { x0: 76, x1: 100, z: 18, width: 3, deck: 2.0, head: { x0: 94, x1: 100, z0: 13.5, z1: 22.5 } },
+  rime: { x0: 63, x1: 87, z: 8, width: 3, deck: 2.0, head: { x0: 81, x1: 87, z0: 3.5, z1: 12.5 } },
+  mire: { x0: 81, x1: 105, z: 24, width: 3, deck: 2.0, head: { x0: 99, x1: 105, z0: 19.5, z1: 28.5 } },
+  glow: { x0: 58, x1: 82, z: 10, width: 3, deck: 2.0, head: { x0: 76, x1: 82, z0: 5.5, z1: 14.5 } },
+});
 
 /** Where the rowboat ties up, beside the pier. */
-export const BOAT_MOORING: { readonly x: number; readonly z: number; readonly yaw: number } = HOME ? { x: 80, z: 17.6, yaw: Math.PI / 2 } : { x: 88, z: 21.6, yaw: Math.PI / 2 };
+/** (Every island's is beside its jetty's head, on the south side.) */
+export const BOAT_MOORING: { readonly x: number; readonly z: number; readonly yaw: number } = HOME ? { x: 80, z: 17.6, yaw: Math.PI / 2 } : { x: PIER.head.x0 - 6, z: PIER.z + 3.6, yaw: Math.PI / 2 };
 
-/** The buoy that marks the way across to the other island: a boat beside it may row out. */
-export const CROSSING: { readonly x: number; readonly z: number; readonly reach: number } = HOME ? { x: 104, z: 36, reach: 9 } : { x: 108, z: 32, reach: 9 };
+/** The buoy that marks the way out to the other islands: a boat beside it may row out. */
+export const CROSSING: { readonly x: number; readonly z: number; readonly reach: number } = pick({
+  cove: { x: 104, z: 36, reach: 9 },
+  kettle: { x: 108, z: 32, reach: 9 },
+  rime: { x: 99, z: 22, reach: 9 },
+  mire: { x: 111, z: 38, reach: 9 },
+  glow: { x: 96, z: 24, reach: 9 },
+});
 
 /** The patch of the square that takes chalk. */
-export const CHALK: { readonly x: number; readonly z: number; readonly size: number } = HOME ? { x: -5, z: 19, size: 8 } : { x: NOWHERE, z: NOWHERE, size: 8 };
+export const CHALK: { readonly x: number; readonly z: number; readonly size: number } = HOME ? { x: -5, z: 19, size: 8 } : { ...NO_PLACE, size: 8 };
 
 /** Footpaths, as polylines. */
 const COVE_PATHS: readonly (readonly V2[])[] = [
@@ -104,7 +132,28 @@ const KETTLE_PATHS: readonly (readonly V2[])[] = [
   // Along the south shore to the reef flat
   [[62, 15], [52, 28], [36, 40], [14, 48], [-10, 50], [-34, 44], [-50, 34]],
 ];
-export const PATHS: readonly (readonly V2[])[] = HOME ? COVE_PATHS : KETTLE_PATHS;
+/** Rimefall's: from the jetty to the ice hut and the lake, and from the lake's far side up the hill. */
+const RIME_PATHS: readonly (readonly V2[])[] = [
+  [[64, 8], [56, 12], [48, 17]],
+  [[48, 17], [40, 12], [34, 7]],
+  [[-17, -4], [-26, -14], [-33, -24]],
+];
+/** Mirewood's: from the jetty to each boardwalk, and on beyond them. */
+const MIRE_PATHS: readonly (readonly V2[])[] = [
+  [[82, 24], [70, 24], [56, 23], [43.5, 22]],
+  [[56, 23], [51, 13], [47, 4.5]],
+  [[47, -22.5], [30, -30], [4, -34], [-24, -30]],
+  [[56, 23], [42, 40], [14, 44], [-7, 32]],
+  [[-33.5, 32], [-48, 26], [-60, 12]],
+];
+/** Glowmere's: from the jetty to the Mere, and to each beacon. */
+const GLOW_PATHS: readonly (readonly V2[])[] = [
+  [[59, 10], [46, 6], [30, 0], [14, -4], [8, -6]],
+  [[30, 0], [30, -12], [27.5, -21]],
+  [[14, -4], [8, 9], [-10, 11], [-24, 10], [-35, 10]],
+  [[8, 9], [6, 24], [6, 43]],
+];
+export const PATHS: readonly (readonly V2[])[] = pick({ cove: COVE_PATHS, kettle: KETTLE_PATHS, rime: RIME_PATHS, mire: MIRE_PATHS, glow: GLOW_PATHS });
 export const PATH_WIDTH = 1.7;
 
 /** Where the beach is widest: the south shore. */
@@ -114,7 +163,7 @@ export const BEACH_ANGLE = Math.PI / 2;
  * The footbridge over the creek: it stands on the creek's surface (not its bed) and spans it the
  * short way, with an arched deck that can be walked on (see floorAt).
  */
-const BRIDGE_AT = HOME ? { x: -50.2, z: -31.0 } : { x: NOWHERE, z: NOWHERE };
+const BRIDGE_AT = HOME ? { x: -50.2, z: -31.0 } : NO_PLACE;
 const CREEK_DIR = Math.atan2(-3, -6);
 export const BRIDGE = {
   ...BRIDGE_AT,
@@ -242,7 +291,97 @@ const KETTLE_PLACED: readonly Placed[] = [
   { id: 'shell', x: 2, z: 56, yaw: 0.7 },
   { id: 'shell', x: -24, z: 55, yaw: 2.7 },
 ];
-export const PLACED: readonly Placed[] = HOME ? COVE_PLACED : KETTLE_PLACED;
+/** Floors the player can stand on above the ground: the pier, and Mirewood's boardwalks. Axis-aligned rectangles. */
+export interface Floor {
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  y: number;
+}
+
+/** How high Mirewood's boardwalks stand. */
+const WALK_DECK = 2.1;
+/**
+ * Mirewood's boardwalks, in whole three-metre sections: one over the long channel to the north
+ * bank, one over the south channel to the west bank, and one out into the bayou to a platform.
+ */
+export const WALKS: readonly Floor[] = pick<readonly Floor[]>({
+  cove: [],
+  kettle: [],
+  rime: [],
+  mire: [
+    { x0: 45.5, x1: 48.5, z0: -22, z1: 5, y: WALK_DECK },
+    { x0: -33, x1: -6, z0: 30.5, z1: 33.5, y: WALK_DECK },
+    { x0: 27, x1: 45, z0: 20.5, z1: 23.5, y: WALK_DECK },
+    { x0: 18, x1: 27, z0: 17.5, z1: 26.5, y: WALK_DECK },
+  ],
+  glow: [],
+});
+
+/** Where crab pots may be set on Mirewood: in the still water beside a boardwalk, each with a name for the save. */
+export const POTS: readonly { id: string; x: number; z: number }[] = pick<readonly { id: string; x: number; z: number }[]>({
+  cove: [],
+  kettle: [],
+  rime: [],
+  mire: [
+    { id: 'north', x: 50.6, z: -9 },
+    { id: 'west', x: -20, z: 35.6 },
+    { id: 'bayou', x: 35, z: 25.6 },
+    { id: 'shack', x: 22.5, z: 28.6 },
+  ],
+  glow: [],
+});
+
+/** Glowmere's beacons. */
+export const BEACONS: readonly { x: number; z: number }[] = pick<readonly { x: number; z: number }[]>({ cove: [], kettle: [], rime: [], mire: [], glow: GLOW.beacons });
+
+/** Rimefall's ice hut, and Mirewood's shack on stilts. */
+export const ICE_HUT = { x: 46, z: 28, yaw: Math.PI + 0.5 } as const;
+export const SHACK = { x: 13.5, z: 22, yaw: Math.PI / 2 } as const;
+
+/** Rimefall's: a jetty, an ice hut with a fire by it, and seals on the shore. */
+const RIME_PLACED: readonly Placed[] = [
+  { id: 'ice-hut', x: ICE_HUT.x, z: ICE_HUT.z, yaw: ICE_HUT.yaw },
+  { id: 'campfire', x: CAMP.x, z: CAMP.z },
+  { id: 'log', x: CAMP.x + 0.4, z: CAMP.z - 3.2, yaw: 0.1 },
+  { id: 'lamp-post', x: 65, z: 6.8, y: PIER.deck },
+  { id: 'lamp-post', x: 84, z: 4.1, y: PIER.deck },
+  { id: 'crates', x: 70, z: 7.2, y: PIER.deck, yaw: 0.4 },
+  { id: 'signpost', x: 58, z: 10.5, yaw: 1.2 },
+  // Seals hauled out on the shore, two together in the north-east and one by itself in the south.
+  ...[-0.98, -0.9, 1.72].map((a, i): Placed => ({ id: 'seal', x: Math.cos(a) * (rimeShore(a) - 2.5), z: Math.sin(a) * (rimeShore(a) - 2.5), yaw: 2.4 + i * 1.3 })),
+  { id: 'bench', x: -31, z: -22, yaw: 2.2 },
+  { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
+];
+/** Mirewood's: a jetty, a shack on stilts in the bayou, a lamp at each end of every boardwalk, and a float over each place a pot may be set. */
+const MIRE_PLACED: readonly Placed[] = [
+  { id: 'stilt-shack', x: SHACK.x, z: SHACK.z, yaw: SHACK.yaw, y: -1.2 },
+  { id: 'lamp-post', x: 83, z: 22.8, y: PIER.deck },
+  { id: 'lamp-post', x: 102, z: 20.1, y: PIER.deck },
+  { id: 'lamp-post', x: 44.6, z: 5.6 },
+  { id: 'lamp-post', x: 44.6, z: -22.8 },
+  { id: 'lamp-post', x: -5.4, z: 29.6 },
+  { id: 'lamp-post', x: -33.6, z: 29.6 },
+  { id: 'lamp-post', x: 45.6, z: 19.6 },
+  { id: 'lamp-post', x: 26.2, z: 18.3, y: WALK_DECK },
+  { id: 'crates', x: 19.6, z: 25, y: WALK_DECK, yaw: 0.6 },
+  { id: 'barrel', x: 25, z: 25.2, y: WALK_DECK },
+  { id: 'signpost', x: 58, z: 26, yaw: -0.4 },
+  // A pot's float where each may be set: the pot itself is under the water.
+  ...POTS.map((q): Placed => ({ id: 'crab-pot', x: q.x, z: q.z, y: -0.42, yaw: q.x })),
+  { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
+];
+/** Glowmere's: a jetty, three beacons, and a bench by the Mere. */
+const GLOW_PLACED: readonly Placed[] = [
+  ...GLOW.beacons.map((b): Placed => ({ id: 'beacon', x: b.x, z: b.z })),
+  { id: 'lamp-post', x: 60, z: 8.8, y: PIER.deck },
+  { id: 'lamp-post', x: 79, z: 6.1, y: PIER.deck },
+  { id: 'bench', x: 9.5, z: -9, yaw: -1.5 },
+  { id: 'signpost', x: 52, z: 10.5, yaw: 1.2 },
+  { id: 'buoy', x: CROSSING.x, z: CROSSING.z },
+];
+export const PLACED: readonly Placed[] = pick({ cove: COVE_PLACED, kettle: KETTLE_PLACED, rime: RIME_PLACED, mire: MIRE_PLACED, glow: GLOW_PLACED });
 
 /** Where the pier's deck sections go (each model is a square section about three metres across). */
 export function pierSections(): Placed[] {
@@ -254,20 +393,18 @@ export function pierSections(): Placed[] {
   for (let i = 0; i < n; i++) out.push({ id: 'pier', x: PIER.x0 + 1.5 + i * 3, z: PIER.z, yaw: Math.PI / 2, y });
   for (let x = PIER.head.x0 + 1.5; x < PIER.head.x1; x += 3)
     for (let z = PIER.head.z0 + 1.5; z < PIER.head.z1; z += 3) out.push({ id: 'pier', x, z, yaw: Math.PI / 2, y });
+  // The boardwalks are the same sections, their planks across the way they run.
+  for (const w of WALKS) {
+    const alongX = w.x1 - w.x0 > w.z1 - w.z0;
+    for (let x = w.x0 + 1.5; x < w.x1; x += 3) for (let z = w.z0 + 1.5; z < w.z1; z += 3) out.push({ id: 'pier', x, z, yaw: alongX ? Math.PI / 2 : 0, y: w.y - 2.4 + 0.02 });
+  }
   return out;
 }
 
-/** Floors the player can stand on above the ground: the pier. Axis-aligned rectangles. */
-export interface Floor {
-  x0: number;
-  x1: number;
-  z0: number;
-  z1: number;
-  y: number;
-}
 export const FLOORS: readonly Floor[] = [
   { x0: PIER.x0, x1: PIER.head.x0, z0: PIER.z - PIER.width / 2, z1: PIER.z + PIER.width / 2, y: PIER.deck },
   { x0: PIER.head.x0, x1: PIER.head.x1, z0: PIER.head.z0, z1: PIER.head.z1, y: PIER.deck },
+  ...WALKS,
 ];
 
 /** The bridge's deck at a point, or null off it: low at each end, highest in the middle. */
@@ -383,6 +520,57 @@ const KETTLE_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
   camp: { x: CAMP.x - 3, z: CAMP.z + 3, yaw: 2.4 },
   boat: { x: BOAT_MOORING.x, z: BOAT_MOORING.z - 2.4, yaw: 0 },
 };
-export const PLACES: Record<string, { x: number; z: number; yaw: number }> = HOME ? COVE_PLACES : KETTLE_PLACES;
+const boat = { x: BOAT_MOORING.x, z: BOAT_MOORING.z - 2.4, yaw: 0 };
+const RIME_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+  jetty: { x: 72, z: 8, yaw: -Math.PI / 2 },
+  hut: { x: 46, z: 22, yaw: 0.4 },
+  lake: { x: 30, z: 6, yaw: -Math.PI / 2 },
+  hole: { x: HOLES[2].x + 3.4, z: HOLES[2].z, yaw: -Math.PI / 2 },
+  hill: { x: RIME.hill.x + 2, z: RIME.hill.z + 2, yaw: 0.9 },
+  seals: { x: Math.cos(-0.94) * (rimeShore(-0.94) - 8), z: Math.sin(-0.94) * (rimeShore(-0.94) - 8), yaw: 2.2 },
+  boat,
+};
+const MIRE_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+  jetty: { x: 90, z: 24, yaw: -Math.PI / 2 },
+  bayou: { x: 44, z: 22, yaw: -Math.PI / 2 },
+  shack: { x: 24, z: 22, yaw: -Math.PI / 2 },
+  walk: { x: 47, z: 2, yaw: Math.PI },
+  north: { x: 47, z: -24, yaw: Math.PI },
+  west: { x: -36, z: 32, yaw: -Math.PI / 2 },
+  boat,
+};
+const GLOW_PLACES: Record<string, { x: number; z: number; yaw: number }> = {
+  jetty: { x: 68, z: 10, yaw: -Math.PI / 2 },
+  mere: { x: 9, z: -6, yaw: -1.7 },
+  beacon: { x: GLOW.beacons[0].x + 1.5, z: GLOW.beacons[0].z + 2.5, yaw: 3.6 },
+  west: { x: GLOW.beacons[1].x + 3, z: GLOW.beacons[1].z, yaw: -Math.PI / 2 },
+  south: { x: GLOW.beacons[2].x, z: GLOW.beacons[2].z - 3, yaw: 0 },
+  boat,
+};
+export const PLACES: Record<string, { x: number; z: number; yaw: number }> = pick({ cove: COVE_PLACES, kettle: KETTLE_PLACES, rime: RIME_PLACES, mire: MIRE_PLACES, glow: GLOW_PLACES });
 /** Where a visit begins, when the address does not say. */
 export const START = HOME ? 'plaza' : 'jetty';
+
+/** What the chart pins on this island (the cove's are worked out in the chart, from its buildings), and how much of the world it shows. */
+export const PINS: readonly { x: number; z: number; label: string }[] = pick<readonly { x: number; z: number; label: string }[]>({
+  cove: [],
+  kettle: [],
+  rime: [
+    { x: PIER.x0 + 6, z: PIER.z, label: 'Jetty' },
+    { x: ICE_HUT.x, z: ICE_HUT.z, label: 'Ice hut' },
+    { x: RIME.lake.x, z: RIME.lake.z, label: 'The ice' },
+    { x: RIME.hill.x, z: RIME.hill.z, label: 'Sled hill' },
+  ],
+  mire: [
+    { x: PIER.x0 + 6, z: PIER.z, label: 'Jetty' },
+    { x: SHACK.x, z: SHACK.z, label: 'Shack' },
+    { x: 47, z: -9, label: 'Boardwalk' },
+    { x: -20, z: 32, label: 'Boardwalk' },
+  ],
+  glow: [
+    { x: PIER.x0 + 6, z: PIER.z, label: 'Jetty' },
+    { x: GLOW.mere.x, z: GLOW.mere.z, label: 'The Mere' },
+    ...GLOW.beacons.map((b) => ({ x: b.x, z: b.z, label: 'Beacon' })),
+  ],
+});
+export const CHART_VIEW: { readonly x: number; readonly z: number; readonly half: number } = pick({ cove: { x: 14, z: -4, half: 98 }, kettle: { x: 0, z: 0, half: 116 }, rime: { x: 8, z: 4, half: 104 }, mire: { x: 4, z: 4, half: 116 }, glow: { x: 6, z: 4, half: 100 } });

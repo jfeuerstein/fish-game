@@ -66,7 +66,7 @@ describe('each game', () => {
     expect(sold).toBeLessThanOrEqual(6);
     expect(won).toBeGreaterThan(sold * 3);
     // Every paint and charm can be won somewhere.
-    for (const x of [...PAINTS, ...CHARMS]) expect(PRIZES.some((p) => p.id === x.id), x.id).toBe(true);
+    for (const x of [...PAINTS, ...CHARMS].filter((q) => !q.earned)) expect(PRIZES.some((p) => p.id === x.id), x.id).toBe(true);
   });
 });
 

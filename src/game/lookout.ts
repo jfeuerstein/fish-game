@@ -1,7 +1,7 @@
 // The view from the top of the lighthouse. Through the telescope, a thing held in the middle of
 // the glass for a moment is picked out and named. Pure: the angles.
 
-export type Sight = 'trawler' | 'pier' | 'pond' | 'cave' | 'camp';
+export type Sight = 'trawler' | 'pier' | 'pond' | 'cave' | 'camp' | 'ice';
 
 export const SIGHTS: Record<Sight, string> = {
   trawler: 'The trawler Marigold, hauling her nets. Somebody on deck waves.',
@@ -9,6 +9,7 @@ export const SIGHTS: Record<Sight, string> = {
   pond: 'The pond, flat as a plate.',
   cave: 'A cave in the cliffs, with the sea running into it. A boat could get in there.',
   camp: 'Your own camp. It looks small from here.',
+  ice: 'Something white, right on the northern horizon. Ice, and a lot of it.',
 };
 
 /** How near the middle of the glass a thing must be, radians. */

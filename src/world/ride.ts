@@ -4,16 +4,34 @@
 // belongs each frame.
 import * as THREE from 'three';
 import { model } from '../assets/models';
-import { TRICK_SECS, type Trick } from '../game/toys';
+import { STILTS, TRICK_SECS, type Trick } from '../game/toys';
+import { lit } from '../look/material';
 
 /** How far a toy lifts whoever is on it, metres. */
-const LIFT: Record<string, number> = { 'toy-skateboard': 0.2, 'toy-pogo': 0.22, 'toy-balloons': 0 };
+const LIFT: Record<string, number> = { 'toy-skateboard': 0.2, 'toy-pogo': 0.22, 'toy-balloons': 0, 'toy-sled': 0.02, 'toy-stilts': STILTS.lift };
 /** How tall each is made (the skateboard is made bigger than its file says: a metre long, for big feet). */
-const TALL: Record<string, number> = { 'toy-skateboard': 0.3 };
+const TALL: Record<string, number> = { 'toy-skateboard': 0.3, 'toy-sled': 0.42 };
 /** Which way each model's length lies from the way the player faces, as it comes from being made. */
 const TURN: Record<string, number> = { 'toy-skateboard': 0, 'toy-pogo': 0, 'toy-balloons': 0 };
 
 const up = new THREE.Vector3(0, 1, 0);
+
+/** A pair of stilts: a pole under each foot, with a block to stand on. */
+function stilts(): THREE.Object3D {
+  const pair = new THREE.Group();
+  const wood = lit({ color: 0xa97c52 });
+  for (const side of [-1, 1]) {
+    const one = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.09, STILTS.lift + 0.75, 0.09), wood);
+    pole.position.set(side * 0.2, (STILTS.lift + 0.75) / 2, -0.06);
+    pole.castShadow = true;
+    const block = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.26), wood);
+    block.position.set(side * 0.2, STILTS.lift - 0.04, 0.06);
+    one.add(pole, block);
+    pair.add(one);
+  }
+  return pair;
+}
 
 export class Ride {
   private obj: THREE.Object3D | null = null;
@@ -28,7 +46,8 @@ export class Ride {
       this.obj = null;
     }
     if (!id) return;
-    const m = await model(id, TALL[id]);
+    // Stilts are two poles, made here: there is no model of them.
+    const m = id === 'toy-stilts' ? stilts() : await model(id, TALL[id]);
     if (!m || this.id !== id) return;
     this.obj = m;
     scene.add(m);
@@ -38,7 +57,7 @@ export class Ride {
    * Put it where it belongs. `body` is the player's own group, already where the player stands:
    * it is lifted onto the toy, and turned with a spin. `ground` is the height under the player.
    */
-  place(dt: number, body: THREE.Object3D, yaw: number, ground: number, trick: { kind: Trick; t: number } | null): void {
+  place(dt: number, body: THREE.Object3D, yaw: number, ground: number, trick: { kind: Trick; t: number } | null, moving = 0): void {
     this.clock += dt;
     const o = this.obj;
     const id = this.id;
@@ -56,6 +75,16 @@ export class Ride {
       o.quaternion.setFromAxisAngle(up, facing);
       if (trick?.kind === 'kickflip') o.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(along, k * Math.PI * 2));
       if (trick?.kind === 'kickflip') o.position.y += Math.sin(k * Math.PI) * 0.12;
+    } else if (id === 'toy-sled') {
+      o.position.set(body.position.x, body.position.y - (LIFT[id] ?? 0), body.position.z);
+      o.rotation.set(0, facing, 0);
+    } else if (id === 'toy-stilts') {
+      // The poles stand on the ground (the bed, in water) under each foot, and go one before the other.
+      o.position.set(body.position.x, body.position.y - (LIFT[id] ?? 0), body.position.z);
+      o.rotation.set(0, yaw, 0);
+      const step = Math.round(Math.sin(this.clock * 5) * 2) * 0.07 * Math.min(1, moving);
+      o.children[0].position.z = step;
+      o.children[1].position.z = -step;
     } else if (id === 'toy-pogo') {
       // The stick's foot is on the ground as it lands and leaves; its spring gives as it does.
       const off = Math.max(0, body.position.y - (LIFT[id] ?? 0) - ground);

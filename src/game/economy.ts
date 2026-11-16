@@ -198,6 +198,8 @@ export interface Furniture {
   store?: boolean;
   /** Not sold by Gus: only by the trader who comes by boat. */
   trader?: boolean;
+  /** Not sold or won: earned on a far island. */
+  earned?: boolean;
   /** A fire: it has a flame, and throws a flickering light after dark. */
   fire?: boolean;
   /** Throws real light after dark, not only a glow. */
@@ -231,6 +233,8 @@ export const FURNITURE: readonly Furniture[] = [
   // Sold only by the trader who comes by boat (src/game/trader.ts).
   { id: 'f-chime', name: 'Shell Wind Chime', price: 380, trader: true },
   { id: 'f-shipbottle', name: 'Ship in a Bottle', price: 520, trader: true },
+  // Earned on Glowmere.
+  { id: 'f-glowshroom', name: 'Pot of Glowshrooms', price: 0, earned: true, glow: true, lamp: true },
 ];
 
 /** Things to wear besides hats. `prize` ones are won at the Lucky Gull, not sold. */
@@ -278,21 +282,28 @@ export const rodById = (id: string): Rod => RODS.find((r) => r.id === id) ?? ROD
 export const baitById = (id: string): Bait => BAITS.find((b) => b.id === id) ?? BAITS[0];
 
 /** Paint for the rod: won at the Lucky Gull, never sold. The colour is what the rod's own is multiplied by. */
-export const PAINTS: readonly { id: string; name: string; colour: number }[] = [
+export const PAINTS: readonly { id: string; name: string; colour: number; earned?: boolean; glows?: boolean }[] = [
   { id: 'paint-coral', name: 'Coral Paint', colour: 0xf08c62 },
   { id: 'paint-sea', name: 'Sea Blue Paint', colour: 0x7fbbe6 },
   { id: 'paint-moss', name: 'Moss Paint', colour: 0x93b85a },
   { id: 'paint-brass', name: 'Gilt Paint', colour: 0xecc77d },
   { id: 'paint-rose', name: 'Rose Paint', colour: 0xf2a8b0 },
   { id: 'paint-ink', name: 'Ink Paint', colour: 0x4f6d7c },
+  // Earned on the far islands (src/game/isles.ts), not won. The last gives off its own light.
+  { id: 'paint-frost', name: 'Frost Paint', colour: 0xc6e4f4, earned: true },
+  { id: 'paint-mire', name: 'Mire Paint', colour: 0x5c8f44, earned: true },
+  { id: 'paint-glow', name: 'Glow Paint', colour: 0x62c0b0, earned: true, glows: true },
 ];
 
 /** Charms to hang from the rod: won at the Lucky Gull, never sold. */
-export const CHARMS: readonly { id: string; name: string }[] = [
+export const CHARMS: readonly { id: string; name: string; earned?: boolean }[] = [
   { id: 'charm-bell', name: 'Brass Bell' },
   { id: 'charm-feather', name: 'Gull Feather' },
   { id: 'charm-shell', name: 'Pink Shell' },
   { id: 'charm-star', name: 'Lucky Star' },
   { id: 'charm-fish', name: 'Wooden Fish' },
   { id: 'charm-moon', name: 'Tin Moon' },
+  { id: 'charm-icicle', name: 'Icicle', earned: true },
+  { id: 'charm-claw', name: 'Crab Claw', earned: true },
+  { id: 'charm-ember', name: 'Ember', earned: true },
 ];

@@ -55,12 +55,15 @@ import { Uke } from '../ui/uke';
 import { Boat } from '../world/boat';
 import { fishingZone, shoreRadius, standHeight, waterAt } from '../world/island';
 import { splatAt } from '../world/terrain';
-import { CAMP, CANNERY, CAVE, CROSSING, PIER, PLACES, PLACED, POND, POOLS, START } from '../world/layout';
+import { BEACONS, CAMP, CANNERY, CAVE, CROSSING, ICE_HUT, PIER, PLACES, PLACED, POND, POOLS, POTS, START } from '../world/layout';
 import { CROSSING_KEY, HOME, ISLE, ISLE_KEY, ISLE_NAME, type IsleId } from '../world/isle';
 import { CANNERY_PAGES, rummage } from './kettle';
+import { BIOMES } from '../look/biome';
+import { CHART_FOUND, type FarIsle, awake, bottleHolds, burning, giveChart, haulPot, hasChart, lightBeacon, newDeeds, potLeft, potState, setPot } from './isles';
+import { voyageSheet } from '../ui/voyage';
+import { World } from '../world/world';
 import { PlacedThings, ghostOf } from '../world/placed';
 import type { Seat } from '../world/props';
-import { World } from '../world/world';
 import { bitesAt, dayNumber, hourAt, pinnedHour, sayHour, weatherAt, type Weather } from './clock';
 import { FURNITURE, HATS, PAINTS, baitById, hookById, levelFor, lineById, lureById, rigged, rodById, type Rod } from './economy';
 import { SEASON_LOOK, pinnedSeason, seasonAt, type Season } from '../look/season';
@@ -118,7 +121,7 @@ export class Game implements Session {
   private frames = 0;
   private dirty = false;
   private savedAt = 0;
-  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade' | 'tackle' | 'aquarium' | 'chest' | 'sign' | 'trader', Sheet>;
+  private sheets!: Record<'shop' | 'journal' | 'bag' | 'board' | 'more' | 'fun' | 'arcade' | 'tackle' | 'aquarium' | 'chest' | 'sign' | 'trader' | 'voyage', Sheet>;
   fanfare!: Fanfare;
   /** The arcade's counter, and its gull: what it is feeling, and for how much longer. */
   private arcadeFront = new THREE.Vector3(-14, 0, 9);
@@ -262,14 +265,18 @@ export class Game implements Session {
       this.tower = { x: light.x, z: light.z, r: Math.max(lightSize?.x ?? 5, lightSize?.z ?? 5) / 2, top: this.world.field.heightAt(light.x, light.z) + (lightSize?.y ?? 12) * 0.74 };
       const boardAt = PLACED.find((p) => p.id === 'notice-board')!;
       this.board.set(boardAt.x + Math.sin(boardAt.yaw ?? 0) * 1.6, 0, boardAt.z + Math.cos(boardAt.yaw ?? 0) * 1.6);
-    } else {
+    } else if (ISLE === 'kettle') {
       // The cannery's door, from the size of its model.
       const deep = this.world.props.sizes.get('cannery')?.z ?? 6;
       this.canneryDoor.set(CANNERY.x + Math.sin(CANNERY.yaw) * (deep / 2 + 1.3), 0, CANNERY.z + Math.cos(CANNERY.yaw) * (deep / 2 + 1.3));
+    } else if (ISLE === 'rime') {
+      // The ice hut is gone into as the cove's fishing hut is: it is the same room inside, stove and all.
+      const deep = this.world.props.sizes.get('ice-hut')?.z ?? 3;
+      this.hutFront.set(ICE_HUT.x + Math.sin(ICE_HUT.yaw) * (deep / 2 + 1.2), 0, ICE_HUT.z + Math.cos(ICE_HUT.yaw) * (deep / 2 + 1.2));
     }
     if (models) {
       await this.body.setRod(this.save.rod);
-      this.body.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm);
+      this.body.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm, !!PAINTS.find((q) => q.id === this.save.rodPaint)?.glows);
       await this.body.setHat(this.save.hat);
       if (HOME) await Promise.all([this.gus.load(new THREE.Vector3(shop.x + 2.6, this.world.field.heightAt(shop.x + 2.6, this.shopFront.z - 0.4), this.shopFront.z - 0.4), 0), ...this.npcs.map((n) => n.load())]);
       else this.gus.body.group.position.set(nowhere, 0, nowhere);
@@ -293,7 +300,7 @@ export class Game implements Session {
       this.footfall(surface);
     };
     this.rig = new CameraRig(this.camera, this.world.field);
-    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well|cannery)/.test(c.name));
+    this.rig.obstacles = this.world.props.group.children.filter((c) => /^(shop|arcade|lighthouse|fishing-hut|tent|well|cannery|ice-hut|stilt-shack)/.test(c.name));
     this.rig.yaw = this.cfg.yaw ?? at.yaw + Math.PI;
     if (this.cfg.zoom) this.rig.zoom = this.cfg.zoom;
     this.controls = new Controls(this.app);
@@ -377,6 +384,7 @@ export class Game implements Session {
       tackle: tackleSheet(this.app, this),
       chest: chestSheet(this.app, this),
       trader: traderSheet(this.app, this),
+      voyage: voyageSheet(this.app, this, (to) => this.sailTo(to)),
       sign: signSheet(this.app, this, (name) => this.placed.rename(name)),
       aquarium: aquariumSheet(this.app, this, () => void this.indoors.stock(this.save.aquarium, (id) => `${import.meta.env.BASE_URL}icons/fish-${id}.webp`)),
       more: moreSheet(this.app, this, openChests, { field: this.world.field, at: () => ({ x: this.player.pos.x, z: this.player.pos.z }), trader: () => (this.traderIn ? this.trader.pos : null) }),
@@ -441,14 +449,15 @@ export class Game implements Session {
   private welcome(): void {
     if (this.cfg.hud === false) return;
     if (!HOME) {
-      // Kettle Isle: said the first time, and a word each time after.
-      const first = !this.save.hints.includes('kettle');
+      // A far island: what it is, said the first time, and its name each time after.
+      const first = !this.save.hints.includes(ISLE);
       if (first) {
-        this.save.hints.push('kettle');
+        this.save.hints.push(ISLE);
+        this.checkTitles();
         this.changed();
       }
-      setTimeout(() => this.hud.toast(first ? 'Kettle Isle. Nobody has lived here for a long time.' : 'Kettle Isle.', first ? 'gold' : ''), 400);
-      if (first) setTimeout(() => this.hud.toast('There is no shop: what you catch goes home in the cooler. The boat is at the jetty.'), 3600);
+      setTimeout(() => this.hud.toast(first ? BIOMES[ISLE].first : `${ISLE_NAME[ISLE]}.`, first ? 'gold' : ''), 400);
+      if (first) setTimeout(() => this.hud.toast(BIOMES[ISLE].know), 3600);
       return;
     }
     if (!this.save.hints.includes('welcome')) {
@@ -546,7 +555,7 @@ export class Game implements Session {
 
   private fishingHooks(): ConstructorParameters<typeof Fishing>[3] {
     return {
-      conditions: (zone) => ({ zone, hour: this.hour, raining: this.raining, weather: this.weather, season: this.season, rod: this.rod, bait: baitById(this.save.bait), lure: lureById(this.save.lure) }),
+      conditions: (zone) => ({ zone, hour: this.hour, raining: this.raining, weather: this.weather, season: this.season, woken: awake(this.save, Date.now()), rod: this.rod, bait: baitById(this.save.bait), lure: lureById(this.save.lure) }),
       tip: (id) => this.tip(id),
       landed: (c, zone) => this.landed(c, zone),
       snapped: () => {
@@ -572,6 +581,8 @@ export class Game implements Session {
 
   private landed(c: Catch, zone: Parameters<typeof applyCatch>[2], second = false): void {
     if (c.species === 'treasure') return this.treasure();
+    // Now and then a bottle has more in it than a note.
+    if (c.species === 'bottle' && bottleHolds(this.save, Math.random()) && giveChart(this.save, 'glow')) setTimeout(() => this.hud.toast(CHART_FOUND.glow, 'gold'), 2600);
     const night = !bitesAt('day', this.hour);
     const r = applyCatch(this.save, c, zone, night, this.raining);
     noteCatch(this.save, zone, c.species);
@@ -656,6 +667,14 @@ export class Game implements Session {
   }
 
   private checkTitles(): void {
+    // A far island's deed done: paid on the spot.
+    for (const [i, d] of newDeeds(this.save).entries()) {
+      setTimeout(() => {
+        this.hud.toast(`${d.name}! ${ISLE_NAME[d.isle]} gives you ${d.prize}.`, 'gold');
+        this.audio.play('quest', { volume: 0.6 });
+      }, 1200 + i * 2600);
+      this.changed();
+    }
     for (const t of newTitles(this.save)) {
       setTimeout(() => this.hud.toast(`New title: ${t}! Show it from More › Wardrobe.`, 'gold'), 2400);
       this.changed();
@@ -808,11 +827,12 @@ export class Game implements Session {
    * that says so: only one island is ever loaded.
    */
   private cross(): void {
-    if (HOME && !this.save.seaChart) {
-      this.hud.toast('Past the buoy it is open sea. You would want a chart: the trader who comes by boat sells one.');
-      return;
-    }
-    const to: IsleId = HOME ? 'kettle' : 'cove';
+    this.openSheet('voyage');
+  }
+
+  /** Row to an island there is a chart to (or home). The game is put away and begun again there. */
+  sailTo(to: IsleId): void {
+    if (to === ISLE || !hasChart(this.save, to)) return;
     this.fishing.cancel();
     this.keep(true);
     try {
@@ -826,8 +846,90 @@ export class Game implements Session {
     if (this.cfg.fresh || url.searchParams.has('isle')) url.searchParams.set('isle', to);
     url.searchParams.delete('at');
     this.audio.play('row');
-    this.hud.toast(`Rowing ${HOME ? 'out to' : 'home to'} ${ISLE_NAME[to]}…`);
-    setTimeout(() => location.replace(url.toString()), 500);
+    setTimeout(() => location.replace(url.toString()), 400);
+  }
+
+  /** Come by a chart to a far island, and say so. */
+  private foundChart(isle: FarIsle): void {
+    if (!giveChart(this.save, isle)) return;
+    this.hud.toast(CHART_FOUND[isle], 'gold');
+    this.audio.play('quest', { volume: 0.5 });
+    this.changed();
+  }
+
+  // ---------- Mirewood's crab pots ----------
+
+  /** The place for a pot the player stands beside, if any. */
+  private potNear(): { id: string; x: number; z: number } | null {
+    const p = this.player.pos;
+    return POTS.find((q) => Math.hypot(q.x - p.x, q.z - p.z) < 4.2) ?? null;
+  }
+
+  private usePot(pot: { id: string; x: number; z: number }): void {
+    const now = Date.now();
+    const state = potState(this.save, pot.id, now);
+    if (state === 'empty') {
+      setPot(this.save, pot.id, now);
+      this.audio.play('plop', { volume: 0.6, rate: 0.8 });
+      this.fx.splash(new THREE.Vector3(pot.x, 0, pot.z), 0.4);
+      this.hud.toast('The pot goes down with a bit of bait in it. Give it six minutes or so: it keeps while you are away.');
+    } else if (state === 'soaking') {
+      const left = potLeft(this.save, pot.id, now);
+      this.hud.toast(`Nothing in it yet. About ${left >= 90 ? `${Math.round(left / 60)} minutes` : 'a minute'} more.`);
+    } else {
+      // Up it comes: one to three things, each as a catch.
+      const n = haulPot(this.save, pot.id, now, Math.random());
+      this.audio.play('splash', { volume: 0.5 });
+      this.fx.splash(new THREE.Vector3(pot.x, 0, pot.z), 0.6);
+      for (let i = 0; i < n; i++) {
+        const c = rollCatch({ zone: 'pots', hour: this.hour, raining: this.raining, rod: this.rod, bait: baitById(this.save.bait) }, Math.random);
+        setTimeout(() => this.landed({ ...c, at: Date.now() }, 'pots', i > 0), i * 1900);
+      }
+      setTimeout(() => this.checkTitles(), n * 1900);
+    }
+    this.changed();
+  }
+
+  // ---------- Glowmere's beacons ----------
+
+  private beaconFires: ({ flame: THREE.Object3D; lamp: THREE.PointLight | null } | null)[] = [null, null, null];
+
+  private beaconNear(): number {
+    const p = this.player.pos;
+    return BEACONS.findIndex((b) => Math.hypot(b.x - p.x, b.z - p.z) < 2.8);
+  }
+
+  private lightTheBeacon(i: number): void {
+    const { woke } = lightBeacon(this.save, i, Date.now());
+    this.audio.play('fire', { volume: 0.5 });
+    const lit = BEACONS.filter((_, k) => burning(this.save, k, Date.now())).length;
+    if (woke) {
+      this.hud.toast('All three are burning. Out in the shallows the light goes down, and comes back brighter. The water is awake.', 'gold');
+      this.audio.play('rare', { volume: 0.6 });
+    } else this.hud.toast(lit === 1 ? 'It catches. There are two more, and they do not burn for ever.' : `${lit} of three alight.`);
+    this.checkTitles();
+    this.changed();
+  }
+
+  /** Each beacon has a flame while it burns, and none when it has gone out. */
+  private tendBeacons(): void {
+    const now = Date.now();
+    const up = awake(this.save, now);
+    if (!up && this.world.woken === 1 && this.started) this.hud.toast('The water has gone back to sleep.');
+    this.world.woken = up ? 1 : 0;
+    for (const [i, b] of BEACONS.entries()) {
+      const on = burning(this.save, i, now);
+      const fire = this.beaconFires[i];
+      if (on && !fire) {
+        const top = new THREE.Vector3(b.x, this.world.field.heightAt(b.x, b.z) + (this.world.props.sizes.get('beacon')?.y ?? 1.9) * 0.92, b.z);
+        this.beaconFires[i] = { flame: this.world.addFlame(top, 1.3), lamp: this.world.borrowLamp(top.clone().setY(top.y + 0.6), 12, 3.4, 0xff9448, true) };
+      } else if (!on && fire) {
+        this.world.removeFlame(fire.flame);
+        if (fire.lamp) this.world.returnLamp(fire.lamp);
+        this.beaconFires[i] = null;
+        if (this.started) this.hud.toast('A beacon has burned down.');
+      }
+    }
   }
 
   /** Sit in the hot spring. */
@@ -862,6 +964,8 @@ export class Game implements Session {
     this.save.cannery.pages++;
     this.hud.toast(`“${CANNERY_PAGES[page]}”`);
     this.audio.play('card', { volume: 0.4 });
+    // In the back, behind the last page: a chart.
+    if (page === CANNERY_PAGES.length - 1) setTimeout(() => this.foundChart('mire'), 2800);
     this.changed();
   }
 
@@ -924,7 +1028,14 @@ export class Game implements Session {
     const hint = `ride-${toy.gear}`;
     if (!this.save.hints.includes(hint)) {
       this.save.hints.push(hint);
-      this.hud.toast(toy.gear === 'skate' ? 'Push the stick to get rolling: it keeps going. Jump to ollie, then Kickflip or 360 before you land.' : toy.gear === 'pogo' ? 'It never stops. Jump makes the next bounce a big one.' : 'Jump, and float. Jump again in the air for a little more lift, twice.');
+      const says = {
+        skate: 'Push the stick to get rolling: it keeps going. Jump to ollie, then Kickflip or 360 before you land.',
+        pogo: 'It never stops. Jump makes the next bounce a big one.',
+        balloons: 'Jump, and float. Jump again in the air for a little more lift, twice.',
+        sled: 'Point it downhill and let go. On the flat it hardly moves at all.',
+        stilts: 'Slow and tall. Water that would stop you on foot will not stop you now.',
+      };
+      this.hud.toast(says[toy.gear]);
       this.changed();
     }
   }
@@ -972,7 +1083,7 @@ export class Game implements Session {
   dressRod(paint: string | null, charm: string | null): void {
     this.save.rodPaint = paint;
     this.save.charm = charm;
-    this.body.setRodLook(PAINTS.find((q) => q.id === paint)?.colour ?? null, charm);
+    this.body.setRodLook(PAINTS.find((q) => q.id === paint)?.colour ?? null, charm, !!PAINTS.find((q) => q.id === paint)?.glows);
     this.changed();
   }
 
@@ -1003,7 +1114,7 @@ export class Game implements Session {
       this.body = fresh;
       (this.player as unknown as { body: Character }).body = fresh;
       await fresh.setRod(this.save.rod);
-      fresh.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm);
+      fresh.setRodLook(PAINTS.find((q) => q.id === this.save.rodPaint)?.colour ?? null, this.save.charm, !!PAINTS.find((q) => q.id === this.save.rodPaint)?.glows);
       await fresh.setHat(this.save.hat);
       await fresh.setExtra(this.save.extra);
       // The old body's line and bobber go with it.
@@ -1072,7 +1183,7 @@ export class Game implements Session {
     this.carrying = null;
     if (!(this.save.furniture[c.id] > 0)) return;
     this.save.furniture[c.id]--;
-    const thing: PlacedThing = HOME ? { id: c.id, x: to.x, z: to.z, yaw: to.yaw } : { id: c.id, x: to.x, z: to.z, yaw: to.yaw, isle: 'kettle' };
+    const thing: PlacedThing = ISLE === 'cove' ? { id: c.id, x: to.x, z: to.z, yaw: to.yaw } : { id: c.id, x: to.x, z: to.z, yaw: to.yaw, isle: ISLE };
     this.save.placed.push(thing);
     void this.placed.add(thing);
     this.audio.play('click');
@@ -1257,7 +1368,15 @@ export class Game implements Session {
     for (let d = 3; d <= reach; d += 1.5) {
       if (fishingZone(this.world.field, this.player.pos.x + f.x * d, this.player.pos.z + f.z * d)) return true;
     }
-    return false;
+    // A small water (a hole in the ice, a tide pool) is easily stepped over by that: one near enough ahead counts.
+    const p = this.player.pos;
+    return POOLS.some((q) => {
+      if (q.hot) return false;
+      const dx = q.x - p.x;
+      const dz = q.z - p.z;
+      const d = Math.hypot(dx, dz);
+      return d < reach + q.r && d > 0.5 && (dx * f.x + dz * f.z) / d > 0.8;
+    });
   }
 
   /** Whether the player stands by a fire: the camp's, or one of their own. */
@@ -1364,7 +1483,7 @@ export class Game implements Session {
     else if (dig && this.detecting && this.mode === 'walk') hud.setSecond('Dig', () => this.startDig(dig));
     else if (this.mode === 'boat') {
       // Beside the buoy the way is open to the other island.
-      if (Math.hypot(this.boat.pos.x - CROSSING.x, this.boat.pos.z - CROSSING.z) < CROSSING.reach) hud.setSecond(HOME ? 'Row out' : 'Row home', () => this.cross());
+      if (Math.hypot(this.boat.pos.x - CROSSING.x, this.boat.pos.z - CROSSING.z) < CROSSING.reach) hud.setSecond('Row out', () => this.cross());
       else hud.setSecond(this.boat.nearMooring(this.boat.pos) ? 'Get out' : null, () => this.leaveBoat());
     }
     else if (this.mode === 'sit') hud.setSecond('Stand up', () => this.stopActivity());
@@ -1375,7 +1494,14 @@ export class Game implements Session {
       hud.setSecond(ready >= 0 ? `Give ${BY_ID[this.save.bag[ready].species]?.name ?? 'fish'}` : 'Chat', () => this.speakTo(who, (words) => npc.chat(performance.now(), words), npc.def.lines));
     } else if (gusNear && this.shopFront.distanceTo(new THREE.Vector3(p.x, 0, p.z)) >= 3.2) hud.setSecond('Chat', () => this.speakTo('npc-pelican', (words) => this.gus.chat(performance.now(), words), GUS_LINES));
     else if (this.mode === 'walk' && this.gullNear()) hud.setSecond('Feed gull', () => this.feedTheGull());
-    else if (this.mode === 'walk' && Math.hypot(p.x - this.canneryDoor.x, p.z - this.canneryDoor.z) < 2.6) hud.setSecond('Go inside', () => void this.goInside('cannery'));
+    else if (this.mode === 'walk' && this.potNear()) {
+      const pot = this.potNear()!;
+      const state = potState(this.save, pot.id, Date.now());
+      hud.setSecond(state === 'empty' ? 'Set pot' : state === 'ready' ? 'Haul pot' : 'Pot soaking', () => this.usePot(pot));
+    } else if (this.mode === 'walk' && this.beaconNear() >= 0 && !burning(this.save, this.beaconNear(), Date.now())) {
+      const i = this.beaconNear();
+      hud.setSecond('Light', () => this.lightTheBeacon(i));
+    } else if (this.mode === 'walk' && Math.hypot(p.x - this.canneryDoor.x, p.z - this.canneryDoor.z) < 2.6) hud.setSecond('Go inside', () => void this.goInside('cannery'));
     else if (this.mode === 'walk' && waterAt(this.world.field, p.x, p.z)?.zone === 'spring') hud.setSecond('Soak', () => this.soak());
     else if (this.mode === 'walk' && this.traderIn && this.trader.pos.distanceTo(p) < 3.2) hud.setSecond('Chat', () => this.trader.chat(performance.now()));
     else if (this.mode === 'walk' && Math.hypot(p.x - this.shopFront.x, p.z - this.shopFront.z) < 3.2) hud.setSecond('Go inside', () => void this.goInside('shop'));
@@ -1519,6 +1645,8 @@ export class Game implements Session {
       pond: new THREE.Vector3(POND.x, POND.level, POND.z),
       cave: new THREE.Vector3(CAVE.x, 2, CAVE.z),
       camp: camp ? new THREE.Vector3(camp.x, this.world.field.heightAt(camp.x, camp.z) + 1, camp.z) : null,
+      // (Only on a clear day: mist and rain hide it.)
+      ice: this.weather === 'clear' ? World.ICEBERG.clone().setY(14) : null,
     };
     const on = sighted(cam.position, dir, where);
     if (on !== this.held.sight) this.held = { sight: on, secs: 0 };
@@ -1531,6 +1659,7 @@ export class Game implements Session {
           if (on === 'trawler') this.save.tokens += 1;
           this.changed();
         }
+        if (on === 'ice') setTimeout(() => this.foundChart('rime'), 2600);
         this.hud.toast(SIGHTS[on] + (first && on === 'trawler' ? ' +1 pearl' : ''), first ? 'gold' : '');
         this.audio.play(first ? 'quest' : 'click', { volume: 0.4 });
       }
@@ -1721,11 +1850,12 @@ export class Game implements Session {
     const now = Date.now();
     const mode = this.save.settings.clock;
     const tz = new Date().getTimezoneOffset();
-    this.hour = pinnedHour(this.pin.time) ?? hourAt(now, mode, tz);
+    // (Where it is always one hour, or one season, it is.)
+    this.hour = pinnedHour(this.pin.time) ?? BIOMES[ISLE].hour ?? hourAt(now, mode, tz);
     this.weather = this.pin.weather ?? weatherAt(now, mode, tz);
     const skyRain = this.weather === 'rain' || this.weather === 'storm';
     // The season, by the calendar (or pinned): the island is dressed for it when it changes.
-    const season = pinnedSeason(this.pin.season) ?? seasonAt(now, tz);
+    const season = pinnedSeason(this.pin.season) ?? BIOMES[ISLE].season ?? seasonAt(now, tz);
     if (season !== this.season || !this.dressed) {
       this.season = season;
       this.dressed = true;
@@ -1733,7 +1863,14 @@ export class Game implements Session {
     }
     // A sky that is not there every day, when the weather is clear.
     const pinnedSky = RARE_SKIES.find((k) => k === this.cfg.sky) ?? null;
-    const rare: RareSky | null = pinnedSky ?? (this.benching ? null : rareSkyAt(dayNumber(now, mode, tz), this.hour, this.weather === 'clear'));
+    // On Rimefall the northern lights are out every clear night.
+    const lights = !!BIOMES[ISLE].aurora && this.weather === 'clear' && (this.hour >= 20.5 || this.hour < 4.5);
+    const rare: RareSky | null = pinnedSky ?? (this.benching ? null : lights ? 'aurora' : rareSkyAt(dayNumber(now, mode, tz), this.hour, this.weather === 'clear'));
+    if (rare === 'aurora' && ISLE === 'rime' && this.started && !this.save.hints.includes('rime-lights')) {
+      this.save.hints.push('rime-lights');
+      this.checkTitles();
+      this.changed();
+    }
     this.world.air.rare = rare;
     this.world.air.rareNow = !!pinnedSky;
     if (rare && rare !== this.skyTold && this.started && !pinnedSky) {
@@ -1793,7 +1930,7 @@ export class Game implements Session {
           this.trick = null;
           this.audio.play('tick', { volume: 0.3, rate: 1.4 });
         }
-        this.ride.place(dt, this.body.group, this.player.yaw, standHeight(this.world.field, this.player.pos.x, this.player.pos.z), this.trick);
+        this.ride.place(dt, this.body.group, this.player.yaw, standHeight(this.world.field, this.player.pos.x, this.player.pos.z), this.trick, this.player.pace * 2);
       }
     }
     if (this.mode === 'inside') {
@@ -1863,6 +2000,7 @@ export class Game implements Session {
     this.finds.setCloud(cloud, this.player.pos);
     if (this.started) this.secrets(dt, now);
     if (!HOME) this.steam(dt);
+    if (BEACONS.length) this.tendBeacons();
     this.fx.update(dt, this.camera, this.player.pos);
 
     if (this.started) {
@@ -1885,8 +2023,8 @@ export class Game implements Session {
       const fishingNow = this.mode === 'walk' && this.started && !this.coach && !Sheet.current && this.cfg.hud;
       this.hud.setBait(fishingNow ? this.save.bait : null, this.save.bait === 'bait-worm' ? '∞' : String(this.save.baits[this.save.bait] ?? 0));
     }
-    // The day's bounty, under the clock. (Not while the first minute is being taught: one thing at a time.)
-    if (this.hud && this.started && !this.coach) {
+    // The day's bounty, under the clock. Gus is at home, so it is only shown there. (Not while the first minute is being taught: one thing at a time.)
+    if (this.hud && this.started && !this.coach && HOME) {
       const wanted = bountyFor(this.today);
       this.hud.setBounty(wanted.id, wanted.name, bountyFilled(this.save.bounty, this.today));
       if (this.bountyTold !== this.today && this.cfg.hud) {

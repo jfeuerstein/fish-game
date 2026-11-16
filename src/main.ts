@@ -46,7 +46,7 @@ if (arriving) {
   title?.classList.add('crossing');
   const says = document.createElement('p');
   says.className = 'crossing-says';
-  says.textContent = ISLE === 'kettle' ? `Rowing out to ${ISLE_NAME.kettle}…` : `Rowing home to ${ISLE_NAME.cove}…`;
+  says.textContent = ISLE === 'cove' ? `Rowing home to ${ISLE_NAME.cove}…` : `Rowing out to ${ISLE_NAME[ISLE]}…`;
   title?.querySelector('.title-card')?.prepend(says);
 }
 

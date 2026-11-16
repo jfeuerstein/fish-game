@@ -71,7 +71,10 @@ export function buyWare(save: Save, day: number, ware: Ware): boolean {
   if (ware.gives.furniture) save.furniture[ware.gives.furniture] = (save.furniture[ware.gives.furniture] ?? 0) + 1;
   if (ware.gives.bait) save.baits[ware.gives.bait.id] = (save.baits[ware.gives.bait.id] ?? 0) + ware.gives.bait.count;
   if (ware.gives.pearls) save.tokens += ware.gives.pearls;
-  if (ware.gives.chart) save.seaChart = true;
+  if (ware.gives.chart) {
+    save.seaChart = true;
+    if (!save.charts.includes('kettle')) save.charts.push('kettle');
+  }
   return true;
 }
 

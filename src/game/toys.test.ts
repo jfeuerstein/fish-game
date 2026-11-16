@@ -5,7 +5,7 @@ import { TOYS, comboSays, restLeft, sayRest, toyById, useToy } from './toys';
 
 describe('toys', () => {
   it('are all prizes of the rarest kind, never sold, and every game can give one', () => {
-    for (const t of TOYS) {
+    for (const t of TOYS.filter((x) => !x.earned)) {
       const p = PRIZES.find((q) => q.id === t.id);
       expect(p, t.id).toBeTruthy();
       expect(p!.rarity).toBe('legendary');

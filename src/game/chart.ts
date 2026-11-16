@@ -7,7 +7,7 @@ import type { Save } from './save';
 
 /** The cove's waters, and Kettle Isle's. */
 export const WATERS: readonly Zone[] = ['ocean', 'deep', 'pond', 'creek', 'cave'];
-export const FAR_WATERS: readonly Zone[] = ['lake', 'reef', 'pools'];
+export const FAR_WATERS: readonly Zone[] = ['lake', 'reef', 'pools', 'ice', 'floe', 'swamp', 'pots', 'glow', 'mere'];
 
 /** A fish was landed from a water: the chart remembers. */
 export function noteCatch(save: Save, zone: Zone, species: string): void {

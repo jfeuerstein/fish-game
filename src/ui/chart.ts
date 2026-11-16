@@ -1,20 +1,24 @@
 // The chart, drawn as a sea chart is: the island from above in a few flat inks, a pixel to a
 // metre and a half, with the places named, the camp where it stands, and where you are. Under
 // it, each water and the kinds of fish that have come out of it.
-import { BY_ID, ZONE_LABEL } from '../fishing/fish';
+import { BY_ID, ZONE_ISLE, ZONE_LABEL } from '../fishing/fish';
 import { campAt } from '../game/camp';
 import { FAR_WATERS, WATERS, caughtIn, caveKnown } from '../game/chart';
-import { HOME, ISLE } from '../world/isle';
+import { HOME, ISLE, pick } from '../world/isle';
+import { RIME } from '../world/rime';
 import type { Session } from '../game/session';
-import { type Heightfield, waterAt } from '../world/island';
-import { CANNERY, CAVE, CROSSING, PIER, PLACED, POND, POOLS, WRECK, floorAt } from '../world/layout';
+import { type Heightfield, type Zone, waterAt } from '../world/island';
+import { CANNERY, CAVE, CHART_VIEW, CROSSING, PINS, PIER, PLACED, POND, POOLS, WRECK, floorAt } from '../world/layout';
 import { splatAt } from '../world/terrain';
 import { el, icon } from './hud';
 
+/** What open ground is drawn in: snow on Rimefall, a bluer green where it is always night. */
+const LAND = pick({ cove: { grass: '#5c8f44', high: '#93b85a' }, kettle: { grass: '#5c8f44', high: '#93b85a' }, rime: { grass: '#f4eee3', high: '#d2d6d2' }, mire: { grass: '#5c8f44', high: '#7d8438' }, glow: { grass: '#35633a', high: '#5c8f44' } });
+
 const SIZE = 168;
 /** The part of the world the chart shows: the island and its pier, not the empty sea beyond. */
-const VIEW = HOME ? { x: 14, z: -4, half: 98 } : { x: 0, z: 0, half: 116 };
-const INK: Record<string, string> = { deep: '#1f4f86', ocean: '#3f86c8', shoal: '#7fbbe6', pond: '#2c8a8a', creek: '#62c0b0', cave: '#33264c', lake: '#2c8a8a', reef: '#62c0b0', pools: '#7fbbe6', spring: '#b4e4d4', sand: '#ecc77d', earth: '#a97c52', rock: '#737b80', cobble: '#d6cbb2', grass: '#5c8f44', high: '#93b85a', wood: '#7d5436', line: '#10181f' };
+const VIEW = CHART_VIEW;
+const INK: Record<string, string> = { deep: '#1f4f86', ocean: '#3f86c8', shoal: '#7fbbe6', pond: '#2c8a8a', creek: '#62c0b0', cave: '#33264c', lake: '#2c8a8a', reef: '#62c0b0', pools: '#7fbbe6', spring: '#b4e4d4', ice: '#1f4f86', floe: '#3f86c8', swamp: '#35633a', glow: '#2c8a8a', mere: '#62c0b0', sand: '#ecc77d', earth: '#a97c52', rock: '#737b80', cobble: '#d6cbb2', grass: '#5c8f44', high: '#93b85a', wood: '#7d5436', line: '#10181f' };
 
 let drawn: HTMLCanvasElement | null = null;
 
@@ -36,7 +40,9 @@ function island(field: Heightfield): HTMLCanvasElement {
       else {
         land[j * SIZE + i] = 1;
         const [sand, earth, rock, cobble] = splatAt(field, x, z);
-        ink = cobble > 0.5 ? INK.cobble : rock > 0.5 ? INK.rock : earth > 0.5 ? INK.earth : sand > 0.5 ? INK.sand : field.heightAt(x, z) > 6 ? INK.high : INK.grass;
+        ink = cobble > 0.5 ? INK.cobble : rock > 0.5 ? INK.rock : earth > 0.5 ? INK.earth : sand > 0.5 ? INK.sand : field.heightAt(x, z) > 6 ? LAND.high : LAND.grass;
+        // Rimefall's lake is ground, since it is walked on: the chart shows it as ice.
+        if (ISLE === 'rime' && Math.hypot(x - RIME.lake.x, z - RIME.lake.z) < RIME.lake.r) ink = '#c6e4f4';
       }
       g.fillStyle = ink;
       g.fillRect(i, j, 1, 1);
@@ -86,8 +92,7 @@ export function drawChart(body: HTMLElement, s: Session, of: ChartOf): void {
     pin(PIER.head.x0 - 8, PIER.z, 'Pier');
     pin(POND.x, POND.z, 'Pond');
     if (caveKnown(save)) pin(CAVE.x, CAVE.z, 'Sea cave');
-    if (save.seaChart) pin(CROSSING.x, CROSSING.z, 'To Kettle Isle');
-  } else {
+  } else if (ISLE === 'kettle') {
     pin(PIER.x0 + 6, PIER.z, 'Jetty');
     pin(CANNERY.x, CANNERY.z, 'Cannery');
     pin(POND.x, POND.z, 'The Kettle');
@@ -96,8 +101,8 @@ export function drawChart(body: HTMLElement, s: Session, of: ChartOf): void {
     const tide = POOLS.filter((q) => !q.hot);
     if (tide.length) pin(tide[1].x, tide[1].z, 'Tide pools');
     pin(WRECK.x + 14, WRECK.z - 12, 'Reef');
-    pin(CROSSING.x, CROSSING.z, 'Home');
-  }
+  } else for (const q of PINS) pin(q.x, q.z, q.label);
+  pin(CROSSING.x, CROSSING.z, HOME ? 'Way out' : 'Way out');
   const camp = campAt(save.placed.filter((q) => (q.isle ?? 'cove') === ISLE));
   if (camp) pin(camp.x, camp.z, save.campName || 'Your camp', 'camp');
   const stall = of.trader();
@@ -107,9 +112,10 @@ export function drawChart(body: HTMLElement, s: Session, of: ChartOf): void {
   body.append(wrap);
 
   body.append(el('div', 'section', 'What has come out of each water'));
-  // Both islands' waters are listed, the one the player is on first; Kettle Isle's only once it has been reached.
-  const far = save.hints.includes('kettle') ? FAR_WATERS : [];
-  for (const zone of HOME ? [...WATERS, ...far] : [...far, ...WATERS]) {
+  // Every island's waters are listed, this island's first; a far island's only once it has been reached.
+  const zones: Zone[] = [...WATERS, ...FAR_WATERS.filter((z) => save.hints.includes(ZONE_ISLE[z] ?? ''))];
+  zones.sort((a, b) => Number((ZONE_ISLE[b] ?? 'cove') === ISLE) - Number((ZONE_ISLE[a] ?? 'cove') === ISLE));
+  for (const zone of zones) {
     if (zone === 'cave' && !caveKnown(save)) continue;
     const kinds = caughtIn(save, zone);
     const row = el('div', 'chart-water');

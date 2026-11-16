@@ -18,7 +18,7 @@ node tools/shot.mjs out.png "at=shop" 402 874 1 "window.__cove.open('shop')"   #
 node tools/play-check.mjs outdir                             # three scripted casts from the pier, with pictures
 node tools/touch-check.mjs                                   # emulated-phone taps through every menu, 44 pt buttons, a dragged thumb walks and turns, and a whole cast by thumb
 node tools/bench-check.mjs                                   # runs the game's own benchmark end to end (its numbers mean nothing off the phone)
-node tools/cross-check.mjs outdir                            # rows to Kettle Isle and back by the buttons, with pictures; and that a kept save opens on the island it was put away on
+node tools/cross-check.mjs outdir                            # rows round all four far islands and home by the buttons, with pictures; and that a kept save opens on the island it was put away on
 node tools/icons.mjs [prefix]                                # render menu icons from the models (into art/icons)
 node tools/assets/lofi.mjs [models|icons|ground|title] [id]  # cut art/ down to what the game draws, in public/ (free, ten seconds)
 node tools/face-check.mjs out.png [--chars ...] [--face happy] # every character's head from three sides, to look at the drawn eyes
@@ -33,7 +33,7 @@ NODE_USE_ENV_PROXY=1 node tools/assets/make-media.mjs        # fal: textures, ti
 tools/blender/run.sh [id ...]                                # Blender (bpy): models fal did not make
 ```
 
-Run `npm test`, `npm run build` and `node tools/touch-check.mjs` before pushing (and `node tools/cross-check.mjs` after touching either island's layout, the boat or the save). The browser tools
+Run `npm test`, `npm run build` and `node tools/touch-check.mjs` before pushing (and `node tools/cross-check.mjs` after touching any island's layout, the boat or the save). The browser tools
 need Playwright's Chromium (cloud sessions have it). Every push runs the tests and build; the
 deploy to GitHub Pages only goes through from a branch the `github-pages` environment allows
 (the default branch, unless the owner adds others under Settings > Environments). That rule is
@@ -46,7 +46,7 @@ the owner's: do not route a deploy round it.
 - **Every state is a URL** (`src/config.ts`): `at` (a name in `PLACES` in `src/world/layout.ts`),
   `time` (dawn/day/dusk/night/hour), `weather` (clear/rain), `hud=0`, `title=0`, `fresh=1` (a new
   save that is not kept), `zoom`, `yaw`, `quality=low`, `mute=1`, `models=0`, `zoo=fish|hat|f-|all`,
-  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `isle=kettle` loads Kettle Isle (`at` then takes its places: `jetty`, `cannery`, `notch`, `lake`, `spring`, `pools`, `reef`). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
+  `warp=n` (run time faster, for the tools), `coach=0` (no first-minute guide; the picture tools set it), `stats=1` (the frame-rate readout), `bench=1` and `benchsecs=n` (run the benchmark), `look=smooth` (draw full size with soft light, as before the lo-fi look), `eyes=0` (no drawn eyes), `season=spring|summer|fall|winter`, `sky=aurora|bloodmoon|sunrise` (a rare sky, whatever the day). `trader=1` has the trader in (`trader=0`, never). `isle=kettle|rime|mire|glow` loads a far island (`at` then takes its places: Kettle's `jetty`, `cannery`, `notch`, `lake`, `spring`, `pools`, `reef`; Rimefall's `jetty`, `hut`, `lake`, `hole`, `hill`, `seals`; Mirewood's `jetty`, `bayou`, `shack`, `walk`, `north`, `west`; Glowmere's `jetty`, `mere`, `beacon`, `west`, `south`; each has `boat`). `weather` also takes `fog` and `storm`. `window.__cove` exposes `state()`, `teleport`, `face`,
   `press`/`release` (the big button) and `open(sheet, tab)`; and, only with `fresh=1` (as every tool runs), what changes
   the game: `give(coins, tokens)`, `catchNow`, `emote`, `game`.
 - **The island** (`src/world/island.ts`, `layout.ts`): heights from a function sampled every metre;
@@ -100,7 +100,7 @@ the owner's: do not route a deploy round it.
   reel, sit, wave, dance, cheer, clap, uke, row) and `rig.ts` (turns them into bone rotations about
   the character's own axes, worked out from the skeleton). Hats sit on the head bone; the rod is
   placed from the hand each frame.
-- **Fishing** (`src/fishing/`): `fish.ts` (43 kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
+- **Fishing** (`src/fishing/`): `fish.ts` (some ninety kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
   size, shiny/golden), `reel.ts` (the reeling minigame, fixed-step), `fishing.ts` (cast, bobber,
   line, bite, hook, reel, land). Tune feel with `REEL` and the tests in `fishing.test.ts`.
 - **Pearls and the Lucky Gull.** Pearls (the save's `tokens`) are the premium currency: only the
@@ -308,25 +308,73 @@ the owner's: do not route a deploy round it.
   else the player does (casting, sitting, going indoors) gets them off. Landing in deep water
   puts the player back where they last stood, as a jump always has.
 
-- **Two islands** (`src/world/isle.ts`). Driftwood Cove, and Kettle Isle, a wilder one a boat's
-  row away; the owner asked for it, and for the crossing to be a loading card rather than a
-  seamless sea. **Only one island is ever loaded.** Which one is chosen once, as the page
-  loads (`ISLE`, `HOME`: from `isle=` in the address, else from `cove.isle` in storage, and
-  always the cove under the tests and for an unkept save), and everything that says where
-  things are picks its island's version there and then: `layout.ts` (`POND`, `PIER`, `PATHS`,
-  `PLACED`, `PLACES`, `START`, `CROSSING` and the rest each have a cove value and a Kettle
-  value; what an island lacks is put at `NOWHERE`, off the map, so nothing is ever near it),
-  `island.ts` (`rawHeight`, `shoreRadius`, `waterAt`), the scatter's rules, the chart. A test
-  of Kettle Isle mocks `./isle` (see `kettle.test.ts`). In `main.ts` the cove's own things
-  (shop, Lucky Gull, board, hut, lighthouse, islanders, Gus, the trader, sea glass, mushrooms,
-  the first-minute guide) are simply not there when `!HOME`: their doors are set nowhere.
-- **The crossing** (`Game.cross`): in the boat beside the buoy (`CROSSING`: south of the
-  cove's pier head, east of Kettle's jetty) the second button reads Row out, or Row home. It
-  wants the **sea chart**, which Tansy sells (always on her stall until bought; `seaChart` in
-  the save). The save is kept, the island's name is put in storage, and the page is loaded
-  again; `src/main.ts` sees the crossing's mark in session storage and shows a card over the
-  title's picture ("Rowing out to Kettle Isle…") in place of the title, and the game begins by
-  itself, at the boat. A kept save opens on the island it was put away on.
+- **Five islands** (`src/world/isle.ts`). Driftwood Cove, and four far ones a boat's row away:
+  Kettle Isle, Rimefall, Mirewood and Glowmere. The owner asked for a second island, then for
+  a fleet of them, each with its own design, rewards, biome and fish, and for the crossing to
+  be a loading card rather than a seamless sea. **Only one island is ever loaded.** Which one
+  is chosen once, as the page loads (`ISLE`, `HOME`: from `isle=` in the address, else from
+  `cove.isle` in storage, and always the cove under the tests and for an unkept save), and
+  everything that says where things are picks its island's version there and then with
+  `pick({ cove, kettle, rime, mire, glow })`: `layout.ts` (`POND`, `PIER`, `PATHS`, `PLACED`,
+  `PLACES`, `START`, `CROSSING`, `PINS`, `CHART_VIEW` and the rest; what an island lacks is
+  put at `NOWHERE`, off the map, so nothing is ever near it), `island.ts` (`HEIGHT`, `SHORE`,
+  and `WATERS`: what each island calls its pond, its pools and its sea), the scatter's rules,
+  the chart. `pick` takes a full record, so a sixth island will not compile until every one
+  of them has been given its value. A test of an island's ground mocks `./isle` with
+  `mockIsle('rime')` from `isleMock.ts`, which must import nothing (a mock that imports what
+  imports `isle` hangs), and runs the shared `checkIsle` (`isleChecks.ts`): paths dry, the
+  jetty walkable, the boat's way afloat, every place somewhere to stand, every water found.
+  In `main.ts` the cove's own things (shop, Lucky Gull, board, hut, lighthouse, islanders,
+  Gus, the trader, sea glass, mushrooms, the first-minute guide, the day's bounty) are simply
+  not there when `!HOME`: their doors are set nowhere. Nobody lives on a far island and
+  nothing is sold there: what is caught goes home in the cooler.
+- **The crossing** (`Game.cross`, `sailTo`; `src/ui/voyage.ts`): in the boat beside the buoy
+  (`CROSSING`) the second button reads Row out, on every island, and opens the list of places
+  to row to: home, and each far island. One the player has a chart to has a Row button; one
+  they have not is `???` with a rumour of how its chart is come by. `sailTo` keeps the save,
+  puts the island's name in storage and loads the page again; `src/main.ts` sees the
+  crossing's mark in session storage and shows a card over the title's picture ("Rowing out
+  to Rimefall…") in place of the title, and the game begins by itself, at the boat. A kept
+  save opens on the island it was put away on.
+- **Charts** (`src/game/isles.ts`, pure, tested; `charts` in the save, and `seaChart` for
+  Kettle's in older saves). Each is come by differently, and nothing but the rumour points at
+  one: Kettle Isle's is sold by Tansy; Mirewood's is in the back of the cannery's ledger on
+  Kettle Isle (its last page); Rimefall's is drawn by picking out the ice on the northern
+  horizon through the lighthouse's telescope on a clear day (the sight `ice`, an iceberg
+  drawn far out at `World.ICEBERG`); Glowmere's is in a bottle (the odd `bottle` on the end
+  of a line: about one in three holds it, and the fifth for certain; `bottleHolds`). `CHART_RUMOUR` and `CHART_FOUND` are the words.
+- **A biome is a look laid over the island** (`src/look/biome.ts`, `BIOMES`; `World.dress`):
+  a season or an hour that never changes there, mist, the water's own colour, the grass's
+  tint, and what is said on arriving. Rimefall is always winter, with the northern lights on
+  every clear night; Mirewood has mist lying on it and green water; on Glowmere it is always
+  a little after eleven at night.
+- **Deeds** (`DEEDS`, `newDeeds` in `isles.ts`): three to an island, each paid once with
+  something that cannot be bought or won (`earned` on a paint, a charm, a toy or a piece of
+  furniture, which keeps it out of the shop and the Lucky Gull's prizes): the Icicle, Crab
+  Claw and Ember charms, Frost, Mire and Glow paint (which gives off light), the sled, the
+  stilts, and pots of glowshrooms to set down. No deed waits on a legend. The journal's Far
+  isles tab lists each island's deeds over its fish; an island with no chart is `???` there.
+- **Rimefall** (`src/world/rime.ts`): snow, a few pines, seals on the shore, floes on a cold
+  sea (zone `floe`), and in the middle a lake frozen flat. The ice is ground: it is walked
+  on, and fished through five holes (`HOLES`, which are `POOLS`; zone `ice`). A cast that
+  would fly over a hole or land beside one drops into it (`cast` in `fishing.ts`), since a
+  hole is under two metres across. An ice hut to go into (the hut's room) with a fire by it,
+  and a hill for the **sled** (a ridden toy: the skateboard's physics with `SLED`'s numbers,
+  sat on; slow on the flat, fast downhill).
+- **Mirewood** (`src/world/mire.ts`): a low swamp cut by three still channels and a bayou
+  (zone `swamp`), too deep to wade, crossed by boardwalks (`WALKS`: floors like the pier,
+  laid from pier sections) with mangroves along the banks and a shack on stilts. **Crab
+  pots**: four places (`POTS`, each with a float). Set pot drops one; six minutes later
+  (`POT_SECS`, by the real clock, and it keeps however long it is left) Haul pot brings up
+  one to three things from zone `pots`, which is never cast into. The **stilts** (a ridden
+  toy) wade what feet cannot (`STILTS.wade`, passed to `walkable`), slowly, with no jump.
+- **Glowmere** (`src/world/glow.ts`): always night. Giant mushrooms for trees
+  (`tree-shroom`, which hold a little of their own colour against the dark and have a glow
+  under every other cap), glowing shallows all round (zone `glow`) and the Mere on top
+  (zone `mere`). **Three beacons** (`BEACONS`) on its hills: Light sets one burning for
+  twelve minutes (`BURN_SECS`); with all three alight at once the water wakes for ten
+  (`WAKE_SECS`, `awake`): the shallows go brighter (`World.woken`), and the two fish marked
+  `woken` in `fish.ts` bite only then (`Conditions.woken` in `roll.ts`).
 - **Kettle Isle** (`src/world/kettle.ts`, pure, tested): an old crater with a lake in it (the
   Kettle: `POND` there, zone `lake`, held in by a rim with a notch to walk in by), a reef flat
   off the south-west shore where the sea stays wadeable for thirty metres (zone `reef`, with
@@ -337,9 +385,12 @@ the owner's: do not route a deploy round it.
   Nobody lives there: no shop, so what is caught goes home in the cooler. A jetty, a ruined
   cannery to go into (`room-cannery`: a ledger read a page at a time, and a crate with
   something in it once a day; `src/game/kettle.ts`), an old fire ring. Eleven fish in the
-  three waters (`farAway` in `fish.ts`), with their own page of the journal and a set; an
+  three waters.
+- **The far islands' fish** (`ZONE_ISLE`, `farAway`, `isleOf` in `fish.ts`): 37 kinds, each
+  island with a legend of its own, a set, and its part of the journal's Far isles tab; an
   errand, a bounty or a favour never asks for one (`everyDay`). Things set down are kept by
-  island (`isle` on a `PlacedThing`).
+  island (`isle` on a `PlacedThing`). A new fish needs a sprite: a new sheet in
+  `make-sprites.mjs` (sheets 6 to 8 are the fleet's).
 
 ## What the game leans into
 
