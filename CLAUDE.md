@@ -99,7 +99,10 @@ the owner's: do not route a deploy round it.
 - **Characters** are Tripo-rigged models posed in code: `poses.ts` (pure joint angles: walk, cast,
   reel, sit, wave, dance, cheer, clap, uke, row) and `rig.ts` (turns them into bone rotations about
   the character's own axes, worked out from the skeleton). Hats sit on the head bone; the rod is
-  placed from the hand each frame.
+  placed from the hand each frame. **Which end of a rod is held** is `lieOf` in
+  `src/player/long.ts` (pure, tested): the end with more surface, the grip and the reel. It
+  was the end with more corners, and once the rods were cut down they had more corners in
+  the tip, so every rod was held by its tip with the reel in the air: the owner saw it.
 - **Fishing** (`src/fishing/`): `fish.ts` (some hundred and ten kinds of fish, odds and ends, and the treasure chest, as data), `roll.ts` (what bites,
   size, shiny/golden), `reel.ts` (the reeling minigame, fixed-step), `fishing.ts` (cast, bobber,
   line, bite, hook, reel, land). Tune feel with `REEL` and the tests in `fishing.test.ts`.
@@ -462,7 +465,11 @@ Generated, not drawn in code. `tools/assets/manifest.mjs` holds every prompt.
   tables, lamp-posts, the well, the tent, the furniture set down from the bag): cut to a few
   hundred triangles a plank came out warped, a wall bowed and a stripe smeared, and the owner
   saw the shop and the bench looking odd. They lose a triangle only where that moves nothing
-  by more than `error` of their size, and wear a 256 pixel texture. What makes them lo-fi is
+  by more than `error` of their size, and wear a 256 pixel texture. The rods (`rod-*`) are
+  among them: a straight shaft cut to 420 triangles was a crooked ribbon. A rod also loses
+  whatever its picture had hanging from its tip (`tools/assets/rod-trim.mjs`: a bobber, a
+  hook or a charm on a thread, which shaped is a stiff wire sticking out of the rod), since
+  the game draws the line and the bobber itself. What makes them lo-fi is
   the small picture, the inks and the stepped light, not a bent bench. It costs about 120,000
   triangles at the plaza (some 720,000 in view). An
   icon to a 48-pixel sprite with a dark line round it; the title picture to 256 pixels across

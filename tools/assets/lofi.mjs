@@ -22,6 +22,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import sharp from 'sharp';
 import { eyesOnCorners, eyesOnTexture, readBody, trianglesOnTexture } from './eyes.mjs';
 import { INKS, calm, inkFor, inked, inkedSmall } from './palette.mjs';
+import { trimHanging } from './rod-trim.mjs';
 
 const ROOT = new URL('../../', import.meta.url).pathname;
 await Promise.all([MeshoptDecoder.ready, MeshoptEncoder.ready, MeshoptSimplifier.ready]);
@@ -66,7 +67,8 @@ const CUT = {
 const BIG = new Set(['shop', 'arcade', 'lighthouse', 'fishing-hut', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'cliff']);
 /** Things people have built, which keep their shape (see `made` above); anything set down from the bag (`f-`) is one too. */
 const MADE = new Set(['stall', 'wreck', 'crab-pot', 'beacon', 'sundial', 'toy-sled', 'cave-mouth', 'bridge', 'rowboat', 'tent', 'well', 'notice-board', 'bench', 'picnic-table', 'lamp-post', 'signpost', 'mailbox', 'fence', 'crates', 'barrel', 'campfire', 'buoy', 'pier']);
-const isMade = (id) => MADE.has(id) || id.startsWith('f-');
+// (A rod is one of them: a straight shaft cut to a few hundred triangles came out a crooked ribbon.)
+const isMade = (id) => MADE.has(id) || id.startsWith('f-') || id.startsWith('rod-');
 /** The trees: each is cut twice, once to be seen near and once far (see `tree` and `far` above). */
 export const TREES = new Set(['tree-pine', 'tree-round', 'tree-birch', 'tree-palm', 'tree-mangrove', 'tree-shroom', 'tree-dandelion']);
 const PLANT = new Set(['bush', 'flowers', 'grass-tuft', 'mushrooms', 'cattails', 'lilypad', 'rock-a', 'rock-b', 'shell', 'cloud']);
@@ -177,6 +179,14 @@ export async function lofiModel(id, far = false) {
   if (Object.keys(extras).length) root.listScenes()[0]?.setExtras(extras);
   const ratio = Math.min(1, cut.tris / tris);
   await doc.transform(dedup(), weld(), ...(ratio < 1 ? [simplify({ simplifier: MeshoptSimplifier, ratio, error: cut.error ?? 0.08, lockBorder: false })] : []), prune());
+  // A rod loses whatever its picture had hanging from its tip (rod-trim.mjs): the game draws the line and the bobber.
+  if (id.startsWith('rod-'))
+    for (const m of root.listMeshes())
+      for (const p of m.listPrimitives()) {
+        const { keep, cut: gone } = trimHanging(p.getAttribute('POSITION').getArray(), p.getIndices().getArray());
+        if (gone) p.getIndices().setArray(new Uint32Array(keep));
+        if (gone) console.log(`${id}: ${gone} triangles of what hung from its tip taken off`);
+      }
   for (const tex of root.listTextures()) {
     const t = whole.get(tex);
     if (!t) continue;

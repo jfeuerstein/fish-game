@@ -9,6 +9,7 @@ import { FIDGETS, Gaze, fidgetAt, lookToward } from './gaze';
 import { lit, pixelled } from '../look/material';
 import { INK } from '../look/inks';
 import { DARK_FUR, EXPRESSIONS, type Expression, GUESS, type PaintedEye, blinking, eyeHeight, eyeShader, faceFor, readEyes } from './face';
+import { lieOf } from './long';
 import { type Cut, type HatShape, type Head, type Measure, fitFor, hatFor, headOf, measureHat, placeHat, placeFor } from './fit';
 
 /** Draw each skull's ellipsoid (`socket=1` in the address), to tune HEADS by eye. */
@@ -16,47 +17,28 @@ const SOCKETS = typeof location !== 'undefined' && new URLSearchParams(location.
 
 export type Action = 'idle' | 'walk' | 'sit' | 'hold' | 'castBack' | 'castThrow' | 'reel' | 'show' | 'cheer' | 'wave' | 'dance' | 'clap' | 'uke' | 'row' | 'jump' | 'dig' | 'sweep' | 'flop' | 'spin' | 'honk' | 'slap' | 'stretch' | 'skip' | 'warm' | 'lean' | 'skate' | 'pogo' | 'float';
 
-/** Turn a long thin model (a rod) so it lies along +y with its heavier end (the reel and handle) at the origin. */
+/** Turn a long thin model (a rod) so it lies along +y with its handle (the grip and the reel) at the origin. */
 export function alongY(root: THREE.Object3D, length: number): THREE.Object3D {
   root.updateMatrixWorld(true);
-  const pts: THREE.Vector3[] = [];
+  // Every triangle, where it is in the world: which end is held is a matter of surface (src/player/long.ts).
+  const tris: number[] = [];
+  const v = new THREE.Vector3();
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
     const pos = m.geometry.getAttribute('position');
-    const step = Math.max(1, Math.floor(pos.count / 1500));
-    for (let i = 0; i < pos.count; i += step) pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld));
+    const index = m.geometry.getIndex();
+    const count = index ? index.count : pos.count;
+    for (let i = 0; i + 2 < count; i += 3)
+      for (let k = 0; k < 3; k++) {
+        v.fromBufferAttribute(pos, index ? index.getX(i + k) : i + k).applyMatrix4(m.matrixWorld);
+        tris.push(v.x, v.y, v.z);
+      }
   });
-  const mean = pts.reduce((a, b) => a.add(b), new THREE.Vector3()).multiplyScalar(1 / Math.max(1, pts.length));
-  // The longest direction by power iteration on the spread of the points.
-  let dir = new THREE.Vector3(1, 1, 1).normalize();
-  for (let it = 0; it < 30; it++) {
-    const next = new THREE.Vector3();
-    for (const p of pts) {
-      const d = p.clone().sub(mean);
-      next.addScaledVector(d, d.dot(dir));
-    }
-    dir = next.normalize();
-  }
-  // Which end is heavier (has more of the points beyond a third of the way).
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (const p of pts) {
-    const t = p.clone().sub(mean).dot(dir);
-    lo = Math.min(lo, t);
-    hi = Math.max(hi, t);
-  }
-  let near = 0;
-  let far = 0;
-  for (const p of pts) {
-    const t = (p.clone().sub(mean).dot(dir) - lo) / (hi - lo);
-    if (t < 0.3) near++;
-    if (t > 0.7) far++;
-  }
-  if (far > near) {
-    dir.negate();
-    [lo, hi] = [-hi, -lo];
-  }
+  const lie = lieOf(tris);
+  const mean = new THREE.Vector3(...lie.mean);
+  const dir = new THREE.Vector3(...lie.dir);
+  const { lo, hi } = lie;
   const holder = new THREE.Group();
   const inner = new THREE.Group();
   inner.add(root);
