@@ -53,7 +53,8 @@ export const MODELS = {
   'tent': { kind: 'prop', what: 'a small triangular orange camping tent with the front flap tied open, pegged down with ropes', h: 2.0, faces: 5000 },
   'pier': { kind: 'prop', what: 'a square section of a wooden pier: a flat deck of weathered planks on four thick round posts, seen from above at an angle', h: 2.4, faces: 4000 },
   'bridge': { kind: 'prop', what: 'a small arched wooden footbridge with low chunky rails', h: 1.8, faces: 6000 },
-  'rowboat': { kind: 'prop', what: 'a small wooden rowboat painted white with a red stripe, two oars resting inside, empty', h: 1.0, faces: 6000 },
+  // (Empty: the game makes the oars, so that they can be rowed with. The first one had a pair lying in it, which nobody could pick up.)
+  'rowboat': { kind: 'prop', what: 'a small open wooden rowing boat painted white with a red stripe along its bottom, a pointed bow at one end and a flat square stern at the other, two plain plank seats across it and a flat wooden floor inside, completely empty with nothing in it', h: 1.0, faces: 6000 },
   'buoy': { kind: 'prop', what: 'a round floating sea buoy, red and white, with a little bell on top', h: 1.6, faces: 3000 },
 
   'arcade': { kind: 'prop', what: 'a small seaside carnival game booth: a wooden stall painted deep teal and cream with a striped red and cream canopy, a row of round light bulbs along the top edge, a big painted seagull sign on the roof, a counter across the open front with a little slot machine on it and a shelf of plush fish prizes behind', h: 5.4, faces: 12000 },

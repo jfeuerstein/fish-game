@@ -94,6 +94,8 @@ export class Character {
   action: Action = 'idle';
   /** For walking: 0 standing to 1 running. */
   speed = 0;
+  /** Rowing: where the boat's oars are in their stroke, which the arms and the back go with. */
+  stroke = 0;
   /** For casting and reeling: wind-up power, throw progress, line strain. */
   power = 0;
   strain = 0;
@@ -755,7 +757,7 @@ export class Character {
       case 'uke':
         return P.uke(t, this.pluck);
       case 'row':
-        return P.row(t, this.speed);
+        return P.row(t, this.speed, this.stroke);
       case 'jump':
         return P.jump(t);
       case 'dig':

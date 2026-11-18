@@ -56,6 +56,11 @@ const SOLID: Record<string, { circle?: number; box?: number }> = {
   'ice-hut': { box: 0.8 },
 };
 
+/** What snow lies on in winter: whatever grows, the rocks and the logs. And how nearly a face must look straight up to hold it, and its colour (an ink, as the shader wants it: linear). */
+const snowLies = (id: string): boolean => id.startsWith('tree-') || id === 'bush' || id === 'rock-a' || id === 'rock-b' || id === 'log' || id === 'cliff';
+const SNOW_FROM = 0.42;
+const SNOW_INK = new THREE.Color('#f4eee3').toArray().map((c) => c.toFixed(3)).join(', ');
+
 /**
  * What moves in the wind, and how: `bend` is how far a point a metre up is pushed, and `power`
  * how the push grows with height (2: a trunk that is still at its foot and swings at its top).
@@ -167,6 +172,41 @@ export class Props {
     }
   }
 
+  /** How much snow lies on what grows and on the rocks (0 none, 1 winter's), and what each of them is called for it. */
+  private snow = { value: 0 };
+
+  /**
+   * Let snow lie on a thing: every face of it that looks up at the sky is snow, and the rest is
+   * as it was, so a pine is a dark tree with white boughs. (Winter was once a pale colour laid
+   * over the whole of every tree, which in a bright light left nothing of the tree at all: the
+   * owner saw trees that were fully white.) A model has one normal to a face, so a face is
+   * snow or it is not.
+   */
+  private snowy(material: THREE.Material): void {
+    if (material.userData.snowy) return;
+    material.userData.snowy = true;
+    const before = material.onBeforeCompile;
+    const key = material.customProgramCacheKey.bind(material);
+    material.customProgramCacheKey = () => `${key()}|snow`;
+    material.onBeforeCompile = (shader, renderer) => {
+      before?.call(material, shader, renderer);
+      shader.uniforms.uSnow = this.snow;
+      shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying float vSnowUp;').replace(
+        '#include <beginnormal_vertex>',
+        `#include <beginnormal_vertex>
+#ifdef USE_INSTANCING
+  vSnowUp = normalize(mat3(instanceMatrix) * objectNormal).y;
+#else
+  vSnowUp = normalize(mat3(modelMatrix) * objectNormal).y;
+#endif`,
+      );
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uSnow;\nvarying float vSnowUp;')
+        .replace('#include <color_fragment>', `#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(${SNOW_INK}), step(${SNOW_FROM.toFixed(2)}, vSnowUp) * uSnow);`);
+    };
+    material.needsUpdate = true;
+  }
+
   /** Give a material the spotlight: what it draws nearer the camera than the player is opened round them. */
   private spotlit(material: THREE.Material): void {
     if (material.userData.spotlit) return;
@@ -182,7 +222,8 @@ export class Props {
   }
 
   /** Multiply what grows by a colour for each kind (the season's): the whole of each, trunk and all. */
-  tint(by: Record<string, string>, rime = '#000000'): void {
+  tint(by: Record<string, string>, rime = '#000000', snow = 0): void {
+    this.snow.value = snow;
     for (const o of this.group.children) {
       const colour = by[o.name];
       const m = (o as THREE.Mesh).material as THREE.MeshToonMaterial | undefined;
@@ -243,6 +284,7 @@ export class Props {
         for (const mesh of meshes) {
           if (SWAY[id]) this.sway(mesh.material as THREE.Material, SWAY[id]);
           if (id.startsWith('tree-') || WINDOWED.has(id)) this.spotlit(mesh.material as THREE.Material);
+          if (snowLies(id)) this.snowy(mesh.material as THREE.Material);
         }
         // A few of a kind are one mesh. Many of a kind are split by where they stand, a mesh to
         // each square of the island, so that what is behind the camera or beyond the shadow's
@@ -256,6 +298,7 @@ export class Props {
           far?.traverse((o) => {
             if ((o as THREE.Mesh).isMesh) farMeshes.push(o as THREE.Mesh);
           });
+          for (const mesh of farMeshes) this.snowy(mesh.material as THREE.Material);
           const squares = new Map<string, number[]>();
           list.forEach((p, i) => {
             const key = `${Math.floor(p.x / SQUARE)},${Math.floor(p.z / SQUARE)}`;

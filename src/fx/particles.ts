@@ -20,6 +20,9 @@ const MAX = 220;
 const STREAKS = 520;
 const MARKS = 120;
 /** The box of rain: how wide and how tall, metres. It is kept round whoever the camera is watching. */
+/** A snowflake is five numbers; and how fast one falls, slowest and fastest, metres a second (rain falls at fourteen). */
+const FLAKE = 5;
+const SNOW_FALL: [number, number] = [1.1, 2.1];
 const RAIN_WIDE = 26;
 const RAIN_TALL = 18;
 /** Footprints kept on the sand, and how long each stays, seconds. */
@@ -38,6 +41,9 @@ export class Effects {
   private rainOn = 0;
   private snowing = false;
   private snow: THREE.InstancedMesh;
+  /** Every flake: where it began in its box, how fast it falls, and where in its sway it is. */
+  private flakes = new Float32Array(STREAKS * FLAKE);
+  private snowClock = 0;
   private marks: THREE.InstancedMesh;
   private markAt: { x: number; y: number; z: number; born: number }[] = [];
   private markNext = 0;
@@ -68,11 +74,16 @@ export class Effects {
     this.rain.frustumCulled = false;
     this.rain.visible = false;
     this.group.add(this.rain);
-    // Snow: square flakes in the same box, that fall slowly and drift.
+    // Snow: square flakes in a box of the same size, each falling slowly at its own pace and drifting from side to side.
     this.snow = new THREE.InstancedMesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), new THREE.MeshBasicMaterial({ color: 0xfffdf6 }), STREAKS);
+    this.snow.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     for (let i = 0; i < STREAKS; i++) {
-      this.m.makeTranslation((Math.random() - 0.5) * RAIN_WIDE, Math.random() * RAIN_TALL, (Math.random() - 0.5) * RAIN_WIDE);
-      this.snow.setMatrixAt(i, this.m);
+      this.flakes[i * FLAKE] = Math.random() * RAIN_WIDE;
+      this.flakes[i * FLAKE + 1] = Math.random() * RAIN_TALL;
+      this.flakes[i * FLAKE + 2] = Math.random() * RAIN_WIDE;
+      this.flakes[i * FLAKE + 3] = SNOW_FALL[0] + Math.random() * (SNOW_FALL[1] - SNOW_FALL[0]);
+      this.flakes[i * FLAKE + 4] = Math.random() * Math.PI * 2;
+      this.snow.setMatrixAt(i, this.none);
     }
     this.snow.frustumCulled = false;
     this.snow.visible = false;
@@ -207,11 +218,26 @@ export class Effects {
     if (gone) this.prints.instanceMatrix.needsUpdate = true;
     this.snow.visible = this.snowing && this.rainOn > 0.05;
     if (this.snow.visible) {
+      // Each flake is where it is in the world, and falls there: the box that holds them goes
+      // with whoever is watched, and a flake that leaves it by one side comes in at the other,
+      // out at the edge where it is not seen. (The whole box once slid down a little way and
+      // jumped back, about once a second, and jumped two metres whenever the player had walked
+      // two: at rain's speed that is a blur, and at snow's the owner saw every jump.)
       this.snow.count = Math.round(STREAKS * Math.min(1, this.rainOn));
       const p = focus ?? camera.position;
-      const t = performance.now() / 1000;
-      // Falling a tenth as fast as rain, and swung a little from side to side, in steps.
-      this.snow.position.set(Math.round(p.x / 2) * 2 + Math.round(Math.sin(t * 0.8) * 4) / 8, p.y - 3 - ((t * 1.6) % 1.4), Math.round(p.z / 2) * 2);
+      this.snowClock += dt;
+      const t = this.snowClock;
+      const foot = p.y - 3;
+      const within = (v: number, size: number): number => ((v % size) + size) % size;
+      for (let i = 0; i < this.snow.count; i++) {
+        const o = i * FLAKE;
+        const sway = Math.sin(t * 0.9 + this.flakes[o + 4]) * 0.4;
+        const x = p.x - RAIN_WIDE / 2 + within(this.flakes[o] + sway - p.x, RAIN_WIDE);
+        const y = foot + within(this.flakes[o + 1] - this.flakes[o + 3] * t - foot, RAIN_TALL);
+        const z = p.z - RAIN_WIDE / 2 + within(this.flakes[o + 2] + Math.cos(t * 0.7 + this.flakes[o + 4]) * 0.3 - p.z, RAIN_WIDE);
+        this.snow.setMatrixAt(i, this.m.makeTranslation(x, y, z));
+      }
+      this.snow.instanceMatrix.needsUpdate = true;
     }
     this.rain.visible = !this.snowing && this.rainOn > 0.05;
     if (this.rain.visible) {

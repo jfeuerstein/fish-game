@@ -83,7 +83,12 @@ the owner's: do not route a deploy round it.
   the lo-fi look in six steps a second. More in rain.
 - **Rain** (`src/fx/particles.ts`) is short thick streaks in a box kept round the player, a pale
   pixel where each drop lands (on the ground, or on the water where there is water) that widens
-  once and goes, and the ground darkened in two steps (`uWet` in `terrain.ts`).
+  once and goes, and the ground darkened in two steps (`uWet` in `terrain.ts`). **Snow** is
+  not the rain's box slowed down: that box slides a little way down and jumps back, and
+  jumps two metres when the player has walked two, which at rain's speed is a blur and at
+  snow's was a jump a second, and the owner saw it. Each flake is where it is in the world and
+  falls there at its own pace; the box that holds them goes with the player, and a flake
+  leaving it by one side comes in at the other, out at the edge.
 - **What feet leave** (`Game.tread`, `footfall`, `Effects.print`, `puff`): a print in the sand
   for every short pace, laid to the slope and lit as the ground is, gone after half a minute;
   a ring and a few drops for a step in the shallows; a puff of dust on landing from a jump.
@@ -201,7 +206,19 @@ the owner's: do not route a deploy round it.
 - **Islanders** (`src/npc/npcs.ts`): three fishers walk routes between spots and fish; Gus stands by
   the shop. They turn their heads to watch the player go by, keep looking a beat after, and now
   and then glance about, scratch, shift their weight or yawn (`src/player/gaze.ts`, pure, tested;
-  `Character.watching` and `fidgets`; the fidgets are poses in `poses.ts`). **Boat** (`src/world/boat.ts`), **placed furniture** (`placed.ts`).
+  `Character.watching` and `fidgets`; the fidgets are poses in `poses.ts`). **Placed furniture** (`placed.ts`).
+- **The boat** (`src/world/boat.ts`; its rules in `src/world/hull.ts`, pure, tested) goes bow
+  first and is rowed with its oars. Its model is read when loaded (`readHull`, from points
+  all over its surface): the narrow end is the bow, and the model is turned so that it leads
+  (it went stern first until the owner said so); the bench nearest the middle is the rower's,
+  and the oars rest on the rim before it. The oars are made in code (the model is an empty
+  boat: its first had a pair lying in it that nobody could pick up) and go round a stroke
+  every second and a half (`oarAt`: in the water from bow to stern, lifted and carried back),
+  in steps, as the rower moves. The rower sits with their back to the bow, as anyone rowing
+  does (`Boat.facing`), and their arms and back go with the stroke (`row` in `poses.ts`
+  takes it; `Character.stroke`). The boat is pulled hardest while the blades are in, and
+  there is a splash and the sound as they go in (`onCatch`). With nobody aboard the oars lie
+  back along the rim.
 - **Sound** (`src/audio/audio.ts`): MP3s made through fal, played with Web Audio from the first touch.
   In the lo-fi look everything goes through a narrow band with a little tape saturation, the
   effects are cut to a few dozen levels so they crunch, and the music wavers in pitch like a worn
@@ -216,7 +233,12 @@ the owner's: do not route a deploy round it.
   what says whether that is a good trade.
 - **Seasons** (`src/look/season.ts`, pure, tested): by the real calendar. A season is a repaint:
   the leaves' and grass's colour, the light, frost on the grass, snow in place of rain in
-  winter (`SEASON_LOOK`, `World.setSeason`, `Props.tint`). Some fish keep to a season
+  winter (`SEASON_LOOK`, `World.setSeason`, `Props.tint`). **In winter snow lies** on the
+  trees, bushes, rocks and logs (`lying`; `Props.snowy`): every face that looks up is snow
+  and the rest is the thing's own colour, so a pine is a dark tree with white boughs. Winter
+  was once a pale colour laid over the whole of each tree (`rime`), and on Rimefall, where
+  it is always winter, the owner saw trees that were fully white. Thistledown and Sandglass
+  Key keep one season each (`season` in their biome): no snow on a palm. Some fish keep to a season
   (`seasons` on a `Species`); the journal says when.
 - **Weather** is clear, rain, fog or a thunderstorm (`weatherAt` in `clock.ts`, from the clock
   alone). Fog is pale and close; a storm is darker rain with lightning (`World.air`,

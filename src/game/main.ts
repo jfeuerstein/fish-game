@@ -220,6 +220,11 @@ export class Game implements Session {
     this.scene.add(this.body.group);
     this.player = new Player(this.body, this.world.field, this.world.solid);
     this.boat = new Boat(this.world.field);
+    // As the blades go in: a splash at each, and the sound of it.
+    this.boat.onCatch = (blades) => {
+      for (const b of blades) this.fx.splash(b.setY(0), 0.35);
+      this.audio.play('row', { volume: 0.35 });
+    };
     this.gus = new Shopkeeper(this.scene);
     // The islanders live at the cove.
     this.npcs = HOME ? NPCS.map((d) => new Npc(d, this.world.field, this.scene)) : [];
@@ -1985,7 +1990,9 @@ export class Game implements Session {
       this.boat.update(dt, this.fishing.busy ? { x: 0, y: 0 } : stick, this.rig.yaw);
       const seatAt = this.boat.seat();
       this.player.pos.copy(seatAt);
-      if (!this.fishing.busy) this.player.yaw = this.boat.yaw;
+      // (Whoever rows faces the stern.)
+      if (!this.fishing.busy) this.player.yaw = this.boat.facing;
+      this.body.stroke = this.boat.stroke;
       this.player.sync();
       if (!this.fishing.busy) {
         this.body.action = 'row';
@@ -1998,7 +2005,7 @@ export class Game implements Session {
         this.hud.toast('The water goes still and dark under the rock. Something lives in here that lives nowhere else.', 'gold');
         this.changed();
       }
-      if (this.boat.effort > 0.3 && Math.floor(performance.now() / 950) !== Math.floor((performance.now() - dt * 1000) / 950)) this.audio.play('row', { volume: 0.35 });
+
     } else {
       this.boat.update(dt, { x: 0, y: 0 }, 0);
       // (On a cloud with a line out, the cloud stays where it is.)

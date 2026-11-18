@@ -29,6 +29,8 @@ export interface SeasonLook {
   /** How much of the grass lies under frost (0 to 1), and the pale colour laid over every leaf (black: none). */
   frost: number;
   rime: string;
+  /** How much snow lies on the trees, the bushes and the rocks: on every face of them that looks up (0 to 1). */
+  lying: number;
 }
 
 /**
@@ -37,8 +39,9 @@ export interface SeasonLook {
  * little green-gold, full, amber and blue.
  */
 export const SEASON_LOOK: Record<Season, SeasonLook> = {
-  spring: { leaves: { 'tree-round': '#d6f0a8', 'tree-birch': '#e2f4b4', bush: '#dcf2b0', 'tree-pine': '#f2fff0', 'tree-palm': '#ffffff' }, grass: '#eaffd0', sun: '#fffbe8', fill: '#f4fff4', snow: false, frost: 0, rime: '#000000' },
-  summer: { leaves: { 'tree-round': '#ffffff', 'tree-birch': '#ffffff', bush: '#ffffff', 'tree-pine': '#ffffff', 'tree-palm': '#ffffff' }, grass: '#ffffff', sun: '#ffffff', fill: '#ffffff', snow: false, frost: 0, rime: '#000000' },
-  fall: { leaves: { 'tree-round': '#ffb060', 'tree-birch': '#ffd870', bush: '#f0a868', 'tree-pine': '#f4f0e0', 'tree-palm': '#fff4e0' }, grass: '#f0dc9c', sun: '#ffe6c0', fill: '#fff0e0', snow: false, frost: 0, rime: '#000000' },
-  winter: { leaves: { 'tree-round': '#c4ccd0', 'tree-birch': '#d8dcdc', bush: '#c8d0d0', 'tree-pine': '#e0f0f4', 'tree-palm': '#e8f0f0' }, grass: '#e4f0f4', sun: '#e8f2ff', fill: '#e4f0ff', snow: true, frost: 0.7, rime: '#46565c' },
+  spring: { leaves: { 'tree-round': '#d6f0a8', 'tree-birch': '#e2f4b4', bush: '#dcf2b0', 'tree-pine': '#f2fff0', 'tree-palm': '#ffffff' }, grass: '#eaffd0', sun: '#fffbe8', fill: '#f4fff4', snow: false, frost: 0, rime: '#000000', lying: 0 },
+  summer: { leaves: { 'tree-round': '#ffffff', 'tree-birch': '#ffffff', bush: '#ffffff', 'tree-pine': '#ffffff', 'tree-palm': '#ffffff' }, grass: '#ffffff', sun: '#ffffff', fill: '#ffffff', snow: false, frost: 0, rime: '#000000', lying: 0 },
+  fall: { leaves: { 'tree-round': '#ffb060', 'tree-birch': '#ffd870', bush: '#f0a868', 'tree-pine': '#f4f0e0', 'tree-palm': '#fff4e0' }, grass: '#f0dc9c', sun: '#ffe6c0', fill: '#fff0e0', snow: false, frost: 0, rime: '#000000', lying: 0 },
+  // (Winter's trees are their own colours with snow lying on them. The rime that was laid over all of each made them one pale shape, white on a bright screen.)
+  winter: { leaves: { 'tree-round': '#b4b8b4', 'tree-birch': '#d0d0c8', bush: '#b8c0b8', 'tree-pine': '#dceae4', 'tree-palm': '#e8f0f0' }, grass: '#e4f0f4', sun: '#e8f2ff', fill: '#e4f0ff', snow: true, frost: 0.7, rime: '#000000', lying: 1 },
 };

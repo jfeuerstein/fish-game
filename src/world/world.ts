@@ -334,7 +334,7 @@ export class World {
   /** Dress the island for a season: the leaves, the grass and the light. */
   setSeason(season: Season): void {
     const look = SEASON_LOOK[season];
-    this.props.tint(look.leaves, look.rime);
+    this.props.tint(look.leaves, look.rime, look.lying);
     (this.terrain.userData.grass as { value: THREE.Color }).value.set(look.grass).multiply(new THREE.Color(BIOME.grass ?? '#ffffff'));
     (this.terrain.userData.frost as { value: number }).value = look.frost;
     this.air.sun.set(look.sun);

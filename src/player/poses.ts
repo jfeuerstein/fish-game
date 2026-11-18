@@ -277,10 +277,14 @@ export function uke(t: number, pluck: number): Pose {
   return p;
 }
 
-/** Rowing, sitting in the boat. */
-export function row(t: number, effort: number): Pose {
+/**
+ * Rowing, sitting in the boat with both hands on the oars. `stroke` is where the oars are in
+ * their stroke (`oarAt` in src/world/hull.ts): at 0 the arms are out and the back bent forward
+ * for the catch, and half way round the hands are at the chest and the back leant away.
+ */
+export function row(t: number, effort: number, stroke = t * 4.2): Pose {
   const p = sit(t);
-  const a = Math.sin(t * 4.2) * effort;
+  const a = Math.cos(stroke) * effort;
   p.armL = limb(1.0 + a * 0.5, 0.4);
   p.armR = limb(1.0 + a * 0.5, 0.4);
   p.elbowL = 0.6 - a * 0.4;
